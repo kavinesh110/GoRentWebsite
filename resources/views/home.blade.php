@@ -421,11 +421,12 @@
 
   @php
     $cars = [
-      ['name'=>'Nissan KICKS e-POWER','rate'=>'RM163 / day','img'=>'kicks','status'=>'Available'],
-      ['name'=>'Honda City','rate'=>'RM163 / day','img'=>'city','status'=>'Available'],
-      ['name'=>'Renault Captur FL','rate'=>'RM159 / day','img'=>'captur','status'=>'Available'],
-      ['name'=>'Renault Captur FL','rate'=>'RM159 / day','img'=>'captur2','status'=>'Available'],
-      ['name'=>'Renault Koleos','rate'=>'RM189 / day','img'=>'koleos','status'=>'Available'],
+      ['name'=>'Proton Saga','rate'=>'RM120 / day','img'=>'saga','status'=>'Available'],
+      ['name'=>'Perodua Bezza','rate'=>'RM130 / day','img'=>'bezza','status'=>'Available'],
+      ['name'=>'Perodua Axia','rate'=>'RM100 / day','img'=>'axia','status'=>'Available'],
+      ['name'=>'Perodua Myvi','rate'=>'RM140 / day','img'=>'myvi','status'=>'Available'],
+      ['name'=>'Toyota Vellfire','rate'=>'RM350 / day','img'=>'vellfire','status'=>'On Request'],
+      ['name'=>'Hyundai Starex','rate'=>'RM300 / day','img'=>'starex','status'=>'On Request'],
     ];
   @endphp
 
