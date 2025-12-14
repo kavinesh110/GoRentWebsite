@@ -1,0 +1,9 @@
+{
+  "projectId": "7420c6f4-864c-4939-b7ac-4505df924957",
+  "createdAt": 1765698694383,
+  "startupCommands": [
+    "composer install && npm install",
+    "powershell -ExecutionPolicy Bypass -NoProfile -Command \"cd 'C:\\GitHub\\GoRentWebsite'; & 'C:\\laragon\\bin\\php\\php-8.3.26-Win32-vs16-x64\\php.exe' artisan serve\"",
+    "powershell -ExecutionPolicy Bypass -NoProfile -Command \"cd 'C:\\GitHub\\GoRentWebsite'; npm run dev\""
+  ]
+}
