@@ -419,42 +419,28 @@
     <h2>Car rental deals found in Johor Bahru</h2>
   </div>
 
-  @php
-    $cars = [
-      ['name'=>'Perodua Axia 2018','rate'=>'RM120/day','img'=>'axia','status'=>'Available'],
-      ['name'=>'Perodua Myvi 2015','rate'=>'RM120/day','img'=>'myvi','status'=>'Available'],
-      ['name'=>'Perodua Myvi 2020','rate'=>'RM150/day','img'=>'myvi','status'=>'Available'],
-      ['name'=>'Perodua Bezza 2018','rate'=>'RM140/day','img'=>'bezza','status'=>'Available'],
-      ['name'=>'Perodua Axia 2024','rate'=>'RM130/day','img'=>'axia','status'=>'Available'],
-      ['name'=>'Perodua Bezza 2024','rate'=>'RM140/day','img'=>'bezza','status'=>'Available'],
-      ['name'=>'Proton Saga 2017','rate'=>'RM120/day','img'=>'saga','status'=>'Available'],
-      ['name'=>'Perodua Alza 2019','rate'=>'RM200/day','img'=>'alza','status'=>'Available'],
-      ['name'=>'Perodua Aruz 2020','rate'=>'RM180/day','img'=>'aruz','status'=>'Available'],
-      ['name'=>'Toyota Vellfire 2020','rate'=>'RM500/day','img'=>'vellfire','status'=>'Available'],
-      ['name'=>'Toyota Alphard 2020','rate'=>'RM500/day','img'=>'alphard','status'=>'Available'],
-      ['name'=>'Hyundai Starex 2020','rate'=>'RM650/day','img'=>'starex','status'=>'Available'],
-      ['name'=>'Hyundai Staria 2020','rate'=>'RM550/day','img'=>'staria','status'=>'Available'],
-    ];
-  @endphp
-
   <div class="row g-4 mb-5">
-    @foreach($cars as $c)
+    @foreach($cars as $car)
       <div class="col-md-6 col-lg-3">
-        <div class="card shadow-soft h-100 car-card" data-name="{{ strtolower($c['name']) }}" data-status="{{ strtolower($c['status']) }}" style="border-radius: 16px; border: none; overflow: hidden;">
+        <div class="card shadow-soft h-100 car-card" data-name="{{ strtolower($car->name) }}" data-status="available" style="border-radius: 16px; border: none; overflow: hidden;">
           <div style="height: 200px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <svg width="120" height="80" viewBox="0 0 120 80" fill="none">
-              <rect x="10" y="30" width="100" height="40" rx="8" fill="#ddd"/>
-              <circle cx="30" cy="65" r="8" fill="#999"/>
-              <circle cx="90" cy="65" r="8" fill="#999"/>
-              <path d="M30 30 L50 15 L70 15 L90 30" stroke="#bbb" stroke-width="3" fill="none"/>
-            </svg>
+            @if($car->exterior_image)
+              <img src="{{ $car->exterior_image }}" alt="{{ $car->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            @else
+              <svg width="120" height="80" viewBox="0 0 120 80" fill="none">
+                <rect x="10" y="30" width="100" height="40" rx="8" fill="#ddd"/>
+                <circle cx="30" cy="65" r="8" fill="#999"/>
+                <circle cx="90" cy="65" r="8" fill="#999"/>
+                <path d="M30 30 L50 15 L70 15 L90 30" stroke="#bbb" stroke-width="3" fill="none"/>
+              </svg>
+            @endif
           </div>
           <div class="card-body" style="padding: 16px;">
-            <h5 class="card-title" style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111;">{{ $c['name'] }}</h5>
+            <h5 class="card-title" style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #111;">{{ $car->name }}</h5>
             <p class="card-text" style="font-size: 14px; font-weight: 600; color: #111; margin-bottom: 12px;">
-              starting from <strong>{{ $c['rate'] }}</strong>
+              starting from <strong>RM{{ number_format($car->price_per_day, 0) }}/day</strong>
             </p>
-            <a href="{{ route('bookings.create', ['car' => $c['name']]) }}" class="btn btn-hasta w-100" style="border-radius: 8px; padding: 10px; font-weight: 600;">Book Now</a>
+            <a href="{{ route('cars.show', $car->id) }}" class="btn btn-hasta w-100" style="border-radius: 8px; padding: 10px; font-weight: 600;">Book Now</a>
           </div>
         </div>
       </div>
