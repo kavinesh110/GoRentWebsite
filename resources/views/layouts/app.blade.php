@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Hasta Travel RMS')</title>
+    <title>@yield('title', 'Hasta GoRent')</title>
 
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -105,7 +105,7 @@
                 <circle cx="7" cy="17" r="2"/>
                 <circle cx="17" cy="17" r="2"/>
             </svg>
-            <span>GoCar.</span>
+            <span>Hasta GoRent</span>
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
@@ -118,7 +118,7 @@
                 <li class="nav-item"><a class="nav-link" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Latest Update</a></li>
                 <li class="nav-item"><a class="nav-link" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Choose language</a></li>
                 <li class="nav-item">
-                    <a class="btn btn-hasta rounded-pill px-4 py-2 ms-2" href="/bookings/create" style="font-size: 14px;">Download GoCar App</a>
+                    <a class="btn btn-hasta rounded-pill px-4 py-2 ms-2" href="/bookings/create" style="font-size: 14px;">Download Hasta GoRent App</a>
                 </li>
             </ul>
         </div>
@@ -133,7 +133,7 @@
     <div class="container py-4">
         <div class="row">
             <div class="col-md-3 mb-3">
-                <h6 class="fw-bold mb-3">About GoCar</h6>
+                <h6 class="fw-bold mb-3">About Hasta GoRent</h6>
                 <ul class="list-unstyled small">
                     <li class="mb-2"><a href="#" class="text-decoration-none text-muted">About Us</a></li>
                     <li class="mb-2"><a href="#" class="text-decoration-none text-muted">Careers</a></li>
@@ -166,7 +166,7 @@
         </div>
         <hr class="my-4">
         <div class="text-center small text-muted">
-            © {{ date('Y') }} Hasta Travel. All rights reserved.
+            © {{ date('Y') }} Hasta GoRent. All rights reserved.
         </div>
     </div>
 </footer>

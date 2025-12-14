@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Home - Hasta Travel')
+@section('title','Home - Hasta GoRent')
 
 @section('content')
 
@@ -329,7 +329,7 @@
       <div class="hero-meta">
         <h1 class="hero-title text-white">Rent a car in Johor Bahru</h1>
         <p class="hero-sub">
-          Need a car for your next getaway or a quick trip in Johor Bahru? GoCar Sharing has everything you need to rent a car for your Johor Bahru adventure trip.
+          Need a car for your next getaway or a quick trip in Johor Bahru? Hasta GoRent has everything you need to rent a car for your Johor Bahru adventure trip.
         </p>
       </div>
     </div>
