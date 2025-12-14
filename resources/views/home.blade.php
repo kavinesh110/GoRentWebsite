@@ -446,7 +446,7 @@
             <p class="card-text" style="font-size: 14px; font-weight: 600; color: #111; margin-bottom: 12px;">
               starting from <strong>{{ $c['rate'] }}</strong>
             </p>
-            <a href="/bookings/create" class="btn btn-hasta w-100" style="border-radius: 8px; padding: 10px; font-weight: 600;">Book Now</a>
+            <a href="{{ route('bookings.create', ['car' => $c['name']]) }}" class="btn btn-hasta w-100" style="border-radius: 8px; padding: 10px; font-weight: 600;">Book Now</a>
           </div>
         </div>
       </div>
