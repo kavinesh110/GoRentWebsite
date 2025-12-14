@@ -421,12 +421,19 @@
 
   @php
     $cars = [
-      ['name'=>'Proton Saga','rate'=>'RM120 / day','img'=>'saga','status'=>'Available'],
-      ['name'=>'Perodua Bezza','rate'=>'RM130 / day','img'=>'bezza','status'=>'Available'],
-      ['name'=>'Perodua Axia','rate'=>'RM100 / day','img'=>'axia','status'=>'Available'],
-      ['name'=>'Perodua Myvi','rate'=>'RM140 / day','img'=>'myvi','status'=>'Available'],
-      ['name'=>'Toyota Vellfire','rate'=>'RM350 / day','img'=>'vellfire','status'=>'On Request'],
-      ['name'=>'Hyundai Starex','rate'=>'RM300 / day','img'=>'starex','status'=>'On Request'],
+      ['name'=>'Perodua Axia 2018','rate'=>'RM120/day','img'=>'axia','status'=>'Available'],
+      ['name'=>'Perodua Myvi 2015','rate'=>'RM120/day','img'=>'myvi','status'=>'Available'],
+      ['name'=>'Perodua Myvi 2020','rate'=>'RM150/day','img'=>'myvi','status'=>'Available'],
+      ['name'=>'Perodua Bezza 2018','rate'=>'RM140/day','img'=>'bezza','status'=>'Available'],
+      ['name'=>'Perodua Axia 2024','rate'=>'RM130/day','img'=>'axia','status'=>'Available'],
+      ['name'=>'Perodua Bezza 2024','rate'=>'RM140/day','img'=>'bezza','status'=>'Available'],
+      ['name'=>'Proton Saga 2017','rate'=>'RM120/day','img'=>'saga','status'=>'Available'],
+      ['name'=>'Perodua Alza 2019','rate'=>'RM200/day','img'=>'alza','status'=>'Available'],
+      ['name'=>'Perodua Aruz 2020','rate'=>'RM180/day','img'=>'aruz','status'=>'Available'],
+      ['name'=>'Toyota Vellfire 2020','rate'=>'RM500/day','img'=>'vellfire','status'=>'Available'],
+      ['name'=>'Toyota Alphard 2020','rate'=>'RM500/day','img'=>'alphard','status'=>'Available'],
+      ['name'=>'Hyundai Starex 2020','rate'=>'RM650/day','img'=>'starex','status'=>'Available'],
+      ['name'=>'Hyundai Staria 2020','rate'=>'RM550/day','img'=>'staria','status'=>'Available'],
     ];
   @endphp
 
