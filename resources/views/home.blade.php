@@ -113,6 +113,118 @@
     transform: scale(1.05);
   }
 
+  .promo-carousel-section{
+    margin-bottom: 60px;
+  }
+  .promo-carousel{
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+  .promo-slides{
+    display: flex;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .promo-slide{
+    min-width: 100%;
+    height: 380px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 60px;
+  }
+  .promo-slide:nth-child(2){
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+  .promo-slide:nth-child(3){
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+  .promo-slide:nth-child(4){
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  }
+  .promo-content{
+    max-width: 600px;
+    text-align: center;
+    z-index: 2;
+  }
+  .promo-content h2{
+    font-size: 48px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+  }
+  .promo-content p{
+    font-size: 18px;
+    margin-bottom: 24px;
+    opacity: 0.95;
+  }
+  .promo-btn{
+    display: inline-block;
+    padding: 14px 32px;
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 50px;
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+  }
+  .promo-btn:hover{
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-2px);
+    color: white;
+  }
+  .promo-controls{
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .promo-dot{
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .promo-dot.active{
+    width: 32px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.9);
+  }
+  .promo-nav{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s;
+  }
+  .promo-nav:hover{
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-50%) scale(1.1);
+  }
+  .promo-nav.prev{ left: 20px; }
+  .promo-nav.next{ right: 20px; }
+
   .car-section-header{
     margin-bottom: 24px;
   }
@@ -140,6 +252,16 @@
     }
     .hero-searchbar .seg:last-of-type{ border-bottom: none; }
     .hero-searchbar .search-action{ width: 100%; border-radius: 8px; }
+    .promo-slide{
+      height: 300px;
+      padding: 40px 24px;
+    }
+    .promo-content h2{
+      font-size: 32px;
+    }
+    .promo-content p{
+      font-size: 16px;
+    }
   }
 </style>
 
@@ -243,6 +365,55 @@
     </form>
   </div>
 
+  {{-- PROMOTIONS CAROUSEL SECTION --}}
+  <div class="promo-carousel-section">
+    <div class="promo-carousel">
+      <div class="promo-slides" id="promoSlides">
+        <div class="promo-slide">
+          <div class="promo-content">
+            <h2>Year-End Sale!</h2>
+            <p>Get up to 50% off on all car rentals this December. Limited time offer!</p>
+            <a href="#" class="promo-btn">Book Now</a>
+          </div>
+        </div>
+        <div class="promo-slide">
+          <div class="promo-content">
+            <h2>New Member Discount</h2>
+            <p>Sign up today and enjoy RM50 off your first rental. Start your journey with us!</p>
+            <a href="#" class="promo-btn">Join Today</a>
+          </div>
+        </div>
+        <div class="promo-slide">
+          <div class="promo-content">
+            <h2>Weekend Special</h2>
+            <p>Rent for the weekend and get Monday free! Perfect for extended trips.</p>
+            <a href="#" class="promo-btn">Learn More</a>
+          </div>
+        </div>
+        <div class="promo-slide">
+          <div class="promo-content">
+            <h2>Corporate Packages</h2>
+            <p>Special rates for business travelers. Flexible terms and premium vehicles.</p>
+            <a href="#" class="promo-btn">Contact Us</a>
+          </div>
+        </div>
+      </div>
+      
+      <button class="promo-nav prev" onclick="promoCarousel.prev()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <button class="promo-nav next" onclick="promoCarousel.next()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+
+      <div class="promo-controls" id="promoControls"></div>
+    </div>
+  </div>
+
   {{-- SECTION: CAR LISTINGS --}}
   <div class="car-section-header">
     <h2>Car rental deals found in Johor Bahru</h2>
@@ -309,6 +480,61 @@
         card.style.display = matches ? '' : 'none';
       });
     });
+  })();
+
+  const promoCarousel = (function(){
+    const slides = document.getElementById('promoSlides');
+    const controls = document.getElementById('promoControls');
+    const slideCount = slides.children.length;
+    let currentIndex = 0;
+    let autoPlayInterval;
+
+    for(let i = 0; i < slideCount; i++){
+      const dot = document.createElement('div');
+      dot.className = 'promo-dot' + (i === 0 ? ' active' : '');
+      dot.onclick = () => goToSlide(i);
+      controls.appendChild(dot);
+    }
+
+    function updateSlide(){
+      slides.style.transform = `translateX(-${currentIndex * 100}%)`;
+      
+      const dots = controls.children;
+      for(let i = 0; i < dots.length; i++){
+        dots[i].classList.toggle('active', i === currentIndex);
+      }
+    }
+
+    function goToSlide(index){
+      currentIndex = index;
+      updateSlide();
+      resetAutoPlay();
+    }
+
+    function next(){
+      currentIndex = (currentIndex + 1) % slideCount;
+      updateSlide();
+      resetAutoPlay();
+    }
+
+    function prev(){
+      currentIndex = (currentIndex - 1 + slideCount) % slideCount;
+      updateSlide();
+      resetAutoPlay();
+    }
+
+    function startAutoPlay(){
+      autoPlayInterval = setInterval(next, 5000);
+    }
+
+    function resetAutoPlay(){
+      clearInterval(autoPlayInterval);
+      startAutoPlay();
+    }
+
+    startAutoPlay();
+
+    return { next, prev, goToSlide };
   })();
 </script>
 @endpush
