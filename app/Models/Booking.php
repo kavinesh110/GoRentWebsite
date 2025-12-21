@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\CarLocation;
 
 class Booking extends Model
 {
@@ -55,6 +57,21 @@ class Booking extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    public function penalties(): HasMany
+    {
+        return $this->hasMany(Penalty::class, 'booking_id', 'booking_id');
+    }
+
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class, 'booking_id', 'booking_id');
+    }
+
+    public function rentalPhotos(): HasMany
+    {
+        return $this->hasMany(RentalPhoto::class, 'booking_id', 'booking_id');
+    }
+
     public function pickupLocation(): BelongsTo
     {
         return $this->belongsTo(CarLocation::class, 'pickup_location_id', 'location_id');
@@ -63,5 +80,10 @@ class Booking extends Model
     public function dropoffLocation(): BelongsTo
     {
         return $this->belongsTo(CarLocation::class, 'dropoff_location_id', 'location_id');
+    }
+
+    public function feedback(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Feedback::class, 'booking_id', 'booking_id');
     }
 }

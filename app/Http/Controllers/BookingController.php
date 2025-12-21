@@ -6,11 +6,17 @@ use Illuminate\Http\Request;
 use App\Models\Car;
 use App\Models\Booking;
 use App\Models\CarLocation;
+use App\Models\Customer;
 
 class BookingController extends Controller
 {
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        // Require customer login to book
+        if ($request->session()->get('auth_role') !== 'customer') {
+            return redirect()->route('login')->with('error', 'Please login as a customer to book a car.');
+        }
+
         try {
             $car = Car::findOrFail($id);
             
@@ -18,8 +24,22 @@ class BookingController extends Controller
             if (!$car->brand || !$car->model) {
                 abort(404, 'Car information is incomplete');
             }
+
+            // Get customer info
+            $customerId = $request->session()->get('auth_id');
+            $customer = \App\Models\Customer::findOrFail($customerId);
+
+            // Get available locations from database
+            $locations = \App\Models\CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])
+                ->orderBy('name')
+                ->get();
+
+            // Get feedbacks for this car (for reviews display)
+            $feedbacks = \App\Models\Feedback::whereHas('booking', function($q) use ($car) {
+                $q->where('car_id', $car->id)->where('status', 'completed');
+            })->with('customer')->latest()->take(5)->get();
             
-            return view('bookings.show', compact('car'));
+            return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             abort(404, 'Car not found');
         }
@@ -33,6 +53,11 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        // Ensure user is logged in as customer
+        if ($request->session()->get('auth_role') !== 'customer') {
+            return redirect()->route('login')->with('error', 'Please login as a customer to make a booking.');
+        }
+
         $validated = $request->validate([
             'car_id' => 'required|exists:cars,id',
             'name' => 'required|string|max:255',
@@ -71,8 +96,14 @@ class BookingController extends Controller
             ['type' => 'both']
         );
 
+        // Get authenticated customer ID
+        $customerId = $request->session()->get('auth_id');
+        if (!$customerId || $request->session()->get('auth_role') !== 'customer') {
+            return redirect()->route('login')->with('error', 'Please login to make a booking.');
+        }
+
         $booking = Booking::create([
-            'customer_id' => 1, // TODO: Get from authenticated user
+            'customer_id' => $customerId,
             'car_id' => $validated['car_id'],
             'pickup_location_id' => $pickupLocation->location_id,
             'dropoff_location_id' => $dropoffLocation->location_id,
@@ -90,7 +121,7 @@ class BookingController extends Controller
             'status' => 'created',
         ]);
 
-        return redirect()->route('bookings.show', $booking->id)
-            ->with('success', 'Booking created successfully!');
+        return redirect()->route('customer.bookings')
+            ->with('success', 'Booking created successfully! Please wait for confirmation from Hasta staff.');
     }
 }

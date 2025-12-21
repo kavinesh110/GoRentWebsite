@@ -273,6 +273,38 @@
     box-shadow: 0 4px 12px rgba(249, 136, 32, 0.3);
   }
 
+  /* Tablet responsiveness for hero search bar & cards */
+  @media (max-width: 1024px){
+    .hero-gocar{
+      padding-bottom: 70px;
+      margin-bottom: 150px;
+    }
+    .hero-searchbar{
+      bottom: -120px;
+      padding: 16px 18px;
+      width: calc(100% - 40px);
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px 12px;
+    }
+    .hero-searchbar .seg{
+      flex: 1 1 45%;
+      border-right: none;
+      border-bottom: 1px solid #e9ecef;
+      padding: 10px 12px;
+    }
+    .hero-searchbar .seg.location-seg{
+      flex: 1 1 100%;
+      border-bottom: none;
+    }
+    .hero-searchbar .search-action{
+      flex: 1 1 100%;
+      width: 100%;
+      height: 52px;
+      border-radius: 14px;
+    }
+  }
+
   @media (max-width: 767px){
     .secondary-nav .nav-items{ gap: 16px; }
     .secondary-nav .nav-item-icon{ flex-direction: column; gap: 4px; }
@@ -302,12 +334,91 @@
       text-align: center;
     }
   }
+
+  /* Hasta GoRent @ UTM intro strip */
+  .utm-intro{
+    margin-top: 24px;
+    margin-bottom: 32px;
+    padding: 20px 24px;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .utm-intro-main{
+    max-width: 520px;
+  }
+  .utm-intro-badge{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(203,55,55,0.08);
+    color: var(--hasta-darker);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .utm-intro-title{
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #222;
+  }
+  .utm-intro-text{
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+  }
+  .utm-intro-grid{
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 16px;
+    min-width: 260px;
+  }
+  .utm-intro-pill{
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #faf5f5;
+    font-size: 12px;
+    color: #444;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .utm-intro-pill span{
+    font-weight: 600;
+    color: var(--hasta-darker);
+  }
+
+  @media (max-width: 992px){
+    .utm-intro{
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .utm-intro-grid{
+      width: 100%;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+  }
+  @media (max-width: 576px){
+    .utm-intro-grid{
+      grid-template-columns: minmax(0,1fr);
+    }
+  }
 </style>
 
 {{-- SECONDARY NAVIGATION --}}
 <div class="secondary-nav">
   <div class="nav-items">
-    <a href="/cars" class="nav-item-icon active">
+    <a href="{{ route('home') }}" class="nav-item-icon {{ request()->routeIs('home') ? 'active' : '' }}">
       <div class="icon-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 17h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"/>
@@ -317,47 +428,44 @@
       </div>
       <span>Car Rental</span>
     </a>
+    @if(session('auth_role') === 'customer')
+      <a href="{{ route('customer.bookings') }}" class="nav-item-icon {{ request()->routeIs('customer.bookings*') ? 'active' : '' }}">
+        <div class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <polyline points="17 11 19 13 23 9"></polyline>
+          </svg>
+        </div>
+        <span>My Bookings</span>
+      </a>
+      <a href="{{ route('customer.loyalty-rewards') }}" class="nav-item-icon {{ request()->routeIs('customer.loyalty-rewards') ? 'active' : '' }}">
+        <div class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+        </div>
+        <span>Loyalty Rewards</span>
+      </a>
+    @endif
     <a href="#" class="nav-item-icon">
       <div class="icon-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
       </div>
-      <span>Car Service & Repair</span>
+      <span>How It Works</span>
     </a>
     <a href="#" class="nav-item-icon">
       <div class="icon-circle">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
       </div>
-      <span>Subscription</span>
-    </a>
-    <a href="#" class="nav-item-icon">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-      </div>
-      <span>EV Hub</span>
-    </a>
-    <a href="#" class="nav-item-icon">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        </svg>
-      </div>
-      <span>Insurance & Roadtax</span>
-    </a>
-    <a href="#" class="nav-item-icon">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"></path>
-          <line x1="7" y1="7" x2="7.01" y2="7"></line>
-        </svg>
-      </div>
-      <span>Cuba Beli</span>
+      <span>Contact Us</span>
     </a>
   </div>
 </div>
@@ -367,9 +475,9 @@
   <div class="hero-gocar shadow-soft">
     <div class="hero-inner">
       <div class="hero-meta">
-        <h1 class="hero-title">Year-End Sale!</h1>
+        <h1 class="hero-title">Smart car rentals for UTM students & staff</h1>
         <p class="hero-sub">
-          Get up to 50% off on all car rentals this December. Limited time offer!
+          Centralised, deposit-first booking with loyalty rewards, maintenance tracking and campus-focused pricing for Hasta Travels & Tours.
         </p>
       </div>
     </div>
@@ -403,6 +511,60 @@
         </svg>
       </button>
     </form>
+  </div>
+
+  {{-- ACTIVITIES & PROMOTIONS SECTION --}}
+  @if($activities && $activities->count() > 0)
+  <div class="activities-section mb-5">
+    <div class="row g-3">
+      @foreach($activities as $activity)
+        <div class="col-md-6 col-lg-4">
+          <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, var(--hasta) 0%, var(--hasta-dark) 100%); color: white;">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="fw-bold mb-0">{{ $activity->title }}</h5>
+                @if($activity->end_date >= now())
+                  <span class="badge bg-light text-dark">Active</span>
+                @endif
+              </div>
+              @if($activity->description)
+                <p class="mb-2" style="font-size: 14px; opacity: 0.9;">{{ Str::limit($activity->description, 120) }}</p>
+              @endif
+              <div class="small mt-3" style="opacity: 0.8;">
+                <div>{{ $activity->start_date->format('d M Y') }} - {{ $activity->end_date->format('d M Y') }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      @endforeach
+    </div>
+  </div>
+  @endif
+
+  {{-- UTM-FOCUSED SYSTEM INTRO --}}
+  <div class="utm-intro">
+    <div class="utm-intro-main">
+      <div class="utm-intro-badge">Designed for UTM community</div>
+      <h2 class="utm-intro-title">Centralised car rental system for Hasta Travels & Tours</h2>
+      <p class="utm-intro-text">
+        Built to replace manual WhatsApp bookings with a secure web-based platform. UTM students and staff can verify their
+        identity, book with deposit-first, upload receipts and rental photos, and track vouchers & rental history in one place.
+      </p>
+    </div>
+    <div class="utm-intro-grid">
+      <div class="utm-intro-pill">
+        <span>Booking & payments</span>
+        Deposit-first flow, manual receipt upload and clear agreement signing for every rental.
+      </div>
+      <div class="utm-intro-pill">
+        <span>Fleet & maintenance</span>
+        Real-time car status, mileage-based service alerts and before / after inspection photos.
+      </div>
+      <div class="utm-intro-pill">
+        <span>Loyalty & analytics</span>
+        Stamps for every 9 rental hours, vouchers for frequent renters and insights by college.
+      </div>
+    </div>
   </div>
 
   {{-- SECTION: CAR LISTINGS --}}

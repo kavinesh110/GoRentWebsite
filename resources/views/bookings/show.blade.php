@@ -8,9 +8,10 @@
   $carName = ($car->brand ?? 'Car') . ' ' . ($car->model ?? '');
   $year = $car->year ?? null;
   
-  // Default rating and reviews (can be added to database later)
-  $rating = 4.0; // Default 4 stars
-  $reviewCount = 440; // Default review count
+  // Calculate actual rating from feedbacks
+  $avgRating = $feedbacks ? $feedbacks->avg('rating') : 0;
+  $rating = $avgRating > 0 ? $avgRating : 4.0; // Default 4 stars if no reviews
+  $reviewCount = $feedbacks ? $feedbacks->count() : 0;
   
   // Calculate pricing (default to 24 hours = 1 day, will update via JavaScript when dates are selected)
   // Note: base_rate_per_hour is used, so we calculate by hours
@@ -368,7 +369,10 @@
                 @endif
               @endfor
             </div>
-            <span class="review-count">{{ $reviewCount }}+ Reviewer</span>
+            <span class="review-count">{{ $reviewCount }} {{ $reviewCount === 1 ? 'Review' : 'Reviews' }}</span>
+            @if($avgRating > 0)
+              <span class="review-count ms-2">({{ number_format($avgRating, 1) }} avg)</span>
+            @endif
           </div>
           
           <div class="car-image-container">
@@ -432,11 +436,11 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label" for="name">Name</label>
-                <input type="text" id="name" name="name" class="form-input" placeholder="Your name" required>
+                <input type="text" id="name" name="name" class="form-input" placeholder="Your name" value="{{ $customer->full_name ?? '' }}" required>
               </div>
               <div class="form-group">
                 <label class="form-label" for="phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" class="form-input" placeholder="Phone number" required>
+                <input type="tel" id="phone" name="phone" class="form-input" placeholder="Phone number" value="{{ $customer->phone ?? '' }}" required>
               </div>
               <div class="form-group full-width">
                 <label class="form-label" for="address">Address</label>
@@ -470,11 +474,12 @@
                   <div class="form-group">
                     <label class="form-label" for="pickup_location">Locations</label>
                     <select id="pickup_location" name="pickup_location" class="form-input" required>
-                      <option value="">Select your city</option>
-                      <option value="johor-bahru">Johor Bahru</option>
-                      <option value="kuala-lumpur">Kuala Lumpur</option>
-                      <option value="penang">Penang</option>
-                      <option value="malacca">Malacca</option>
+                      <option value="">Select pickup location</option>
+                      @foreach($locations as $location)
+                        @if(in_array($location->type, ['pickup', 'both']))
+                          <option value="{{ $location->name }}">{{ $location->name }}</option>
+                        @endif
+                      @endforeach
                     </select>
                   </div>
                   <div class="form-group">
@@ -500,11 +505,12 @@
                   <div class="form-group">
                     <label class="form-label" for="dropoff_location">Locations</label>
                     <select id="dropoff_location" name="dropoff_location" class="form-input" required>
-                      <option value="">Select your city</option>
-                      <option value="johor-bahru">Johor Bahru</option>
-                      <option value="kuala-lumpur">Kuala Lumpur</option>
-                      <option value="penang">Penang</option>
-                      <option value="malacca">Malacca</option>
+                      <option value="">Select dropoff location</option>
+                      @foreach($locations as $location)
+                        @if(in_array($location->type, ['dropoff', 'both']))
+                          <option value="{{ $location->name }}">{{ $location->name }}</option>
+                        @endif
+                      @endforeach
                     </select>
                   </div>
                   <div class="form-group">
@@ -593,5 +599,42 @@
   }
 </script>
 @endpush
+
+@if(isset($feedbacks) && $feedbacks && $feedbacks->count() > 0)
+<div class="container-custom mt-5">
+  <div class="card border-0 shadow-soft">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-4">Customer Reviews</h5>
+      <div class="row g-3">
+        @foreach($feedbacks as $feedback)
+          <div class="col-12">
+            <div class="border-bottom pb-3 mb-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <strong>{{ $feedback->customer->full_name ?? 'Anonymous' }}</strong>
+                  <div class="small text-muted">{{ $feedback->created_at->format('d M Y') }}</div>
+                </div>
+                <div class="d-flex gap-1">
+                  @for($i = 1; $i <= 5; $i++)
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ $i <= $feedback->rating ? '#FFD700' : '#ddd' }}" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  @endfor
+                </div>
+              </div>
+              @if($feedback->comment)
+                <p class="mb-0">{{ $feedback->comment }}</p>
+              @endif
+              @if($feedback->reported_issue)
+                <small class="text-warning">⚠ Issue reported</small>
+              @endif
+            </div>
+          </div>
+        @endforeach
+      </div>
+    </div>
+  </div>
+</div>
+@endif
 
 @endsection
