@@ -1,6 +1,8 @@
 @extends('layouts.app')
 @section('title','Home - Hasta GoRent')
 
+{{-- ===== HOMEPAGE ===== --}}
+{{-- Displays: Secondary navigation, hero section, activities/promotions, car listings --}}
 @section('content')
 
 <style>
@@ -513,7 +515,9 @@
     </form>
   </div>
 
-  {{-- ACTIVITIES & PROMOTIONS SECTION --}}
+  {{-- ===== ACTIVITIES & PROMOTIONS SECTION ===== --}}
+  {{-- Displays active company activities/promotional campaigns --}}
+  {{-- Activities are created by staff and shown on homepage --}}
   @if($activities && $activities->count() > 0)
   <div class="activities-section mb-5">
     <div class="row g-3">
@@ -567,7 +571,9 @@
     </div>
   </div>
 
-  {{-- SECTION: CAR LISTINGS --}}
+  {{-- ===== CAR LISTINGS SECTION ===== --}}
+  {{-- Displays all available cars in a grid layout --}}
+  {{-- Each car card shows: image, name, type, price, and "Rent Now" button --}}
   <div class="car-section-header">
     <h2>Car rental deals found in Johor Bahru</h2>
   </div>

@@ -12,10 +12,19 @@ use App\Models\Penalty;
 use App\Models\Inspection;
 use App\Models\Activity;
 
+/**
+ * Handles all staff/admin functionality
+ * Includes car management, booking management, customer management, and activity management
+ */
 class StaffController extends Controller
 {
     /**
-     * Simple guard to ensure only logged-in staff can access staff pages.
+     * Ensure only logged-in staff can access staff pages
+     * Aborts with 403 error if user is not staff
+     * 
+     * @param Request $request
+     * @return void
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
      */
     protected function ensureStaff(Request $request): void
     {
@@ -24,6 +33,13 @@ class StaffController extends Controller
         }
     }
 
+    /**
+     * Display staff dashboard with key statistics
+     * Shows total cars, available cars, active bookings, and total customers
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function dashboard(Request $request)
     {
         $this->ensureStaff($request);
@@ -41,18 +57,27 @@ class StaffController extends Controller
     }
 
     // ========== CAR MANAGEMENT ==========
+    
+    /**
+     * List all cars with filtering and search capabilities
+     * Supports filtering by status (available, in_use, maintenance)
+     * Supports searching by brand, model, or plate number
+     * 
+     * @param Request $request May contain 'status' and 'search' filter parameters
+     * @return \Illuminate\View\View
+     */
     public function cars(Request $request)
     {
         $this->ensureStaff($request);
 
         $query = Car::query();
         
-        // Filter by status
+        // Filter by car status (available, in_use, maintenance)
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
 
-        // Search by brand/model/plate
+        // Search functionality: search in brand, model, or plate number
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -62,6 +87,7 @@ class StaffController extends Controller
             });
         }
 
+        // Paginate results (12 cars per page)
         $cars = $query->orderBy('created_at', 'desc')->paginate(12);
 
         return view('staff.cars.index', [
@@ -70,6 +96,12 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Display the form to create a new car
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function carsCreate(Request $request)
     {
         $this->ensureStaff($request);
@@ -77,6 +109,14 @@ class StaffController extends Controller
         return view('staff.cars.create', ['locations' => $locations]);
     }
 
+    /**
+     * Store a newly created car
+     * Handles image upload and stores car information
+     * Validates all car data including unique plate number
+     * 
+     * @param Request $request Contains car form data and optional image file
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function carsStore(Request $request)
     {
         $this->ensureStaff($request);
@@ -96,24 +136,35 @@ class StaffController extends Controller
             'gps_enabled' => 'boolean',
         ]);
 
+        // Process checkbox and default values
         $data['gps_enabled'] = $request->has('gps_enabled');
         $data['current_mileage'] = $data['current_mileage'] ?? 0;
 
-        // Handle image upload
+        // Handle car image upload
+        // Images are stored in storage/app/public/images/cars/ with unique filenames
         if ($request->hasFile('car_image')) {
             $image = $request->file('car_image');
+            // Generate unique filename: timestamp + uniqid + original extension
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('images/cars', $imageName, 'public');
-            $data['image_url'] = $imagePath;
+            $data['image_url'] = $imagePath; // Store relative path
         } else {
-            $data['image_url'] = null;
+            $data['image_url'] = null; // No image uploaded
         }
 
+        // Create car record in database
         Car::create($data);
 
         return redirect()->route('staff.cars')->with('success', 'Car added successfully!');
     }
 
+    /**
+     * Display the form to edit an existing car
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\View\View
+     */
     public function carsEdit(Request $request, $id)
     {
         $this->ensureStaff($request);
@@ -122,6 +173,15 @@ class StaffController extends Controller
         return view('staff.cars.edit', ['car' => $car, 'locations' => $locations]);
     }
 
+    /**
+     * Update an existing car
+     * Handles image upload (replaces old image if new one is uploaded)
+     * Auto-updates car status to 'maintenance' if mileage exceeds service limit
+     * 
+     * @param Request $request Contains updated car data and optional new image
+     * @param int $id Car ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function carsUpdate(Request $request, $id)
     {
         $this->ensureStaff($request);
@@ -142,27 +202,30 @@ class StaffController extends Controller
             'gps_enabled' => 'boolean',
         ]);
 
+        // Process checkbox
         $data['gps_enabled'] = $request->has('gps_enabled');
 
-        // Auto-update status if mileage exceeds service limit
+        // Business rule: Auto-set status to maintenance if mileage exceeds service limit
+        // This ensures cars requiring service are automatically flagged
         if ($data['current_mileage'] >= $data['service_mileage_limit']) {
             $data['status'] = 'maintenance';
         }
 
-        // Handle image upload
+        // Handle car image upload/update
         if ($request->hasFile('car_image')) {
-            // Delete old image if exists (use raw original value for file operations)
+            // Delete old uploaded image file if it exists (don't delete external URLs)
             $oldImagePath = $car->getRawOriginal('image_url');
             if ($oldImagePath && !filter_var($oldImagePath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldImagePath)) {
                 Storage::disk('public')->delete($oldImagePath);
             }
 
+            // Upload new image with unique filename
             $image = $request->file('car_image');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('images/cars', $imageName, 'public');
             $data['image_url'] = $imagePath;
         }
-        // If no new image uploaded, keep existing image_url (don't set it)
+        // If no new image uploaded, existing image_url is preserved (not overwritten)
 
         $car->update($data);
 
@@ -170,18 +233,28 @@ class StaffController extends Controller
     }
 
     // ========== BOOKING MANAGEMENT ==========
+    
+    /**
+     * List all bookings with filtering and search
+     * Supports filtering by booking status
+     * Supports searching by customer name/email or car plate number
+     * 
+     * @param Request $request May contain 'status' and 'search' filter parameters
+     * @return \Illuminate\View\View
+     */
     public function bookings(Request $request)
     {
         $this->ensureStaff($request);
 
+        // Eager load car and customer relationships for performance
         $query = Booking::with(['car', 'customer']);
 
-        // Filter by status
+        // Filter by booking status (created, confirmed, active, completed, cancelled)
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
 
-        // Search by customer name/email or car plate
+        // Search functionality: search in customer name/email or car plate number
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->whereHas('customer', function($q) use ($search) {
@@ -192,6 +265,7 @@ class StaffController extends Controller
             });
         }
 
+        // Paginate results (15 bookings per page)
         $bookings = $query->orderBy('created_at', 'desc')->paginate(15);
 
         return view('staff.bookings.index', [
@@ -200,36 +274,66 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Display detailed view of a specific booking
+     * Shows booking details, penalties, inspections
+     * Allows staff to update status, add penalties, and record inspections
+     * 
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\View\View
+     */
     public function bookingsShow(Request $request, $id)
     {
         $this->ensureStaff($request);
 
+        // Eager load all related data for display
         $booking = Booking::with([
             'car',
             'customer',
             'penalties',
             'inspections' => function ($q) {
-                $q->orderBy('datetime', 'asc');
+                $q->orderBy('datetime', 'asc'); // Order inspections chronologically
             },
         ])->findOrFail($id);
 
         return view('staff.bookings.show', ['booking' => $booking]);
     }
 
+    /**
+     * Update booking status
+     * Allows staff to change booking status through the workflow
+     * Status options: created, confirmed, active, completed, cancelled
+     * 
+     * @param Request $request Contains new status
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function bookingsUpdateStatus(Request $request, $id)
     {
         $this->ensureStaff($request);
         $booking = Booking::findOrFail($id);
 
+        // Validate status value
         $data = $request->validate([
-            'status' => 'required|in:created,confirmed,ongoing,completed,cancelled',
+            'status' => 'required|in:created,confirmed,active,completed,cancelled',
         ]);
 
+        // Update booking status
         $booking->update($data);
 
         return redirect()->back()->with('success', 'Booking status updated!');
     }
 
+    /**
+     * Add a penalty to a booking
+     * Records penalties for late returns, fuel issues, damage, accidents, etc.
+     * Supports installment payments (penalty can be paid in parts)
+     * 
+     * @param Request $request Contains penalty data (type, amount, description, status)
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function bookingsAddPenalty(Request $request, $id)
     {
         $this->ensureStaff($request);
@@ -243,53 +347,78 @@ class StaffController extends Controller
             'status'         => 'required|in:pending,partially_paid,settled',
         ]);
 
+        // Link penalty to booking and set installment flag
         $data['booking_id'] = $booking->booking_id;
         $data['is_installment'] = $request->has('is_installment');
 
+        // Create penalty record
         Penalty::create($data);
 
         return redirect()->back()->with('success', 'Penalty recorded for this booking.');
     }
 
+    /**
+     * Record an inspection for a booking
+     * Used for pickup and return inspections
+     * Tracks fuel level (0-8), odometer reading, and inspection notes
+     * Records which staff member performed the inspection
+     * 
+     * @param Request $request Contains inspection data (type, datetime, fuel, odometer, notes)
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function bookingsAddInspection(Request $request, $id)
     {
         $this->ensureStaff($request);
         $booking = Booking::findOrFail($id);
 
+        // Validate inspection data
         $data = $request->validate([
-            'inspection_type'  => 'required|in:pickup,return,other',
-            'datetime'         => 'required|date',
-            'fuel_level'       => 'required|integer|min:0|max:8',
-            'odometer_reading' => 'required|integer|min:0',
-            'notes'            => 'nullable|string',
+            'inspection_type'  => 'required|in:pickup,return,other', // Type of inspection
+            'datetime'         => 'required|date', // When inspection was performed
+            'fuel_level'       => 'required|integer|min:0|max:8', // Fuel level (0=empty, 8=full)
+            'odometer_reading' => 'required|integer|min:0', // Car mileage at inspection
+            'notes'            => 'nullable|string', // Additional notes
         ]);
 
+        // Link inspection to booking and record inspecting staff member
         $data['booking_id'] = $booking->booking_id;
-        $data['inspected_by'] = $request->session()->get('auth_id');
+        $data['inspected_by'] = $request->session()->get('auth_id'); // Staff who performed inspection
 
+        // Create inspection record
         Inspection::create($data);
 
         return redirect()->back()->with('success', 'Inspection recorded for this booking.');
     }
 
     // ========== CUSTOMER MANAGEMENT ==========
+    
+    /**
+     * List all customers with filtering and search
+     * Supports filtering by verification status (pending, approved, rejected)
+     * Supports filtering by blacklist status
+     * Supports searching by customer name or email
+     * 
+     * @param Request $request May contain 'verification_status', 'blacklisted', and 'search' parameters
+     * @return \Illuminate\View\View
+     */
     public function customers(Request $request)
     {
         $this->ensureStaff($request);
 
         $query = Customer::query();
 
-        // Filter by verification status
+        // Filter by verification status (pending, approved, rejected)
         if ($request->has('verification_status') && $request->verification_status !== '') {
             $query->where('verification_status', $request->verification_status);
         }
 
-        // Filter by blacklist
+        // Filter by blacklist status (show only blacklisted or only non-blacklisted)
         if ($request->has('blacklisted')) {
             $query->where('is_blacklisted', $request->blacklisted === '1');
         }
 
-        // Search by name/email
+        // Search functionality: search in customer name or email
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -298,6 +427,7 @@ class StaffController extends Controller
             });
         }
 
+        // Paginate results (15 customers per page)
         $customers = $query->orderBy('created_at', 'desc')->paginate(15);
 
         return view('staff.customers.index', [
@@ -306,47 +436,82 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Display detailed view of a specific customer
+     * Shows customer information, verification status, booking history
+     * Allows staff to verify/blacklist customers
+     * 
+     * @param Request $request
+     * @param int $id Customer ID
+     * @return \Illuminate\View\View
+     */
     public function customersShow(Request $request, $id)
     {
         $this->ensureStaff($request);
+        // Eager load bookings relationship for display
         $customer = Customer::with('bookings')->findOrFail($id);
         return view('staff.customers.show', ['customer' => $customer]);
     }
 
+    /**
+     * Update customer verification status
+     * Staff can approve, reject, or leave customer as pending
+     * Records which staff member verified and when
+     * 
+     * @param Request $request Contains new verification_status
+     * @param int $id Customer ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function customersVerify(Request $request, $id)
     {
         $this->ensureStaff($request);
         $customer = Customer::findOrFail($id);
 
+        // Validate verification status
         $data = $request->validate([
             'verification_status' => 'required|in:pending,approved,rejected',
         ]);
 
+        // Record who verified and when
         $data['verified_by'] = $request->session()->get('auth_id');
         $data['verified_at'] = now();
 
+        // Update customer verification status
         $customer->update($data);
 
         return redirect()->back()->with('success', 'Customer verification status updated!');
     }
 
+    /**
+     * Blacklist or remove blacklist status for a customer
+     * When blacklisting, requires a reason and records the date
+     * When removing blacklist, clears reason and date
+     * Blacklisted customers cannot login
+     * 
+     * @param Request $request Contains is_blacklisted flag and optional blacklist_reason
+     * @param int $id Customer ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function customersBlacklist(Request $request, $id)
     {
         $this->ensureStaff($request);
         $customer = Customer::findOrFail($id);
 
+        // Validate blacklist data (reason required if blacklisting)
         $data = $request->validate([
             'is_blacklisted' => 'required|boolean',
             'blacklist_reason' => 'required_if:is_blacklisted,1|nullable|string|max:500',
         ]);
 
+        // Set blacklist date if blacklisting, clear if removing blacklist
         if ($data['is_blacklisted']) {
-            $data['blacklist_since'] = now();
+            $data['blacklist_since'] = now(); // Record when customer was blacklisted
         } else {
-            $data['blacklist_reason'] = null;
-            $data['blacklist_since'] = null;
+            $data['blacklist_reason'] = null; // Clear reason when removing blacklist
+            $data['blacklist_since'] = null; // Clear date when removing blacklist
         }
 
+        // Update customer blacklist status
         $customer->update($data);
 
         $message = $data['is_blacklisted'] ? 'Customer blacklisted.' : 'Customer removed from blacklist.';
@@ -354,20 +519,32 @@ class StaffController extends Controller
     }
 
     // ========== ACTIVITY MANAGEMENT ==========
+    
+    /**
+     * List all activities/promotions with filtering and search
+     * Supports filtering by status (active or expired)
+     * Supports searching by title or description
+     * 
+     * @param Request $request May contain 'status' and 'search' filter parameters
+     * @return \Illuminate\View\View
+     */
     public function activities(Request $request)
     {
         $this->ensureStaff($request);
 
+        // Eager load staff relationship (to show who created each activity)
         $query = Activity::with('staff');
 
-        // Filter by active/expired
+        // Filter by activity status
+        // Active: end_date >= today (still running)
+        // Expired: end_date < today (past activities)
         if ($request->has('status') && $request->status === 'active') {
             $query->where('end_date', '>=', now());
         } elseif ($request->has('status') && $request->status === 'expired') {
             $query->where('end_date', '<', now());
         }
 
-        // Search by title
+        // Search functionality: search in activity title or description
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -376,6 +553,7 @@ class StaffController extends Controller
             });
         }
 
+        // Paginate results (15 activities per page)
         $activities = $query->orderBy('start_date', 'desc')->paginate(15);
 
         return view('staff.activities.index', [
@@ -384,30 +562,54 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Display the form to create a new activity/promotion
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function activitiesCreate(Request $request)
     {
         $this->ensureStaff($request);
         return view('staff.activities.create');
     }
 
+    /**
+     * Store a newly created activity/promotion
+     * Records which staff member created the activity
+     * Validates that end_date is after or equal to start_date
+     * 
+     * @param Request $request Contains activity data (title, description, start_date, end_date)
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function activitiesStore(Request $request)
     {
         $this->ensureStaff($request);
 
+        // Validate activity data
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'end_date' => 'required|date|after_or_equal:start_date', // End date must be >= start date
         ]);
 
+        // Record which staff member created this activity
         $data['created_by'] = $request->session()->get('auth_id');
 
+        // Create activity record
         Activity::create($data);
 
         return redirect()->route('staff.activities')->with('success', 'Activity created successfully!');
     }
 
+    /**
+     * Display the form to edit an existing activity
+     * 
+     * @param Request $request
+     * @param int $id Activity ID
+     * @return \Illuminate\View\View
+     */
     public function activitiesEdit(Request $request, $id)
     {
         $this->ensureStaff($request);
@@ -415,27 +617,47 @@ class StaffController extends Controller
         return view('staff.activities.edit', ['activity' => $activity]);
     }
 
+    /**
+     * Update an existing activity/promotion
+     * Validates that end_date is after or equal to start_date
+     * 
+     * @param Request $request Contains updated activity data
+     * @param int $id Activity ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function activitiesUpdate(Request $request, $id)
     {
         $this->ensureStaff($request);
         $activity = Activity::findOrFail($id);
 
+        // Validate activity data
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'end_date' => 'required|date|after_or_equal:start_date', // End date must be >= start date
         ]);
 
+        // Update activity record
         $activity->update($data);
 
         return redirect()->route('staff.activities')->with('success', 'Activity updated successfully!');
     }
 
+    /**
+     * Delete an activity/promotion
+     * Permanently removes the activity from the database
+     * 
+     * @param Request $request
+     * @param int $id Activity ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function activitiesDestroy(Request $request, $id)
     {
         $this->ensureStaff($request);
         $activity = Activity::findOrFail($id);
+        
+        // Delete activity record
         $activity->delete();
 
         return redirect()->route('staff.activities')->with('success', 'Activity deleted successfully!');

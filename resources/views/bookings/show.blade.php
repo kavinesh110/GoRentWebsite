@@ -4,21 +4,26 @@
 @section('content')
 
 @php
-  // Get car name and year from new schema
+  // ===== CAR INFORMATION =====
+  // Get car name and year from new schema (brand + model)
   $carName = ($car->brand ?? 'Car') . ' ' . ($car->model ?? '');
   $year = $car->year ?? null;
   
-  // Calculate actual rating from feedbacks
+  // ===== RATING & REVIEWS =====
+  // Calculate actual rating from customer feedbacks (average of all ratings)
+  // Defaults to 4.0 stars if no reviews exist yet
   $avgRating = $feedbacks ? $feedbacks->avg('rating') : 0;
   $rating = $avgRating > 0 ? $avgRating : 4.0; // Default 4 stars if no reviews
   $reviewCount = $feedbacks ? $feedbacks->count() : 0;
   
-  // Calculate pricing (default to 24 hours = 1 day, will update via JavaScript when dates are selected)
-  // Note: base_rate_per_hour is used, so we calculate by hours
-  $defaultHours = 24; // 1 day = 24 hours
+  // ===== PRICING CALCULATION =====
+  // Calculate default pricing (24 hours = 1 day)
+  // Pricing updates dynamically via JavaScript when user selects dates/times
+  // Note: Cars use base_rate_per_hour, so pricing is calculated by hours
+  $defaultHours = 24; // 1 day = 24 hours (default display value)
   $baseRate = $car->base_rate_per_hour ?? 0;
   $subtotal = $baseRate * $defaultHours;
-  $tax = 0.00;
+  $tax = 0.00; // No tax currently applied
   $total = $subtotal + $tax;
 @endphp
 
@@ -343,10 +348,13 @@
   }
 </style>
 
+{{-- ===== BOOKING PAGE LAYOUT ===== --}}
+{{-- Two-column layout: Left side = Rental Summary, Right side = Booking Form --}}
 <div class="booking-page">
   <div class="booking-container">
     <div class="booking-grid">
-      {{-- LEFT: Rental Summary --}}
+      {{-- LEFT COLUMN: Rental Summary (sticky sidebar) --}}
+      {{-- Shows car details, rating, image, pricing breakdown, and total --}}
       <div class="rental-summary">
         <h2>Rental Summary</h2>
         <p class="rental-summary-desc">
@@ -417,9 +425,11 @@
         </div>
       </div>
       
-      {{-- RIGHT: Booking Forms --}}
+      {{-- RIGHT COLUMN: Booking Form --}}
+      {{-- Contains billing information and rental date/time selection --}}
       <div>
-        {{-- Billing Info Section --}}
+        {{-- Billing Information Section --}}
+        {{-- Customer name, phone, address, city --}}
         <div class="booking-form-section">
           <div class="form-header">
             <div>
@@ -452,7 +462,8 @@
               </div>
             </div>
             
-            {{-- Rental Info Section --}}
+            {{-- Rental Information Section --}}
+            {{-- Pickup and dropoff location, date, and time selection --}}
             <div class="rental-section">
               <div class="form-header">
                 <div>
@@ -536,7 +547,10 @@
 
 @push('scripts')
 <script>
-  // Update pricing when dates change
+  // ===== DYNAMIC PRICING CALCULATION =====
+  // Updates rental price automatically when user changes pickup/dropoff dates/times
+  // Calculates hours difference and multiplies by hourly rate
+  
   const pickupDateInput = document.getElementById('pickup_date');
   const dropoffDateInput = document.getElementById('dropoff_date');
   const pickupTimeInput = document.getElementById('pickup_time');
@@ -545,25 +559,31 @@
   const subtotalDisplay = document.getElementById('subtotal-display');
   const totalDisplay = document.querySelector('.total-price-value');
   
+  /**
+   * Calculate and update pricing display based on selected dates/times
+   * Minimum rental is 1 hour
+   */
   function updatePricing() {
     if (pickupDateInput.value && dropoffDateInput.value && pickupTimeInput.value && dropoffTimeInput.value) {
+      // Parse selected dates and times into Date objects
       const pickup = new Date(pickupDateInput.value + 'T' + pickupTimeInput.value);
       const dropoff = new Date(dropoffDateInput.value + 'T' + dropoffTimeInput.value);
       
-      // Ensure dropoff is after pickup
+      // Validation: Ensure dropoff is after pickup (prevent invalid selections)
       if (dropoff < pickup) {
         dropoffDateInput.value = pickupDateInput.value;
         dropoffTimeInput.value = pickupTimeInput.value;
         return;
       }
       
-      // Calculate difference in hours
+      // Calculate rental duration in hours
       const diffTime = Math.abs(dropoff - pickup);
-      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-      const hours = Math.max(1, diffHours);
+      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60)); // Convert milliseconds to hours
+      const hours = Math.max(1, diffHours); // Minimum 1 hour rental
       
+      // Calculate pricing: hourly rate × hours
       const subtotal = pricePerHour * hours;
-      const tax = 0.00;
+      const tax = 0.00; // No tax currently
       const total = subtotal + tax;
       
       // Update display
@@ -587,7 +607,8 @@
     dropoffTimeInput.addEventListener('change', updatePricing);
   }
   
-  // Set minimum date to today
+  // ===== DATE VALIDATION =====
+  // Set minimum selectable date to today (prevent booking past dates)
   const today = new Date().toISOString().split('T')[0];
   if (pickupDateInput) {
     pickupDateInput.setAttribute('min', today);

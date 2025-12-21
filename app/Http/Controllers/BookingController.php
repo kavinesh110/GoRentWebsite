@@ -8,8 +8,21 @@ use App\Models\Booking;
 use App\Models\CarLocation;
 use App\Models\Customer;
 
+/**
+ * Handles car booking flow for customers
+ * Manages booking form display and submission
+ */
 class BookingController extends Controller
 {
+    /**
+     * Display the booking form for a specific car
+     * Requires customer authentication
+     * Shows car details, available locations, and customer reviews
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+     */
     public function show(Request $request, $id)
     {
         // Require customer login to book
@@ -45,12 +58,26 @@ class BookingController extends Controller
         }
     }
 
+    /**
+     * Display create booking page (legacy/alternative route)
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function create(Request $request)
     {
         $carName = $request->query('car');
         return view('bookings.create', ['carName' => $carName]);
     }
 
+    /**
+     * Process and store a new booking
+     * Validates booking data, calculates pricing, creates location records if needed
+     * Creates booking with status 'created' (awaiting staff confirmation)
+     * 
+     * @param Request $request Contains booking form data (car_id, dates, locations, customer info)
+     * @return \Illuminate\Http\RedirectResponse Redirects to customer bookings list on success
+     */
     public function store(Request $request)
     {
         // Ensure user is logged in as customer
@@ -74,19 +101,21 @@ class BookingController extends Controller
 
         $car = Car::findOrFail($validated['car_id']);
         
-        // Calculate hours between pickup and dropoff
+        // Calculate rental duration in hours
         $pickup = \Carbon\Carbon::parse($validated['pickup_date'] . ' ' . $validated['pickup_time']);
         $dropoff = \Carbon\Carbon::parse($validated['dropoff_date'] . ' ' . $validated['dropoff_time']);
-        $hours = max(1, $pickup->diffInHours($dropoff));
+        $hours = max(1, $pickup->diffInHours($dropoff)); // Minimum 1 hour rental
         
+        // Calculate pricing breakdown
         $basePrice = ($car->base_rate_per_hour ?? 0) * $hours;
-        $promoDiscount = 0.00;
-        $voucherDiscount = 0.00;
+        $promoDiscount = 0.00; // TODO: Implement promo code system
+        $voucherDiscount = 0.00; // TODO: Implement voucher redemption
         $totalRentalAmount = $basePrice - $promoDiscount - $voucherDiscount;
-        $depositAmount = 50.00; // Default deposit RM50
+        $depositAmount = 50.00; // Default deposit amount (RM50)
         $finalAmount = $totalRentalAmount;
 
-        // Get location IDs (create if they don't exist)
+        // Get or create location records for pickup and dropoff
+        // Locations are created automatically if they don't exist (type: 'both' allows pickup and dropoff)
         $pickupLocation = CarLocation::firstOrCreate(
             ['name' => $validated['pickup_location']],
             ['type' => 'both']
