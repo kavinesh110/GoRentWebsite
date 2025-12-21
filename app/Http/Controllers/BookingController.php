@@ -7,6 +7,7 @@ use App\Models\Car;
 use App\Models\Booking;
 use App\Models\CarLocation;
 use App\Models\Customer;
+use App\Models\Feedback;
 
 /**
  * Handles car booking flow for customers
@@ -40,17 +41,26 @@ class BookingController extends Controller
 
             // Get customer info
             $customerId = $request->session()->get('auth_id');
-            $customer = \App\Models\Customer::findOrFail($customerId);
+            if (!$customerId) {
+                return redirect()->route('login')->with('error', 'Please login to book a car.');
+            }
+            $customer = Customer::findOrFail($customerId);
 
             // Get available locations from database
-            $locations = \App\Models\CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])
+            $locations = CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])
                 ->orderBy('name')
                 ->get();
 
             // Get feedbacks for this car (for reviews display)
-            $feedbacks = \App\Models\Feedback::whereHas('booking', function($q) use ($car) {
-                $q->where('car_id', $car->id)->where('status', 'completed');
-            })->with('customer')->latest()->take(5)->get();
+            // Try to get feedbacks, but handle gracefully if table doesn't exist or query fails
+            try {
+                $feedbacks = Feedback::whereHas('booking', function($q) use ($car) {
+                    $q->where('car_id', $car->id)->where('status', 'completed');
+                })->with('customer')->latest()->take(5)->get();
+            } catch (\Exception $e) {
+                // If feedbacks table doesn't exist or query fails, return empty collection
+                $feedbacks = collect([]);
+            }
             
             return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
