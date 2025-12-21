@@ -12,29 +12,93 @@
     :root{
         --hasta:#cb3737;
         --hasta-dark:#a92c2c;
-        --bg:#f7f7f8;
+        --hasta-darker:#8a2424;
+        --bg:#F6F7FB;
     }
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    .navbar-brand { 
-        font-weight: 700; 
-        letter-spacing: .3px; 
+    
+    /* Top Navigation Bar (Dark Red) */
+    .top-navbar{
+        background: var(--hasta-darker);
+        padding: 10px 0;
+        width: 100%;
+    }
+    .top-navbar .container-custom{
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .top-navbar-left{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .top-navbar-brand{
+        font-weight: 700;
+        letter-spacing: .3px;
         font-size: 18px;
+        color: #fff;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .top-navbar-badge{
+        background: #f4c430;
         color: #111;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
     }
-    .navbar{
-        background: #fff;
-        border-bottom: 1px solid #e9ecef;
-        padding: 12px 0;
+    .top-navbar-right{
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
     }
-    .navbar .nav-link{
-        color: #333;
+    .top-navbar-link{
+        color: #fff;
+        text-decoration: none;
+        font-size: 13px;
         font-weight: 500;
-        font-size: 14px;
-        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: opacity 0.2s;
     }
-    .navbar .nav-link:hover{
-        color: var(--hasta);
+    .top-navbar-link:hover{
+        opacity: 0.8;
+        color: #fff;
     }
+    .top-navbar-link svg{
+        width: 16px;
+        height: 16px;
+    }
+    .top-navbar-btn{
+        background: var(--hasta);
+        color: #fff;
+        padding: 8px 20px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        transition: all 0.2s;
+    }
+    .top-navbar-btn:hover{
+        background: var(--hasta);
+        opacity: 0.9;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    
     .btn-hasta{ 
         background:var(--hasta); 
         border-color:var(--hasta); 
@@ -56,39 +120,49 @@
     border-radius: 26px;
     overflow:hidden;
     min-height: 460px;
-
-    background:
-        linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.55) 100%),
-        url("https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=1800&q=80");
-    background-size:cover;
-    background-position:center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     }
 
     .hero-gocar .hero-inner{
     padding: 84px 70px 140px 70px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     }
 
-    .hero-meta{ max-width: 760px; }
+    .hero-meta{ 
+    max-width: 600px; 
+    text-align: center;
+    z-index: 2;
+    }
 
     .hero-title{
     font-size: 52px;
     font-weight: 800;
     letter-spacing: -.5px;
     line-height: 1.05;
+    color: white;
+    margin-bottom: 16px;
     }
 
     .hero-sub{
-    color: rgba(255,255,255,.88);
+    color: rgba(255,255,255,.95);
     margin-top: 10px;
-    font-size: 16px;
+    font-size: 18px;
+    margin-bottom: 24px;
     }
 
     @media (max-width: 768px){
+    .top-navbar .container-custom{ flex-direction: column; align-items: flex-start; }
+    .top-navbar-right{ width: 100%; justify-content: space-between; }
     .hero-gocar{ min-height: 420px; }
     .hero-gocar .hero-inner{ padding: 58px 24px 140px 24px; }
     .hero-title{ font-size: 36px; }
     }
-
 
     </style>
 
@@ -97,33 +171,43 @@
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg">
-    <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding: 0 24px;">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 17h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-                <circle cx="7" cy="17" r="2"/>
-                <circle cx="17" cy="17" r="2"/>
-            </svg>
-            <span>Hasta GoRent</span>
-        </a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navMain">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
-                <li class="nav-item"><a class="nav-link" href="/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg> Login / Sign Up Account</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Latest Update</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Choose language</a></li>
-                <li class="nav-item">
-                    <a class="btn btn-hasta rounded-pill px-4 py-2 ms-2" href="/bookings/create" style="font-size: 14px;">Download Hasta GoRent App</a>
-                </li>
-            </ul>
+{{-- TOP NAVIGATION BAR (Dark Red) --}}
+<div class="top-navbar">
+    <div class="container-custom">
+        <div class="top-navbar-left">
+            <a href="/" class="top-navbar-brand">
+                <span>Hasta GoRent.</span>
+            </a>
+            <span class="top-navbar-badge">10 YEARS OF JOURNEYS TOGETHER</span>
+        </div>
+        <div class="top-navbar-right">
+            <a href="/login" class="top-navbar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>Login / Sign Up Account</span>
+            </a>
+            <a href="#" class="top-navbar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Latest Update</span>
+            </a>
+            <a href="#" class="top-navbar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span>Choose language</span>
+            </a>
+            <a href="#" class="top-navbar-btn">Download Hasta GoRent App</a>
         </div>
     </div>
-</nav>
+</div>
 
 <main style="margin: 0;">
     @yield('content')
