@@ -8,12 +8,17 @@ Route::get('/cars/{id}', [App\Http\Controllers\BookingController::class, 'show']
 Route::get('/bookings/create', [App\Http\Controllers\BookingController::class, 'create'])->name('bookings.create');
 Route::post('/bookings', [App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
 
-Route::get('/login', [App\Http\Controllers\AuthController::class, 'showLoginForm'])->name('login');
+// Customer authentication routes
+Route::get('/login', [App\Http\Controllers\AuthController::class, 'showCustomerLogin'])->name('login');
 Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);
 Route::get('/register', [App\Http\Controllers\AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [App\Http\Controllers\AuthController::class, 'register']);
 Route::get('/register/success', [App\Http\Controllers\AuthController::class, 'showRegisterSuccess'])->name('register.success');
 Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout'])->name('logout');
+
+// Staff authentication routes (separate from customer login)
+Route::get('/staff/login', [App\Http\Controllers\AuthController::class, 'showStaffLogin'])->name('staff.login');
+Route::post('/staff/login', [App\Http\Controllers\AuthController::class, 'login'])->name('staff.login.post');
 
 // Customer routes (protected by ensureCustomer middleware in controller)
 Route::prefix('customer')->name('customer.')->group(function () {

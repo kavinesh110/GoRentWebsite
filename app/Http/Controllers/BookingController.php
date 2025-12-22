@@ -8,6 +8,8 @@ use App\Models\Booking;
 use App\Models\CarLocation;
 use App\Models\Customer;
 use App\Models\Feedback;
+use App\Models\Voucher;
+use App\Models\VoucherRedemption;
 
 /**
  * Handles car booking flow for customers
@@ -34,6 +36,12 @@ class BookingController extends Controller
         try {
             $car = Car::findOrFail($id);
             
+            // Check if car is available for booking
+            if ($car->status !== 'available') {
+                return redirect()->route('home')
+                    ->with('error', 'This car is currently not available for booking. Please select another car.');
+            }
+            
             // Check if car has required fields
             if (!$car->brand || !$car->model) {
                 abort(404, 'Car information is incomplete');
@@ -45,6 +53,15 @@ class BookingController extends Controller
                 return redirect()->route('login')->with('error', 'Please login to book a car.');
             }
             $customer = Customer::findOrFail($customerId);
+            
+            // Get available vouchers for this customer (for voucher selection in booking)
+            $availableVouchers = \App\Models\Voucher::where('is_active', true)
+                ->where('expiry_date', '>=', now())
+                ->where('min_stamps_required', '<=', $customer->total_stamps ?? 0)
+                ->whereDoesntHave('redemptions', function($q) use ($customerId) {
+                    $q->where('customer_id', $customerId);
+                })
+                ->get();
 
             // Get available locations from database
             $locations = CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])
@@ -62,7 +79,7 @@ class BookingController extends Controller
                 $feedbacks = collect([]);
             }
             
-            return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks'));
+            return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks', 'availableVouchers'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             abort(404, 'Car not found');
         }
@@ -107,9 +124,16 @@ class BookingController extends Controller
             'dropoff_location' => 'required|string|max:255',
             'dropoff_date' => 'required|date|after_or_equal:pickup_date',
             'dropoff_time' => 'required',
+            'voucher_id' => 'nullable|exists:vouchers,voucher_id',
         ]);
 
         $car = Car::findOrFail($validated['car_id']);
+        
+        // Check if car is still available
+        if ($car->status !== 'available') {
+            return redirect()->route('home')
+                ->with('error', 'This car is no longer available. Please select another car.');
+        }
         
         // Calculate rental duration in hours
         $pickup = \Carbon\Carbon::parse($validated['pickup_date'] . ' ' . $validated['pickup_time']);
@@ -119,7 +143,35 @@ class BookingController extends Controller
         // Calculate pricing breakdown
         $basePrice = ($car->base_rate_per_hour ?? 0) * $hours;
         $promoDiscount = 0.00; // TODO: Implement promo code system
-        $voucherDiscount = 0.00; // TODO: Implement voucher redemption
+        
+        // Process voucher redemption if provided
+        $voucherDiscount = 0.00;
+        $voucherId = null;
+        if (!empty($validated['voucher_id'])) {
+            $customerId = $request->session()->get('auth_id');
+            $customer = Customer::findOrFail($customerId);
+            
+            $voucher = Voucher::where('voucher_id', $validated['voucher_id'])
+                ->where('is_active', true)
+                ->where('expiry_date', '>=', now())
+                ->where('min_stamps_required', '<=', $customer->total_stamps ?? 0)
+                ->whereDoesntHave('redemptions', function($q) use ($customerId) {
+                    $q->where('customer_id', $customerId);
+                })
+                ->first();
+            
+            if ($voucher) {
+                // Calculate discount based on voucher type
+                if ($voucher->discount_type === 'percent') {
+                    $voucherDiscount = ($basePrice * $voucher->discount_value) / 100;
+                } else {
+                    // Fixed amount discount
+                    $voucherDiscount = min($voucher->discount_value, $basePrice); // Can't discount more than base price
+                }
+                $voucherId = $voucher->voucher_id;
+            }
+        }
+        
         $totalRentalAmount = $basePrice - $promoDiscount - $voucherDiscount;
         $depositAmount = 50.00; // Default deposit amount (RM50)
         $finalAmount = $totalRentalAmount;
@@ -159,6 +211,17 @@ class BookingController extends Controller
             'final_amount' => $finalAmount,
             'status' => 'created',
         ]);
+
+        // Create voucher redemption record if voucher was used
+        if ($voucherId && $voucherDiscount > 0) {
+            VoucherRedemption::create([
+                'voucher_id' => $voucherId,
+                'customer_id' => $customerId,
+                'booking_id' => $booking->booking_id,
+                'discount_amount' => $voucherDiscount,
+                'redeemed_at' => now(),
+            ]);
+        }
 
         return redirect()->route('customer.bookings')
             ->with('success', 'Booking created successfully! Please wait for confirmation from Hasta staff.');

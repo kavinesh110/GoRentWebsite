@@ -14,12 +14,31 @@ use App\Models\Staff;
 class AuthController extends Controller
 {
     /**
-     * Display the login form page
+     * Display the customer login form page
      * @return \Illuminate\View\View
+     */
+    public function showCustomerLogin()
+    {
+        return view('auth.customer.login');
+    }
+
+    /**
+     * Display the staff login form page
+     * @return \Illuminate\View\View
+     */
+    public function showStaffLogin()
+    {
+        return view('auth.staff.login');
+    }
+
+    /**
+     * Display the login form page (legacy method - redirects to customer login)
+     * @return \Illuminate\View\View
+     * @deprecated Use showCustomerLogin() instead
      */
     public function showLoginForm()
     {
-        return view('auth.login');
+        return view('auth.customer.login');
     }
 
     /**

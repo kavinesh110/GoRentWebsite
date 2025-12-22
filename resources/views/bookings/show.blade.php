@@ -408,12 +408,30 @@
           </div>
         </div>
         
-        <div class="promo-section">
-          <div class="promo-input-group">
-            <input type="text" class="promo-input" placeholder="Apply promo code">
-            <button type="button" class="promo-btn">Apply now</button>
-          </div>
+        {{-- Voucher Selection Section --}}
+        @if(isset($availableVouchers) && $availableVouchers->count() > 0)
+        <div class="promo-section" style="margin-top: 16px;">
+          <label class="form-label small fw-semibold mb-2" style="display: block;">Apply Voucher (Optional)</label>
+          <select id="voucher-select" name="voucher_id" class="form-select" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            <option value="">No voucher</option>
+            @foreach($availableVouchers as $voucher)
+              <option value="{{ $voucher->voucher_id }}" 
+                data-discount-type="{{ $voucher->discount_type }}"
+                data-discount-value="{{ $voucher->discount_value }}">
+                {{ $voucher->code }} - 
+                @if($voucher->discount_type === 'percent')
+                  {{ number_format($voucher->discount_value) }}% off
+                @else
+                  RM {{ number_format($voucher->discount_value, 2) }} off
+                @endif
+              </option>
+            @endforeach
+          </select>
+          <small class="text-muted" style="display: block; margin-top: 4px; font-size: 12px;">
+            Select a voucher to apply discount to your booking
+          </small>
         </div>
+        @endif
         
         <div class="total-section">
           <div class="total-header">Total Rental Price</div>
@@ -560,7 +578,7 @@
   const totalDisplay = document.querySelector('.total-price-value');
   
   /**
-   * Calculate and update pricing display based on selected dates/times
+   * Calculate and update pricing display based on selected dates/times and voucher
    * Minimum rental is 1 hour
    */
   function updatePricing() {
@@ -581,10 +599,27 @@
       const diffHours = Math.ceil(diffTime / (1000 * 60 * 60)); // Convert milliseconds to hours
       const hours = Math.max(1, diffHours); // Minimum 1 hour rental
       
-      // Calculate pricing: hourly rate × hours
+      // Calculate base pricing: hourly rate × hours
       const subtotal = pricePerHour * hours;
+      
+      // Calculate voucher discount if voucher is selected
+      let voucherDiscount = 0;
+      const voucherSelect = document.getElementById('voucher-select');
+      if (voucherSelect && voucherSelect.value) {
+        const selectedOption = voucherSelect.options[voucherSelect.selectedIndex];
+        const discountType = selectedOption.getAttribute('data-discount-type');
+        const discountValue = parseFloat(selectedOption.getAttribute('data-discount-value'));
+        
+        if (discountType === 'percent') {
+          voucherDiscount = (subtotal * discountValue) / 100;
+        } else {
+          // Fixed amount discount (can't exceed subtotal)
+          voucherDiscount = Math.min(discountValue, subtotal);
+        }
+      }
+      
       const tax = 0.00; // No tax currently
-      const total = subtotal + tax;
+      const total = subtotal - voucherDiscount + tax;
       
       // Update display
       if (subtotalDisplay) {
@@ -592,6 +627,29 @@
       }
       if (totalDisplay) {
         totalDisplay.textContent = 'RM ' + Math.round(total);
+      }
+      
+      // Show/hide voucher discount display
+      let voucherDiscountRow = document.getElementById('voucher-discount-row');
+      if (voucherDiscount > 0) {
+        if (!voucherDiscountRow) {
+          // Create voucher discount row if it doesn't exist
+          const costBreakdown = document.querySelector('.cost-breakdown');
+          if (costBreakdown) {
+            voucherDiscountRow = document.createElement('div');
+            voucherDiscountRow.id = 'voucher-discount-row';
+            voucherDiscountRow.className = 'cost-row';
+            voucherDiscountRow.style.color = '#28a745';
+            voucherDiscountRow.innerHTML = '<span class="cost-label">Voucher Discount</span><span class="cost-value">-RM <span id="voucher-discount-amount">0.00</span></span>';
+            costBreakdown.appendChild(voucherDiscountRow);
+          }
+        }
+        if (voucherDiscountRow) {
+          document.getElementById('voucher-discount-amount').textContent = voucherDiscount.toFixed(2);
+          voucherDiscountRow.style.display = 'flex';
+        }
+      } else if (voucherDiscountRow) {
+        voucherDiscountRow.style.display = 'none';
       }
     }
   }
@@ -605,6 +663,12 @@
     dropoffDateInput.addEventListener('change', updatePricing);
     pickupTimeInput.addEventListener('change', updatePricing);
     dropoffTimeInput.addEventListener('change', updatePricing);
+  }
+  
+  // Update pricing when voucher selection changes
+  const voucherSelect = document.getElementById('voucher-select');
+  if (voucherSelect) {
+    voucherSelect.addEventListener('change', updatePricing);
   }
   
   // ===== DATE VALIDATION =====

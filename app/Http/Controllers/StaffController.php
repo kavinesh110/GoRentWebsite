@@ -45,14 +45,35 @@ class StaffController extends Controller
         $this->ensureStaff($request);
 
         $stats = [
-            'totalCars'       => Car::count(),
-            'availableCars'   => Car::where('status', 'available')->count(),
-            'activeBookings'  => Booking::whereIn('status', ['created', 'ongoing'])->count(),
-            'totalCustomers'  => Customer::count(),
+            'totalCars'           => Car::count(),
+            'availableCars'       => Car::where('status', 'available')->count(),
+            'carsInUse'           => Car::where('status', 'in_use')->count(),
+            'carsInMaintenance'   => Car::where('status', 'maintenance')->count(),
+            'pendingBookings'     => Booking::where('status', 'created')->count(),
+            'activeBookings'      => Booking::where('status', 'active')->count(),
+            'completedBookings'   => Booking::where('status', 'completed')->count(),
+            'totalCustomers'      => Customer::count(),
+            'pendingVerifications' => Customer::where('verification_status', 'pending')->count(),
+            'blacklistedCustomers' => Customer::where('is_blacklisted', true)->count(),
         ];
+
+        // Get recent bookings that need attention
+        $recentBookings = Booking::with(['car', 'customer'])
+            ->whereIn('status', ['created', 'active'])
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        // Get pending customer verifications
+        $pendingCustomers = Customer::where('verification_status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
 
         return view('staff.dashboard', [
             'stats' => $stats,
+            'recentBookings' => $recentBookings,
+            'pendingCustomers' => $pendingCustomers,
         ]);
     }
 

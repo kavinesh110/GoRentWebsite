@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Car;
 use App\Models\Activity;
+use App\Models\CarLocation;
 
 /**
  * Handles the homepage/public facing views
@@ -19,9 +20,11 @@ class HomeController extends Controller
      */
     public function index()
     {
-        // Get all cars from database
-        // TODO: Consider filtering by status='available' to only show available cars
-        $cars = Car::all();
+        // Get only available cars (exclude cars in use or maintenance)
+        // This ensures customers only see cars they can actually book
+        $cars = Car::where('status', 'available')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Get active activities/promotions (not expired)
         // Activities with end_date >= today are considered active
@@ -29,6 +32,21 @@ class HomeController extends Controller
             ->orderBy('start_date', 'desc')
             ->get();
         
-        return view('home', compact('cars', 'activities'));
+        // Get available locations from database (for location dropdown in search bar)
+        // Get all locations that can be used for pickup/dropoff
+        $locations = CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])
+            ->orderBy('name')
+            ->get();
+        
+        // If no locations exist, create "Student Mall" as default
+        if ($locations->isEmpty()) {
+            CarLocation::create([
+                'name' => 'Student Mall',
+                'type' => 'both',
+            ]);
+            $locations = CarLocation::where('name', 'Student Mall')->get();
+        }
+        
+        return view('home', compact('cars', 'activities', 'locations'));
     }
 }

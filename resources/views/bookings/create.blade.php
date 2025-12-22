@@ -42,7 +42,7 @@
                         
                         <div class="mb-4">
                              <label for="location" class="form-label" style="font-weight: 600;">Location</label>
-                             <input type="text" class="form-control" id="location" name="location" placeholder="Johor Bahru, Malaysia" value="Johor Bahru, Malaysia">
+                             <input type="text" class="form-control" id="location" name="location" placeholder="Student Mall" value="Student Mall">
                         </div>
 
                         <div class="mb-4">

@@ -115,6 +115,17 @@
     width: 100%;
     outline: none;
   }
+  /* Dropdown styling for location select in hero searchbar */
+  .hero-searchbar .seg.location-seg select.value{
+    background: #fff;
+    border: none;
+    padding: 8px;
+    width: 100%;
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    cursor: pointer;
+  }
   .hero-searchbar .seg .value::placeholder{
     color: #999;
     font-weight: 500;
@@ -504,7 +515,17 @@
       </div>
       <div class="seg location-seg">
         <label class="label" for="location">Location</label>
-        <input id="location" name="location" type="text" class="value" placeholder="Johor Bahru, Malaysia" value="Johor Bahru, Malaysia">
+        <select id="location" name="location" class="value">
+          @if(isset($locations) && $locations->count() > 0)
+            @foreach($locations as $location)
+              <option value="{{ $location->name }}" {{ $location->name === 'Student Mall' ? 'selected' : '' }}>
+                {{ $location->name }}
+              </option>
+            @endforeach
+          @else
+            <option value="Student Mall" selected>Student Mall</option>
+          @endif
+        </select>
       </div>
       <button type="submit" class="search-action" title="Search" aria-label="Search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -550,10 +571,7 @@
     <div class="utm-intro-main">
       <div class="utm-intro-badge">Designed for UTM community</div>
       <h2 class="utm-intro-title">Centralised car rental system for Hasta Travels & Tours</h2>
-      <p class="utm-intro-text">
-        Built to replace manual WhatsApp bookings with a secure web-based platform. UTM students and staff can verify their
-        identity, book with deposit-first, upload receipts and rental photos, and track vouchers & rental history in one place.
-      </p>
+      
     </div>
     <div class="utm-intro-grid">
       <div class="utm-intro-pill">
@@ -575,7 +593,7 @@
   {{-- Displays all available cars in a grid layout --}}
   {{-- Each car card shows: image, name, type, price, and "Rent Now" button --}}
   <div class="car-section-header">
-    <h2>Car rental deals found in Johor Bahru</h2>
+    <h2>Car rental deals found in Student Mall</h2>
   </div>
 
   <div class="row g-4 mb-5">

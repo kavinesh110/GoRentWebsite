@@ -48,6 +48,13 @@
         align-items: center;
         gap: 8px;
     }
+    .navbar-logo{
+        height: 35px;
+        width: auto;
+        max-width: 200px;
+        object-fit: contain;
+        padding: 5px;
+    }
     .top-navbar-badge{
         background: #f4c430;
         color: #111;
@@ -176,7 +183,9 @@
     <div class="container-custom">
         <div class="top-navbar-left">
             <a href="{{ route('home') }}" class="top-navbar-brand">
-                <span>Hasta GoRent.</span>
+                {{-- Company Logo --}}
+                <img src="{{ asset('images/hastalogo.jpg') }}" alt="Hasta GoRent Logo" class="navbar-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <span style="display: none;">Hasta GoRent.</span>
             </a>
             <span class="top-navbar-badge">UTM STUDENT & STAFF CAR RENTAL</span>
         </div>
@@ -209,12 +218,17 @@
                     <span>Logout</span>
                 </button>
             @else
-                <a href="/login" class="top-navbar-link">
+                {{-- Public navigation: Only show customer login and register --}}
+                <a href="{{ route('login') }}" class="top-navbar-link">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
                     </svg>
-                    <span>Login / Sign Up</span>
+                    <span>Login</span>
+                </a>
+                <a href="{{ route('register') }}" class="top-navbar-btn">
+                    Register
                 </a>
             @endif
             <a href="{{ route('home') }}" class="top-navbar-link">
