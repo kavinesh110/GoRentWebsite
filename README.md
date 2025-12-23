@@ -124,7 +124,7 @@ composer install
 copy .env.example .env
 php artisan key:generate
 
-after line yg atas tu, pls create db named 'hasta'
+after line yg atas tu, pls create db named 'hasta' (kalau taktau how, figure out sendiri)
 
 php artisan migrate
 php artisan storage:link
