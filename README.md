@@ -121,4 +121,11 @@ The system supports structured booking workflows, manual payment verification, v
 git clone <repository-url>
 cd hasta-travel
 composer install
-pl
+copy .env.example .env
+php artisan key:generate
+
+after line yg atas tu, pls create db named 'hasta'
+
+php artisan migrate
+php artisan storage:link
+php artisan serve
