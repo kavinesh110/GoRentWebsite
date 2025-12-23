@@ -66,7 +66,63 @@
     position: relative; 
     overflow: visible; 
     padding-bottom: 80px;
+    padding-top: 80px;
+    margin-top: 20px;
     margin-bottom: 120px;
+    background: linear-gradient(135deg, rgba(236, 89, 43, 1) 0%, rgba(236, 89, 43, 1) 50%, rgba(236, 89, 43, 1) 100%);
+    border-radius: 26px;
+    min-height: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-gocar .hero-inner{
+    padding: 84px 70px 140px 70px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-activity-image{
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .hero-activity-image img{
+    max-height: 220px;
+    width: auto;
+    max-width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    object-fit: contain;
+  }
+  .hero-gocar .carousel-control-prev,
+  .hero-gocar .carousel-control-next{
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.8;
+    transition: all 0.3s;
+  }
+  .hero-gocar .carousel-control-prev:hover,
+  .hero-gocar .carousel-control-next:hover{
+    background: rgba(255, 255, 255, 0.3);
+    opacity: 1;
+  }
+  .hero-gocar .carousel-control-prev{
+    left: 20px;
+  }
+  .hero-gocar .carousel-control-next{
+    right: 20px;
+  }
+  .hero-gocar .carousel-control-prev-icon,
+  .hero-gocar .carousel-control-next-icon{
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
   }
   .hero-searchbar{
     position: absolute;
@@ -291,6 +347,10 @@
     .hero-gocar{
       padding-bottom: 70px;
       margin-bottom: 150px;
+      min-height: 420px;
+    }
+    .hero-gocar .hero-inner{
+      padding: 58px 40px 140px 40px;
     }
     .hero-searchbar{
       bottom: -120px;
@@ -321,7 +381,15 @@
   @media (max-width: 767px){
     .secondary-nav .nav-items{ gap: 16px; }
     .secondary-nav .nav-item-icon{ flex-direction: column; gap: 4px; }
-    .hero-gocar{ padding-bottom: 60px; margin-bottom: 180px; }
+    .hero-gocar{ 
+      padding-bottom: 60px; 
+      margin-bottom: 180px; 
+      min-height: 420px;
+    }
+    .hero-gocar .hero-inner{
+      padding: 58px 24px 140px 24px;
+    }
+    .hero-title{ font-size: 36px; }
     .hero-searchbar{ 
       flex-direction: column; 
       width: calc(100% - 32px); 
@@ -488,10 +556,49 @@
   <div class="hero-gocar shadow-soft">
     <div class="hero-inner">
       <div class="hero-meta">
-        <h1 class="hero-title">Smart car rentals for UTM students & staff</h1>
-        <p class="hero-sub">
-          Centralised, deposit-first booking with loyalty rewards, maintenance tracking and campus-focused pricing for Hasta Travels & Tours.
-        </p>
+        @if(isset($activities) && $activities->count() > 0)
+          {{-- Activity & Promotion Slider (cut slider) --}}
+          <div id="heroActivityCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500">
+            <div class="carousel-inner">
+              @foreach($activities as $index => $activity)
+                <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                  @if($activity->image_url)
+                    <div class="hero-activity-image">
+                      <img src="{{ $activity->image_url }}" alt="{{ $activity->title }}">
+                    </div>
+                  @endif
+                  <h1 class="hero-title">
+                    {{ $activity->title }}
+                  </h1>
+                  @if($activity->description)
+                    <p class="hero-sub">
+                      {{ \Illuminate\Support\Str::limit($activity->description, 160) }}
+                    </p>
+                  @endif
+                  <p class="hero-sub" style="font-size: 14px; opacity: 0.9;">
+                    {{ $activity->start_date->format('d M Y') }} – {{ $activity->end_date->format('d M Y') }}
+                  </p>
+                </div>
+              @endforeach
+            </div>
+            @if($activities->count() > 1)
+              <button class="carousel-control-prev" type="button" data-bs-target="#heroActivityCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#heroActivityCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </button>
+            @endif
+          </div>
+        @else
+          {{-- Fallback static hero content when no activities --}}
+          <h1 class="hero-title">Smart car rentals for UTM students & staff</h1>
+          <p class="hero-sub">
+            Centralised, deposit-first booking with loyalty rewards, maintenance tracking and campus-focused pricing for Hasta Travels & Tours.
+          </p>
+        @endif
       </div>
     </div>
 
@@ -536,35 +643,7 @@
     </form>
   </div>
 
-  {{-- ===== ACTIVITIES & PROMOTIONS SECTION ===== --}}
-  {{-- Displays active company activities/promotional campaigns --}}
-  {{-- Activities are created by staff and shown on homepage --}}
-  @if($activities && $activities->count() > 0)
-  <div class="activities-section mb-5">
-    <div class="row g-3">
-      @foreach($activities as $activity)
-        <div class="col-md-6 col-lg-4">
-          <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, var(--hasta) 0%, var(--hasta-dark) 100%); color: white;">
-            <div class="card-body p-4">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="fw-bold mb-0">{{ $activity->title }}</h5>
-                @if($activity->end_date >= now())
-                  <span class="badge bg-light text-dark">Active</span>
-                @endif
-              </div>
-              @if($activity->description)
-                <p class="mb-2" style="font-size: 14px; opacity: 0.9;">{{ Str::limit($activity->description, 120) }}</p>
-              @endif
-              <div class="small mt-3" style="opacity: 0.8;">
-                <div>{{ $activity->start_date->format('d M Y') }} - {{ $activity->end_date->format('d M Y') }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      @endforeach
-    </div>
-  </div>
-  @endif
+  
 
   {{-- UTM-FOCUSED SYSTEM INTRO --}}
   <div class="utm-intro">
@@ -676,13 +755,15 @@
     const form = document.getElementById('heroSearchForm');
     if(!form) return;
 
+    const locationField = form.querySelector('[name="location"]');
+
     function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
 
     form.addEventListener('submit', function(e){
       e.preventDefault();
 
-      const qLocation = normalize(form.location.value);
-      const qName = normalize(form.location.value);
+      const qLocation = normalize(locationField ? locationField.value : '');
+      const qName = qLocation;
 
       const cards = document.querySelectorAll('.car-card');
       if (cards.length === 0) {

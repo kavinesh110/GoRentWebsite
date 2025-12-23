@@ -9,6 +9,10 @@ use App\Models\Voucher;
 use App\Models\VoucherRedemption;
 use App\Models\ResidentialCollege;
 use App\Models\Feedback;
+use App\Models\Payment;
+use App\Models\Car;
+use App\Models\CarLocation;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Handles all customer-facing features
@@ -114,11 +118,142 @@ class CustomerController extends Controller
         $customerId = $this->getCustomerId($request);
 
         // Load booking with all related data
-        $booking = Booking::with(['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'feedback'])
+        $booking = Booking::with(['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'feedback', 'payments'])
             ->where('customer_id', $customerId) // Security: Ensure customer can only view their own bookings
             ->findOrFail($id);
 
         return view('customer.bookings.show', ['booking' => $booking]);
+    }
+
+    /**
+     * Show payment page for a specific booking
+     * Displays QR code placeholder and payment receipt upload form
+     *
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\View\View
+     */
+    public function bookingsPayment(Request $request)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        $pending = $request->session()->get('pending_booking');
+        if (!$pending || ($pending['customer_id'] ?? null) !== $customerId) {
+            return redirect()->route('customer.bookings')
+                ->with('error', 'No pending booking found. Please start your booking again.');
+        }
+
+        $car = Car::findOrFail($pending['car_id']);
+
+        $pickup = \Carbon\Carbon::parse($pending['pickup_date'] . ' ' . $pending['pickup_time']);
+        $dropoff = \Carbon\Carbon::parse($pending['dropoff_date'] . ' ' . $pending['dropoff_time']);
+
+        $pickupFormatted = $pickup->format('d M Y, H:i');
+        $dropoffFormatted = $dropoff->format('d M Y, H:i');
+        $durationHours = $pending['hours'];
+        $totalToPay = ($pending['deposit_amount'] ?? 0) + ($pending['total_rental_amount'] ?? 0);
+
+        return view('customer.bookings.payment', [
+            'car' => $car,
+            'pending' => $pending,
+            'pickupFormatted' => $pickupFormatted,
+            'dropoffFormatted' => $dropoffFormatted,
+            'durationHours' => $durationHours,
+            'totalToPay' => $totalToPay,
+        ]);
+    }
+
+    /**
+     * Handle payment receipt submission for a pending booking
+     * Creates the booking and an associated deposit payment in one step
+     */
+    public function bookingsPaymentSubmit(Request $request)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        $pending = $request->session()->get('pending_booking');
+        if (!$pending || ($pending['customer_id'] ?? null) !== $customerId) {
+            return redirect()->route('customer.bookings')
+                ->with('error', 'No pending booking found. Please start your booking again.');
+        }
+
+        $validated = $request->validate([
+            'payment_type' => 'required|in:deposit', // booking is created only with deposit payment
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_date' => 'required|date',
+            'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // Handle receipt upload
+        $receipt = $request->file('receipt');
+        $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+        $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
+
+        // Rebuild Carbon dates
+        $pickup = \Carbon\Carbon::parse($pending['pickup_date'] . ' ' . $pending['pickup_time']);
+        $dropoff = \Carbon\Carbon::parse($pending['dropoff_date'] . ' ' . $pending['dropoff_time']);
+
+        // Ensure locations exist
+        $pickupLocation = CarLocation::firstOrCreate(
+            ['name' => $pending['pickup_location']],
+            ['type' => 'both']
+        );
+        $dropoffLocation = CarLocation::firstOrCreate(
+            ['name' => $pending['dropoff_location']],
+            ['type' => 'both']
+        );
+
+        // Create booking record now that deposit receipt is submitted
+        $booking = Booking::create([
+            'customer_id' => $customerId,
+            'car_id' => $pending['car_id'],
+            'pickup_location_id' => $pickupLocation->location_id,
+            'dropoff_location_id' => $dropoffLocation->location_id,
+            'start_datetime' => $pickup,
+            'end_datetime' => $dropoff,
+            'rental_hours' => $pending['hours'],
+            'base_price' => $pending['base_price'],
+            'promo_discount' => $pending['promo_discount'],
+            'voucher_discount' => $pending['voucher_discount'],
+            'total_rental_amount' => $pending['total_rental_amount'],
+            'deposit_amount' => $pending['deposit_amount'],
+            'deposit_used_amount' => 0.00,
+            'deposit_refund_amount' => 0.00,
+            'final_amount' => $pending['final_amount'],
+            'status' => 'created',
+        ]);
+
+        // Create voucher redemption record if voucher was used
+        if (!empty($pending['voucher_id']) && ($pending['voucher_discount'] ?? 0) > 0) {
+            VoucherRedemption::create([
+                'voucher_id' => $pending['voucher_id'],
+                'customer_id' => $customerId,
+                'booking_id' => $booking->booking_id,
+                'discount_amount' => $pending['voucher_discount'],
+                'redeemed_at' => now(),
+            ]);
+        }
+
+        // Create payment record linked to this booking
+        Payment::create([
+            'booking_id' => $booking->booking_id,
+            'penalty_id' => null,
+            'amount' => $validated['amount'],
+            'payment_type' => $validated['payment_type'],
+            'payment_method' => $validated['payment_method'],
+            'receipt_url' => $receiptPath,
+            'payment_date' => $validated['payment_date'],
+            'status' => 'pending', // Staff must verify
+        ]);
+
+        // Clear pending booking data from session
+        $request->session()->forget('pending_booking');
+
+        return redirect()->route('customer.bookings.show', $booking->booking_id)
+            ->with('success', 'Deposit receipt uploaded. Your booking has been created and is pending verification by Hasta staff.');
     }
 
     /**
@@ -172,6 +307,46 @@ class CustomerController extends Controller
         }
 
         return redirect()->route('customer.profile')->with('success', 'Profile updated successfully!');
+    }
+
+    /**
+     * Upload or replace customer verification documents (IC, UTM ID, licence)
+     */
+    public function profileDocumentsUpdate(Request $request)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+        $customer = Customer::findOrFail($customerId);
+
+        $validated = $request->validate([
+            'ic_document' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+            'utmid_document' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+            'license_document' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // Helper closure to handle single document field
+        $handleUpload = function (string $field, string $column, string $subdir) use ($request, $customer) {
+            if (!$request->hasFile($field)) {
+                return;
+            }
+            $file = $request->file($field);
+            $oldPath = $customer->getRawOriginal($column);
+            if ($oldPath && !filter_var($oldPath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+            $name = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs("images/customers/{$subdir}", $name, 'public');
+            $customer->{$column} = $path;
+        };
+
+        $handleUpload('ic_document', 'ic_url', 'ic');
+        $handleUpload('utmid_document', 'utmid_url', 'utmid');
+        $handleUpload('license_document', 'license_url', 'licence');
+
+        $customer->save();
+
+        return redirect()->route('customer.profile')
+            ->with('success', 'Documents updated successfully!');
     }
 
     /**
@@ -290,5 +465,51 @@ class CustomerController extends Controller
 
         return redirect()->route('customer.bookings.show', $id)
             ->with('success', 'Thank you for your feedback!');
+    }
+
+    /**
+     * Upload payment receipt for a booking
+     * Allows customers to upload payment receipts for deposits or rental payments
+     * Creates a pending payment record that staff can verify
+     * 
+     * @param Request $request Contains payment data and receipt file
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bookingsUploadReceipt(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        $booking = Booking::where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'payment_type' => 'required|in:deposit,rental',
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_date' => 'required|date',
+            'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // Handle receipt upload
+        $receipt = $request->file('receipt');
+        $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+        $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
+
+        // Create payment record with pending status
+        Payment::create([
+            'booking_id' => $booking->booking_id,
+            'penalty_id' => null,
+            'amount' => $validated['amount'],
+            'payment_type' => $validated['payment_type'],
+            'payment_method' => $validated['payment_method'],
+            'receipt_url' => $receiptPath,
+            'payment_date' => $validated['payment_date'],
+            'status' => 'pending', // Staff will verify
+        ]);
+
+        return redirect()->route('customer.bookings.show', $id)
+            ->with('success', 'Payment receipt uploaded successfully! Staff will verify your payment shortly.');
     }
 }

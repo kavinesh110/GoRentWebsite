@@ -4,8 +4,11 @@
 @section('content')
 <div class="d-flex justify-content-center align-items-center min-vh-100" style="padding: 40px 16px 80px;">
   <div class="card border-0 shadow-soft rounded-xxl w-100" style="max-width: 480px;">
-    <div class="card-body p-4 p-md-5">
-      <div class="text-center mb-4">
+    <div class="card-body p-4 p-md-5 text-center">
+      {{-- Hasta logo on top --}}
+      <img src="{{ asset('images/hastalogo.jpg') }}" alt="Hasta GoRent Logo" class="mb-3" style="max-height: 60px; width: auto;">
+
+      <div class="mb-3">
         <h2 class="mb-2 fw-bold" style="color:#333;">Staff Portal</h2>
         <p class="text-muted mb-0" style="font-size:14px;">For authorized Hasta Travels & Tours staff only</p>
       </div>

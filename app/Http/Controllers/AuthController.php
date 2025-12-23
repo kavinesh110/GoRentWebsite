@@ -42,12 +42,23 @@ class AuthController extends Controller
     }
 
     /**
-     * Display the registration form page
+     * Display the customer registration form page.
+     *
      * @return \Illuminate\View\View
      */
-    public function showRegisterForm()
+    public function showCustomerRegister()
     {
-        return view('auth.register');
+        return view('auth.customer.register');
+    }
+
+    /**
+     * Display the staff registration form page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showStaffRegister()
+    {
+        return view('auth.staff.register');
     }
 
     /**

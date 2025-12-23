@@ -11,6 +11,7 @@ use App\Models\CarLocation;
 use App\Models\Penalty;
 use App\Models\Inspection;
 use App\Models\Activity;
+use App\Models\Payment;
 
 /**
  * Handles all staff/admin functionality
@@ -316,6 +317,9 @@ class StaffController extends Controller
             'inspections' => function ($q) {
                 $q->orderBy('datetime', 'asc'); // Order inspections chronologically
             },
+            'payments' => function ($q) {
+                $q->orderBy('payment_date', 'desc'); // Order payments by date (newest first)
+            },
         ])->findOrFail($id);
 
         return view('staff.bookings.show', ['booking' => $booking]);
@@ -339,6 +343,18 @@ class StaffController extends Controller
         $data = $request->validate([
             'status' => 'required|in:created,confirmed,active,completed,cancelled',
         ]);
+
+        // Business rule: booking cannot be confirmed/activated until deposit payment is verified
+        if (in_array($data['status'], ['confirmed', 'active'])) {
+            $hasVerifiedDeposit = $booking->payments()
+                ->where('payment_type', 'deposit')
+                ->where('status', 'verified')
+                ->exists();
+
+            if (!$hasVerifiedDeposit) {
+                return redirect()->back()->with('error', 'Cannot change status to ' . $data['status'] . ' before a deposit payment is verified.');
+            }
+        }
 
         // Update booking status
         $booking->update($data);
@@ -611,12 +627,21 @@ class StaffController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
+            'activity_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date', // End date must be >= start date
         ]);
 
         // Record which staff member created this activity
         $data['created_by'] = $request->session()->get('auth_id');
+
+        // Handle optional hero image upload
+        if ($request->hasFile('activity_image')) {
+            $image = $request->file('activity_image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('images/activities', $imageName, 'public');
+            $data['image_url'] = $imagePath;
+        }
 
         // Create activity record
         Activity::create($data);
@@ -655,9 +680,23 @@ class StaffController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'description' => 'nullable|string',
+            'activity_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date', // End date must be >= start date
         ]);
+
+        // Handle optional hero image upload/update
+        if ($request->hasFile('activity_image')) {
+            $oldImagePath = $activity->getRawOriginal('image_url');
+            if ($oldImagePath && !filter_var($oldImagePath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldImagePath)) {
+                Storage::disk('public')->delete($oldImagePath);
+            }
+
+            $image = $request->file('activity_image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('images/activities', $imageName, 'public');
+            $data['image_url'] = $imagePath;
+        }
 
         // Update activity record
         $activity->update($data);
@@ -682,5 +721,74 @@ class StaffController extends Controller
         $activity->delete();
 
         return redirect()->route('staff.activities')->with('success', 'Activity deleted successfully!');
+    }
+
+    // ========== PAYMENT MANAGEMENT ==========
+    
+    /**
+     * Store a new payment for a booking
+     * Allows staff to record payments (deposits, rental fees, penalties, refunds)
+     * Handles receipt upload if provided
+     * 
+     * @param Request $request Contains payment data (type, amount, method, date, receipt)
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function paymentsStore(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $booking = Booking::findOrFail($id);
+
+        $validated = $request->validate([
+            'payment_type' => 'required|in:deposit,rental,penalty,refund,installment',
+            'penalty_id' => 'nullable|exists:penalties,penalty_id',
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_date' => 'required|date',
+            'receipt' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // Handle receipt upload if provided
+        $receiptUrl = null;
+        if ($request->hasFile('receipt')) {
+            $receipt = $request->file('receipt');
+            $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+            $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
+            $receiptUrl = $receiptPath;
+        }
+
+        // Create payment record
+        Payment::create([
+            'booking_id' => $booking->booking_id,
+            'penalty_id' => $validated['penalty_id'] ?? null,
+            'amount' => $validated['amount'],
+            'payment_type' => $validated['payment_type'],
+            'payment_method' => $validated['payment_method'],
+            'receipt_url' => $receiptUrl,
+            'payment_date' => $validated['payment_date'],
+            'status' => 'pending', // Default to pending, staff can verify later
+        ]);
+
+        return redirect()->back()->with('success', 'Payment recorded successfully!');
+    }
+
+    /**
+     * Verify a payment
+     * Changes payment status from 'pending' to 'verified'
+     * 
+     * @param Request $request
+     * @param int $id Payment ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function paymentsVerify(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $payment = Payment::findOrFail($id);
+
+        $payment->update([
+            'status' => 'verified',
+        ]);
+
+        return redirect()->back()->with('success', 'Payment verified successfully!');
     }
 }

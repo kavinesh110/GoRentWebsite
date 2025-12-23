@@ -89,6 +89,88 @@
         </div>
       </div>
 
+      {{-- PAYMENTS LIST --}}
+      <div class="card border-0 shadow-soft mb-3">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Payments</h5>
+            <button type="button" class="btn btn-sm btn-hasta" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+              + Add Payment
+            </button>
+          </div>
+          @if($booking->payments && $booking->payments->count() > 0)
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Amount (RM)</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Receipt</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($booking->payments as $payment)
+                    <tr>
+                      <td>{{ ucfirst($payment->payment_type) }}</td>
+                      <td><strong>RM {{ number_format($payment->amount, 2) }}</strong></td>
+                      <td>{{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}</td>
+                      <td>{{ $payment->payment_date->format('d M Y, H:i') }}</td>
+                      <td>
+                        <span class="badge {{ $payment->status === 'verified' ? 'bg-success' : 'bg-warning' }}">
+                          {{ ucfirst($payment->status) }}
+                        </span>
+                      </td>
+                      <td>
+                        @if($payment->receipt_url)
+                          <a href="{{ $payment->receipt_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        @else
+                          <span class="text-muted">-</span>
+                        @endif
+                      </td>
+                      <td>
+                        @if($payment->status === 'pending')
+                          <form method="POST" action="{{ route('staff.payments.verify', $payment->payment_id) }}" class="d-inline">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="btn btn-sm btn-success">Verify</button>
+                          </form>
+                        @endif
+                      </td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+            @php
+              $totalPaid = $booking->payments->where('status', 'verified')->sum('amount');
+              $totalPending = $booking->payments->where('status', 'pending')->sum('amount');
+            @endphp
+            <div class="mt-3 pt-3 border-top">
+              <div class="row g-2 small">
+                <div class="col-6">
+                  <span class="text-muted">Total Verified:</span>
+                  <strong class="text-success">RM {{ number_format($totalPaid, 2) }}</strong>
+                </div>
+                <div class="col-6">
+                  <span class="text-muted">Pending:</span>
+                  <strong class="text-warning">RM {{ number_format($totalPending, 2) }}</strong>
+                </div>
+                <div class="col-12">
+                  <span class="text-muted">Booking Amount:</span>
+                  <strong>RM {{ number_format($booking->final_amount ?? 0, 2) }}</strong>
+                </div>
+              </div>
+            </div>
+          @else
+            <p class="text-muted mb-0">No payments recorded for this booking.</p>
+          @endif
+        </div>
+      </div>
+
       {{-- PENALTIES LIST --}}
       <div class="card border-0 shadow-soft">
         <div class="card-body p-4">
@@ -229,5 +311,66 @@
   </div>
   </div>
 </div>
+</div>
+
+{{-- Add Payment Modal --}}
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addPaymentModalLabel">Add Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ route('staff.payments.store', $booking->booking_id) }}" enctype="multipart/form-data">
+        @csrf
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Payment Type <span class="text-danger">*</span></label>
+            <select name="payment_type" class="form-select" required>
+              <option value="deposit">Deposit</option>
+              <option value="rental">Rental Payment</option>
+              <option value="penalty">Penalty Payment</option>
+              <option value="refund">Refund</option>
+              <option value="installment">Installment</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Penalty (if payment type is penalty/installment)</label>
+            <select name="penalty_id" class="form-select">
+              <option value="">Select penalty (optional)</option>
+              @foreach($booking->penalties as $penalty)
+                <option value="{{ $penalty->penalty_id }}">{{ ucfirst($penalty->penalty_type) }} - RM {{ number_format($penalty->amount, 2) }}</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Amount (RM) <span class="text-danger">*</span></label>
+            <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+            <select name="payment_method" class="form-select" required>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cash">Cash</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Payment Date <span class="text-danger">*</span></label>
+            <input type="datetime-local" name="payment_date" class="form-control" value="{{ now()->format('Y-m-d\TH:i') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Receipt/Proof (optional)</label>
+            <input type="file" name="receipt" class="form-control" accept="image/*,.pdf">
+            <small class="text-muted">Upload payment receipt or proof (image or PDF)</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-hasta">Add Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 @endsection

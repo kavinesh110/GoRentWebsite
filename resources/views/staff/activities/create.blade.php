@@ -13,8 +13,8 @@
       </div>
 
       <div class="card border-0 shadow-soft">
-        <div class="card-body p-4">
-          <form method="POST" action="{{ route('staff.activities.store') }}">
+      <div class="card-body p-4">
+        <form method="POST" action="{{ route('staff.activities.store') }}" enctype="multipart/form-data">
             @csrf
 
             <div class="row g-3">
@@ -37,6 +37,12 @@
                 <label class="form-label">End Date <span class="text-danger">*</span></label>
                 <input type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date') }}" required>
                 @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+              </div>
+              <div class="col-12">
+                <label class="form-label">Hero Image (optional)</label>
+                <input type="file" name="activity_image" class="form-control @error('activity_image') is-invalid @enderror" accept="image/*">
+                <div class="form-text">This image will appear in the homepage hero slider for this activity.</div>
+                @error('activity_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
               </div>
             </div>
 

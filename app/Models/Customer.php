@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Customer Model
@@ -49,6 +50,48 @@ class Customer extends Model
         'total_rental_hours' => 'integer', // Total hours rented (for loyalty tracking)
         'total_stamps' => 'integer', // Loyalty stamps earned (1 stamp per 9 rental hours)
     ];
+
+    /**
+     * Accessor: return full URL for IC / passport document
+     */
+    public function getIcUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+        return Storage::url($value);
+    }
+
+    /**
+     * Accessor: return full URL for UTM ID document
+     */
+    public function getUtmidUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+        return Storage::url($value);
+    }
+
+    /**
+     * Accessor: return full URL for driving licence document
+     */
+    public function getLicenseUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+        return Storage::url($value);
+    }
 
     /**
      * Get all bookings made by this customer

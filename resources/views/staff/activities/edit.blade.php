@@ -13,8 +13,8 @@
       </div>
 
       <div class="card border-0 shadow-soft">
-        <div class="card-body p-4">
-          <form method="POST" action="{{ route('staff.activities.update', $activity->activity_id) }}">
+      <div class="card-body p-4">
+        <form method="POST" action="{{ route('staff.activities.update', $activity->activity_id) }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -38,6 +38,17 @@
                 <label class="form-label">End Date <span class="text-danger">*</span></label>
                 <input type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date', $activity->end_date->format('Y-m-d')) }}" required>
                 @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+              </div>
+              <div class="col-12">
+                <label class="form-label">Hero Image (optional)</label>
+                @if($activity->image_url)
+                  <div class="mb-2">
+                    <img src="{{ $activity->image_url }}" alt="Current hero image" style="max-height: 140px; border-radius: 12px;">
+                  </div>
+                @endif
+                <input type="file" name="activity_image" class="form-control @error('activity_image') is-invalid @enderror" accept="image/*">
+                <div class="form-text">Upload a new image to replace the current one.</div>
+                @error('activity_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
               </div>
             </div>
 

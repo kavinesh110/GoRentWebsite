@@ -43,4 +43,13 @@ class Penalty extends Model
     {
         return $this->belongsTo(Booking::class, 'booking_id', 'booking_id');
     }
+
+    /**
+     * Get all payments made for this penalty
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function payments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Payment::class, 'penalty_id', 'penalty_id');
+    }
 }

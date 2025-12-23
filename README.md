@@ -1,59 +1,124 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Hasta Travel Car Rental Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Project Overview
+Hasta Travel Car Rental Management System is a web-based application developed using **Laravel** to manage car rental operations for **UTM customers** and **Hasta Travel staff/admin**.
 
-## About Laravel
+The system supports structured booking workflows, manual payment verification, vehicle inspections, and administrative management. This project is developed as part of a **Software Engineering / Database Systems academic project**, following **SRS, ERD, and Agile sprint-based development practices**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Project Objectives
+- Provide a centralized car rental platform for Hasta Travel
+- Allow staff and admin to manage vehicles, bookings, and inspections
+- Maintain a clear separation between customer-facing and admin-facing features
+- Implement a scalable and normalized database design
+- Follow software engineering best practices in documentation and development
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## User Roles
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Customer (UTM Student / Staff)
+- Register and manage account
+- Make car rental bookings
+- Upload payment receipts
+- View booking history
+- Submit feedback after rental
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Hasta Staff / Admin
+- Verify customer documents
+- Manage vehicles and availability
+- Create and manage bookings
+- Conduct vehicle inspections
+- Manage payments, deposits, and penalties
+- View reports and system activities
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## System Modules
 
-### Premium Partners
+### Account Module
+- Authentication and authorization
+- Profile and password management
+- Role-based access control
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Rental Module (Customer)
+- Browse available cars
+- Make bookings (date, time, pickup and drop-off)
+- View booking status and history
 
-## Contributing
+### Rental Module (Staff)
+- Create bookings on behalf of customers
+- Perform pickup and return inspections
+- Update car status (Available, In Use, Maintenance)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Payment and Penalty Module
+- Deposit handling
+- Rental payment verification
+- Late return and damage penalties
+- Deposit refund or carry-forward management
 
-## Code of Conduct
+### Feedback and Activity Module
+- Customer feedback submission
+- Display system activities and promotions
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## Database Design
+- Database: **MySQL**
+- Managed using **Laragon + HeidiSQL**
+- Designed using **Crow’s Foot ERD**
+- Images and documents are stored in the **filesystem**
+- Database stores **file paths (URLs)** only
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Key Tables
+- customer
+- staff
+- car
+- booking
+- payment
+- inspection
+- penalty
+- voucher
+- rental_photo
+- feedback
+- maintenance_record
+- activity
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Design Decisions
+- Images are not stored as BLOBs in the database
+- One booking may have multiple payments (deposit, rental, penalty)
+- One booking may have multiple inspections (pickup and return)
+- Each booking has only one feedback record
+- Customer and staff authentication are separated for security and usability
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|------|-----------|
+| Backend | Laravel |
+| Frontend | Blade, HTML, CSS |
+| Database | MySQL |
+| Server | Laragon |
+| Tools | HeidiSQL, phpMyAdmin |
+| Version Control | Git |
+
+---
+
+## Setup Instructions
+
+### Prerequisites
+- Laragon (PHP & MySQL)
+- Composer
+- Node.js (optional)
+
+### Project Setup
+```bash
+git clone <repository-url>
+cd hasta-travel
+composer install
+pl

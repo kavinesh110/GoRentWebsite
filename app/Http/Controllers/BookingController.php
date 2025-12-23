@@ -175,55 +175,37 @@ class BookingController extends Controller
         $totalRentalAmount = $basePrice - $promoDiscount - $voucherDiscount;
         $depositAmount = 50.00; // Default deposit amount (RM50)
         $finalAmount = $totalRentalAmount;
-
-        // Get or create location records for pickup and dropoff
-        // Locations are created automatically if they don't exist (type: 'both' allows pickup and dropoff)
-        $pickupLocation = CarLocation::firstOrCreate(
-            ['name' => $validated['pickup_location']],
-            ['type' => 'both']
-        );
-        $dropoffLocation = CarLocation::firstOrCreate(
-            ['name' => $validated['dropoff_location']],
-            ['type' => 'both']
-        );
-
         // Get authenticated customer ID
         $customerId = $request->session()->get('auth_id');
         if (!$customerId || $request->session()->get('auth_role') !== 'customer') {
             return redirect()->route('login')->with('error', 'Please login to make a booking.');
         }
 
-        $booking = Booking::create([
+        // Store booking details in session until deposit payment is submitted
+        $request->session()->put('pending_booking', [
             'customer_id' => $customerId,
             'car_id' => $validated['car_id'],
-            'pickup_location_id' => $pickupLocation->location_id,
-            'dropoff_location_id' => $dropoffLocation->location_id,
-            'start_datetime' => $pickup,
-            'end_datetime' => $dropoff,
-            'rental_hours' => $hours,
+            'pickup_location' => $validated['pickup_location'],
+            'dropoff_location' => $validated['dropoff_location'],
+            'pickup_date' => $validated['pickup_date'],
+            'pickup_time' => $validated['pickup_time'],
+            'dropoff_date' => $validated['dropoff_date'],
+            'dropoff_time' => $validated['dropoff_time'],
+            'hours' => $hours,
             'base_price' => $basePrice,
             'promo_discount' => $promoDiscount,
             'voucher_discount' => $voucherDiscount,
             'total_rental_amount' => $totalRentalAmount,
             'deposit_amount' => $depositAmount,
-            'deposit_used_amount' => 0.00,
-            'deposit_refund_amount' => 0.00,
             'final_amount' => $finalAmount,
-            'status' => 'created',
+            'voucher_id' => $voucherId,
+            'billing_name' => $validated['name'],
+            'billing_phone' => $validated['phone'],
+            'billing_address' => $validated['address'],
+            'billing_city' => $validated['city'],
         ]);
 
-        // Create voucher redemption record if voucher was used
-        if ($voucherId && $voucherDiscount > 0) {
-            VoucherRedemption::create([
-                'voucher_id' => $voucherId,
-                'customer_id' => $customerId,
-                'booking_id' => $booking->booking_id,
-                'discount_amount' => $voucherDiscount,
-                'redeemed_at' => now(),
-            ]);
-        }
-
-        return redirect()->route('customer.bookings')
-            ->with('success', 'Booking created successfully! Please wait for confirmation from Hasta staff.');
+        return redirect()->route('customer.bookings.payment')
+            ->with('success', 'Booking details saved. Please complete the deposit payment to create your booking.');
     }
 }

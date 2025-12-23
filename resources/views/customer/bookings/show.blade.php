@@ -102,6 +102,98 @@
         </div>
       </div>
 
+      {{-- PAYMENT RECEIPT UPLOAD --}}
+      @if(in_array($booking->status, ['created', 'confirmed', 'active']))
+      <div class="card border-0 shadow-soft mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Upload Payment Receipt</h5>
+          <p class="small text-muted mb-3">Upload your payment receipt for deposit or rental payment. Staff will verify your payment.</p>
+          
+          <form method="POST" action="{{ route('customer.bookings.receipt.upload', $booking->booking_id) }}" enctype="multipart/form-data">
+            @csrf
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Payment Type <span class="text-danger">*</span></label>
+                <select name="payment_type" class="form-select" required>
+                  <option value="deposit">Deposit</option>
+                  <option value="rental">Rental Payment</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Amount (RM) <span class="text-danger">*</span></label>
+                <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                <select name="payment_method" class="form-select" required>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Payment Date <span class="text-danger">*</span></label>
+                <input type="date" name="payment_date" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Receipt/Proof <span class="text-danger">*</span></label>
+                <input type="file" name="receipt" class="form-control" accept="image/*,.pdf" required>
+                <small class="text-muted">Upload payment receipt (image or PDF, max 5MB)</small>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-hasta">Upload Receipt</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      @endif
+
+      {{-- PAYMENT HISTORY --}}
+      @if($booking->payments && $booking->payments->count() > 0)
+      <div class="card border-0 shadow-soft mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Payment History</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($booking->payments as $payment)
+                  <tr>
+                    <td>{{ ucfirst($payment->payment_type) }}</td>
+                    <td><strong>RM {{ number_format($payment->amount, 2) }}</strong></td>
+                    <td>{{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}</td>
+                    <td>{{ $payment->payment_date->format('d M Y') }}</td>
+                    <td>
+                      <span class="badge {{ $payment->status === 'verified' ? 'bg-success' : 'bg-warning' }}">
+                        {{ ucfirst($payment->status) }}
+                      </span>
+                    </td>
+                    <td>
+                      @if($payment->receipt_url)
+                        <a href="{{ $payment->receipt_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                      @else
+                        <span class="text-muted">-</span>
+                      @endif
+                    </td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      @endif
+
       @if($booking->penalties && $booking->penalties->count() > 0)
       <div class="card border-0 shadow-soft">
         <div class="card-body p-4">

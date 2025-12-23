@@ -131,4 +131,13 @@ class Booking extends Model
     {
         return $this->hasOne(Feedback::class, 'booking_id', 'booking_id');
     }
+
+    /**
+     * Get all payments for this booking
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'booking_id', 'booking_id');
+    }
 }
