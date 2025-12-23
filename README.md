@@ -119,7 +119,7 @@ The system supports structured booking workflows, manual payment verification, v
 ### Project Setup
 ```bash
 git clone <repository-url>
-cd hasta-travel
+cd GoRentWebsite
 composer install
 copy .env.example .env
 php artisan key:generate
