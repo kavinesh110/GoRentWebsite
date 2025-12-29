@@ -14,6 +14,20 @@
 
   <div class="card border-0 shadow-soft">
     <div class="card-body p-4">
+      @if($errors->any() && $errors->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <strong>Error:</strong> {{ $errors->first('error') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+      
+      @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ session('success') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
       <form method="POST" action="{{ route('staff.cars.update', $car->id) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
@@ -52,7 +66,7 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Base Rate (per hour, RM) <span class="text-danger">*</span></label>
-            <input type="number" name="base_rate_per_hour" step="0.01" class="form-control @error('base_rate_per_hour') is-invalid @enderror" value="{{ old('base_rate_per_hour', $car->base_rate_per_hour) }}" min="0" required>
+            <input type="number" name="base_rate_per_hour" step="0.01" class="form-control @error('base_rate_per_hour') is-invalid @enderror" value="{{ old('base_rate_per_hour', $car->base_rate_per_hour ?? '') }}" min="0" required>
             @error('base_rate_per_hour')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">
@@ -66,15 +80,16 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Current Mileage (km)</label>
-            <input type="number" name="current_mileage" class="form-control @error('current_mileage') is-invalid @enderror" value="{{ old('current_mileage', $car->current_mileage) }}" min="0">
+            <input type="number" name="current_mileage" class="form-control @error('current_mileage') is-invalid @enderror" value="{{ old('current_mileage', $car->current_mileage ?? '') }}" min="0">
             @error('current_mileage')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @if($car->current_mileage >= $car->service_mileage_limit)
+            @if(isset($car->current_mileage) && isset($car->service_mileage_limit) && $car->current_mileage >= $car->service_mileage_limit)
               <small class="text-warning">⚠ Mileage exceeds service limit. Status will be set to Maintenance.</small>
             @endif
+            <small class="text-muted">Leave empty to set to 0</small>
           </div>
           <div class="col-md-6">
             <label class="form-label">Service Mileage Limit (km) <span class="text-danger">*</span></label>
-            <input type="number" name="service_mileage_limit" class="form-control @error('service_mileage_limit') is-invalid @enderror" value="{{ old('service_mileage_limit', $car->service_mileage_limit) }}" min="0" required>
+            <input type="number" name="service_mileage_limit" class="form-control @error('service_mileage_limit') is-invalid @enderror" value="{{ old('service_mileage_limit', $car->service_mileage_limit ?? '') }}" min="0" required>
             @error('service_mileage_limit')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">

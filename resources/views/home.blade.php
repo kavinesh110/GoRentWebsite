@@ -6,55 +6,9 @@
 @section('content')
 
 <style>
-  :root {
-    --hasta-red: #cb3737;
-    --hasta-dark: #a92c2c;
-    --bg-light: #f8f9fa;
-    --text-main: #2d3436;
-    --text-muted: #636e72;
-  }
-
-  /* Sticky Secondary Nav */
-  .secondary-nav {
-    background: #fff;
-    padding: 12px 0;
-    border-bottom: 1px solid #eee;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-  }
-  .secondary-nav .nav-items {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    max-width: 1400px;
-    margin: 0 auto;
-    flex-wrap: wrap;
-    padding: 0 24px;
-  }
-  .secondary-nav .nav-item-link {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 50px;
-    transition: 0.3s ease;
-  }
-  .secondary-nav .nav-item-link:hover, 
-  .secondary-nav .nav-item-link.active {
-    background: rgba(203,55,55,0.05);
-    color: var(--hasta-red);
-  }
-
   /* Professional Hero Section with Activity Carousel */
   .hero-section {
     position: relative;
-    padding-top: 30px;
     background: #1e272e;
     border-radius: 0 0 0 0;
     color: #fff;
@@ -81,7 +35,6 @@
     top: 0; left: 0; width: 100%; height: 100%;
     object-fit: cover;
     z-index: 1;
-    opacity: 0.5;
   }
   
   /* Text readability overlay */
@@ -149,7 +102,7 @@
   }
   .search-card .form-control:focus, 
   .search-card .form-select:focus {
-    border-color: var(--hasta-red);
+    border-color: var(--hasta);
     box-shadow: 0 0 0 4px rgba(203,55,55,0.1);
   }
 
@@ -186,7 +139,7 @@
   }
 
   .btn-hasta-primary {
-    background: var(--hasta-red);
+    background: var(--hasta);
     color: #fff;
     border: none;
     padding: 14px 28px;
@@ -217,32 +170,8 @@
     .hero-content { padding: 80px 24px; }
     .search-card { padding: 20px; }
     .search-card-container { margin-top: -50px; }
-    .secondary-nav .nav-items { gap: 10px; overflow-x: auto; justify-content: flex-start; padding: 0 15px; }
   }
 </style>
-
-{{-- SECONDARY NAVIGATION --}}
-<div class="secondary-nav">
-  <div class="nav-items">
-    <a href="{{ route('home') }}" class="nav-item-link {{ request()->routeIs('home') ? 'active' : '' }}">
-      <i class="bi bi-car-front"></i> <span>Browse Cars</span>
-    </a>
-    @if(session('auth_role') === 'customer')
-      <a href="{{ route('customer.bookings') }}" class="nav-item-link">
-        <i class="bi bi-calendar-check"></i> <span>My Bookings</span>
-      </a>
-      <a href="{{ route('customer.loyalty-rewards') }}" class="nav-item-link">
-        <i class="bi bi-gift"></i> <span>Loyalty Rewards</span>
-      </a>
-    @endif
-    <a href="#how-it-works" class="nav-item-link">
-      <i class="bi bi-info-circle"></i> <span>How It Works</span>
-    </a>
-    <a href="#support" class="nav-item-link">
-      <i class="bi bi-envelope"></i> <span>Support</span>
-    </a>
-  </div>
-</div>
 
 {{-- HERO SECTION WITH ACTIVITY SLIDER --}}
 <div class="hero-section">
@@ -253,19 +182,17 @@
           <div class="carousel-item h-100 {{ $index === 0 ? 'active' : '' }}">
             @if($activity->image_url)
               <img src="{{ $activity->image_url }}" class="hero-bg-image" alt="{{ $activity->title }}">
-              <div class="hero-overlay"></div>
-            @endif
-            <div class="container h-100 d-flex align-items-center">
-              <div class="hero-content">
-                <h1 class="hero-title">{{ $activity->title }}</h1>
-                <p class="hero-subtitle">{{ $activity->description }}</p>
-                @if(!$activity->image_url)
+            @else
+              <div class="container h-100 d-flex align-items-center">
+                <div class="hero-content">
+                  <h1 class="hero-title">{{ $activity->title }}</h1>
+                  <p class="hero-subtitle">{{ $activity->description }}</p>
                   <div class="badge bg-primary px-3 py-2">
                     <i class="bi bi-calendar-event me-2"></i> Active: {{ $activity->start_date->format('d M') }} - {{ $activity->end_date->format('d M Y') }}
                   </div>
-                @endif
+                </div>
               </div>
-            </div>
+            @endif
           </div>
         @endforeach
       </div>
@@ -289,7 +216,7 @@
 {{-- FLOATING SEARCH CARD --}}
 <div class="search-card-container">
   <div class="search-card">
-    <form action="/cars" method="GET" class="row g-3">
+    <form action="{{ route('cars.index') }}" method="GET" class="row g-3">
       <div class="col-lg-3 col-md-6">
         <label class="form-label">Pickup Location</label>
         <div class="input-group">
@@ -340,7 +267,7 @@
       <h2 class="fw-bold mb-1">Recommended Vehicles</h2>
       <p class="text-muted small">Hand-picked deals for the UTM community.</p>
     </div>
-    <a href="/cars" class="text-decoration-none fw-bold" style="color: var(--hasta-red);">View All Fleet <i class="bi bi-arrow-right ms-1"></i></a>
+    <a href="{{ route('cars.index') }}" class="text-decoration-none fw-bold" style="color: var(--hasta);">View All Fleet <i class="bi bi-arrow-right ms-1"></i></a>
   </div>
 
   <div class="row g-4 mb-5 pb-5">

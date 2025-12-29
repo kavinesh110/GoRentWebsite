@@ -133,8 +133,8 @@ class StaffController extends Controller
             });
         }
 
-        // Paginate results (12 cars per page)
-        $cars = $query->orderBy('created_at', 'desc')->paginate(12);
+        // Paginate results (12 cars per page) with booking counts for delete warnings
+        $cars = $query->withCount('bookings')->orderBy('created_at', 'desc')->paginate(12);
 
         return view('staff.cars.index', [
             'cars' => $cars,
@@ -184,22 +184,49 @@ class StaffController extends Controller
 
         // Process checkbox and default values
         $data['gps_enabled'] = $request->has('gps_enabled');
-        $data['current_mileage'] = $data['current_mileage'] ?? 0;
+        
+        // Handle nullable current_mileage: Convert empty/null to 0 for new cars (default value)
+        // HTML forms may send empty strings, which we've already converted to null before validation
+        if (!isset($data['current_mileage']) || $data['current_mileage'] === null) {
+            $data['current_mileage'] = 0; // New cars default to 0 mileage
+        } else {
+            $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
+        }
 
         // Handle car image upload
         // Images are stored in storage/app/public/images/cars/ with unique filenames
-        if ($request->hasFile('car_image')) {
-            $image = $request->file('car_image');
-            // Generate unique filename: timestamp + uniqid + original extension
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $imagePath = $image->storeAs('images/cars', $imageName, 'public');
-            $data['image_url'] = $imagePath; // Store relative path
-        } else {
-            $data['image_url'] = null; // No image uploaded
+        try {
+            if ($request->hasFile('car_image')) {
+                $image = $request->file('car_image');
+                // Validate the file was uploaded successfully
+                if ($image->isValid()) {
+                    // Generate unique filename: timestamp + uniqid + original extension
+                    $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('images/cars', $imageName, 'public');
+                    
+                    if ($imagePath) {
+                        $data['image_url'] = $imagePath; // Store relative path
+                    } else {
+                        return redirect()->back()->withInput()->withErrors(['car_image' => 'Failed to upload image. Please try again.']);
+                    }
+                }
+            } else {
+                $data['image_url'] = null; // No image uploaded
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->withErrors(['car_image' => 'Error uploading image: ' . $e->getMessage()]);
         }
 
         // Create car record in database
-        Car::create($data);
+        try {
+            Car::create($data);
+        } catch (\Exception $e) {
+            // If car creation fails, delete uploaded image if it was uploaded
+            if (isset($data['image_url']) && $data['image_url'] && Storage::disk('public')->exists($data['image_url'])) {
+                Storage::disk('public')->delete($data['image_url']);
+            }
+            return redirect()->back()->withInput()->withErrors(['error' => 'Failed to create car: ' . $e->getMessage()]);
+        }
 
         return redirect()->route('staff.cars')->with('success', 'Car added successfully!');
     }
@@ -233,6 +260,11 @@ class StaffController extends Controller
         $this->ensureStaff($request);
         $car = Car::findOrFail($id);
 
+        // Convert empty string to null for nullable integer fields (HTML number inputs send "" when empty)
+        $request->merge([
+            'current_mileage' => $request->input('current_mileage') === '' ? null : $request->input('current_mileage'),
+        ]);
+
         $data = $request->validate([
             'plate_number' => 'required|string|max:20|unique:cars,plate_number,' . $id,
             'brand' => 'required|string|max:50',
@@ -251,31 +283,105 @@ class StaffController extends Controller
         // Process checkbox
         $data['gps_enabled'] = $request->has('gps_enabled');
 
+        // Handle nullable current_mileage: If null (field was left blank), preserve existing value
+        // We've already converted empty strings to null before validation
+        if (!isset($data['current_mileage']) || $data['current_mileage'] === null) {
+            // Preserve existing mileage value (don't overwrite it if user left field blank)
+            $data['current_mileage'] = $car->current_mileage ?? 0;
+        } else {
+            $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
+        }
+
         // Business rule: Auto-set status to maintenance if mileage exceeds service limit
         // This ensures cars requiring service are automatically flagged
-        if ($data['current_mileage'] >= $data['service_mileage_limit']) {
+        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && $data['current_mileage'] >= $data['service_mileage_limit']) {
             $data['status'] = 'maintenance';
         }
 
         // Handle car image upload/update
-        if ($request->hasFile('car_image')) {
-            // Delete old uploaded image file if it exists (don't delete external URLs)
-            $oldImagePath = $car->getRawOriginal('image_url');
-            if ($oldImagePath && !filter_var($oldImagePath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldImagePath)) {
-                Storage::disk('public')->delete($oldImagePath);
+        try {
+            if ($request->hasFile('car_image')) {
+                $image = $request->file('car_image');
+                
+                // Validate the file was uploaded successfully
+                if ($image->isValid()) {
+                    // Delete old uploaded image file if it exists (don't delete external URLs)
+                    $oldImagePath = $car->getRawOriginal('image_url');
+                    if ($oldImagePath && !filter_var($oldImagePath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldImagePath)) {
+                        Storage::disk('public')->delete($oldImagePath);
+                    }
+
+                    // Upload new image with unique filename
+                    $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('images/cars', $imageName, 'public');
+                    
+                    if ($imagePath) {
+                        $data['image_url'] = $imagePath;
+                    } else {
+                        return redirect()->back()->withInput()->withErrors(['car_image' => 'Failed to upload image. Please try again.']);
+                    }
+                } else {
+                    return redirect()->back()->withInput()->withErrors(['car_image' => 'Invalid image file. Please try again.']);
+                }
+            } else {
+                // If no new image uploaded, preserve existing image_url by explicitly keeping it
+                $data['image_url'] = $car->getRawOriginal('image_url');
             }
-
-            // Upload new image with unique filename
-            $image = $request->file('car_image');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $imagePath = $image->storeAs('images/cars', $imageName, 'public');
-            $data['image_url'] = $imagePath;
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->withErrors(['car_image' => 'Error uploading image: ' . $e->getMessage()]);
         }
-        // If no new image uploaded, existing image_url is preserved (not overwritten)
 
-        $car->update($data);
+        // Update car record in database
+        try {
+            $car->update($data);
+        } catch (\Exception $e) {
+            // If update fails and we uploaded a new image, delete it
+            if ($request->hasFile('car_image') && isset($data['image_url']) && Storage::disk('public')->exists($data['image_url'])) {
+                Storage::disk('public')->delete($data['image_url']);
+            }
+            return redirect()->back()->withInput()->withErrors(['error' => 'Failed to update car: ' . $e->getMessage()]);
+        }
 
         return redirect()->route('staff.cars')->with('success', 'Car updated successfully!');
+    }
+
+    /**
+     * Delete a car from the fleet
+     * Deletes the car's image file if it exists
+     * Checks for associated bookings and warns if any exist (bookings will be cascade deleted)
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function carsDestroy(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($id);
+
+        try {
+            // Check if car has any bookings (for informational purposes, cascade will handle deletion)
+            $bookingCount = $car->bookings()->count();
+            
+            // Delete car's image file if it exists (don't delete external URLs)
+            $imagePath = $car->getRawOriginal('image_url');
+            if ($imagePath && !filter_var($imagePath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($imagePath)) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            // Delete the car record (bookings will be cascade deleted due to foreign key constraint)
+            $carName = $car->brand . ' ' . $car->model . ' (' . $car->plate_number . ')';
+            $car->delete();
+
+            $message = 'Car "' . $carName . '" has been deleted successfully.';
+            if ($bookingCount > 0) {
+                $message .= ' Note: ' . $bookingCount . ' associated booking(s) were also deleted.';
+            }
+
+            return redirect()->route('staff.cars')->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('staff.cars')->withErrors(['error' => 'Failed to delete car: ' . $e->getMessage()]);
+        }
     }
 
     // ========== BOOKING MANAGEMENT ==========

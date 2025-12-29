@@ -14,6 +14,20 @@
 
   <div class="card border-0 shadow-soft">
     <div class="card-body p-4">
+      @if($errors->any() && $errors->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <strong>Error:</strong> {{ $errors->first('error') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+      
+      @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ session('success') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
       <form method="POST" action="{{ route('staff.cars.store') }}" enctype="multipart/form-data">
         @csrf
 

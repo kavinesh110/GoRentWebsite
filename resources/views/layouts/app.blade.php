@@ -7,36 +7,48 @@
 
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
 
     <style>
     :root{
-        --hasta:#cb3737;
-        --hasta-dark:#a92c2c;
-        --hasta-darker:#8a2424;
-        --bg:#F6F7FB;
+        --hasta: #cb3737;
+        --hasta-dark: #a92c2c;
+        --hasta-darker: #8a2424;
+        --bg: #F6F7FB;
+        --bg-light: #f8f9fa;
+        --text-main: #2d3436;
+        --text-muted: #636e72;
     }
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     
     /* Top Navigation Bar (Dark Red) */
     .top-navbar{
         background: var(--hasta-darker);
-        padding: 10px 0;
+        padding: 0;
+        height: 70px;
         width: 100%;
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
     }
-    .top-navbar .container-custom{
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 24px;
+    .top-navbar .container-fluid{
+        max-width: 100%;
+        padding: 0 30px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 16px;
+        height: 100%;
+        gap: 20px;
     }
     .top-navbar-left{
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 15px;
+        flex: 1;
     }
     .top-navbar-brand{
         font-weight: 700;
@@ -49,126 +61,98 @@
         gap: 8px;
     }
     .navbar-logo{
-        height: 35px;
+        height: 32px;
         width: auto;
         max-width: 200px;
         object-fit: contain;
-        padding: 5px;
     }
     .top-navbar-badge{
         background: #f4c430;
         color: #111;
-        padding: 4px 10px;
+        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 9px;
+        font-weight: 800;
         white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .top-navbar-nav{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 25px;
+        flex: 2;
     }
     .top-navbar-right{
         display: flex;
         align-items: center;
-        gap: 20px;
-        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 15px;
+        flex: 1;
     }
     .top-navbar-link{
-        color: #fff;
+        color: rgba(255,255,255,0.9);
         text-decoration: none;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 500;
         display: flex;
         align-items: center;
         gap: 6px;
-        transition: opacity 0.2s;
+        transition: all 0.2s;
     }
-    .top-navbar-link:hover{
-        opacity: 0.8;
+    .top-navbar-link:hover, .top-navbar-link.active{
         color: #fff;
+        opacity: 1;
     }
-    .top-navbar-link svg{
-        width: 16px;
-        height: 16px;
+    .top-navbar-link svg, .top-navbar-link i{
+        font-size: 16px;
     }
     .top-navbar-btn{
-        background: var(--hasta);
-        color: #fff;
-        padding: 8px 20px;
-        border-radius: 20px;
+        background: #fff;
+        color: var(--hasta-darker);
+        padding: 8px 18px;
+        border-radius: 50px;
         text-decoration: none;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 700;
         border: none;
         transition: all 0.2s;
     }
     .top-navbar-btn:hover{
-        background: var(--hasta);
-        opacity: 0.9;
-        color: #fff;
+        background: #f8f8f8;
+        color: var(--hasta-darker);
         transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
     .btn-hasta{ 
-        background:var(--hasta); 
-        border-color:var(--hasta); 
-        color:#fff; 
+        background: var(--hasta); 
+        border-color: var(--hasta); 
+        color: #fff; 
         font-weight: 600;
     }
     .btn-hasta:hover{ 
-        background:var(--hasta-dark); 
-        border-color:var(--hasta-dark); 
-        color:#fff; 
+        background: var(--hasta-dark); 
+        border-color: var(--hasta-dark); 
+        color: #fff; 
     }
-    .text-hasta{ color:var(--hasta); }
-    .bg-hasta{ background:var(--hasta); }
+    .text-hasta{ color: var(--hasta); }
+    .bg-hasta{ background: var(--hasta); }
     .shadow-soft { box-shadow: 0 10px 25px rgba(0,0,0,.06); }
     .rounded-xxl{ border-radius: 22px; }
-
-    .hero-gocar{
-    position:relative;
-    border-radius: 26px;
-    overflow:hidden;
-    min-height: 460px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .hero-gocar .hero-inner{
-    padding: 84px 70px 140px 70px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .hero-meta{ 
-    max-width: 600px; 
-    text-align: center;
-    z-index: 2;
-    }
-
-    .hero-title{
-    font-size: 52px;
-    font-weight: 800;
-    letter-spacing: -.5px;
-    line-height: 1.05;
-    color: white;
-    margin-bottom: 16px;
-    }
-
-    .hero-sub{
-    color: rgba(255,255,255,.95);
-    margin-top: 10px;
-    font-size: 18px;
-    margin-bottom: 24px;
+    
+    @media (max-width: 992px){
+        .top-navbar-nav { display: none; }
+        .top-navbar-badge { display: none; }
+        .top-navbar-left, .top-navbar-right { flex: initial; }
     }
 
     @media (max-width: 768px){
-    .top-navbar .container-custom{ flex-direction: column; align-items: flex-start; }
-    .top-navbar-right{ width: 100%; justify-content: space-between; }
-    .hero-gocar{ min-height: 420px; }
-    .hero-gocar .hero-inner{ padding: 58px 24px 140px 24px; }
-    .hero-title{ font-size: 36px; }
+        .top-navbar .container-custom{ padding: 0 15px; }
+        .top-navbar-right{ gap: 10px; }
+        .top-navbar-link span { display: none; }
+        .top-navbar-link i, .top-navbar-link svg { font-size: 18px; }
     }
 
     </style>
@@ -180,72 +164,59 @@
 
 {{-- TOP NAVIGATION BAR (Dark Red) --}}
 <div class="top-navbar">
-    <div class="container-custom">
+    <div class="container-fluid">
         <div class="top-navbar-left">
             <a href="{{ route('home') }}" class="top-navbar-brand">
-                {{-- Company Logo --}}
                 <img src="{{ asset('images/hastalogo.jpg') }}" alt="Hasta GoRent Logo" class="navbar-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
                 <span style="display: none;">Hasta GoRent.</span>
             </a>
-            <span class="top-navbar-badge">UTM STUDENT & STAFF CAR RENTAL</span>
+            <span class="top-navbar-badge">UTM Student & Staff</span>
         </div>
+
+        <div class="top-navbar-nav">
+            <a href="{{ route('cars.index') }}" class="top-navbar-link {{ request()->routeIs('cars.index') ? 'active' : '' }}">
+                <i class="bi bi-car-front"></i> <span>Browse Cars</span>
+            </a>
+            <a href="/#how-it-works" class="top-navbar-link">
+                <i class="bi bi-info-circle"></i> <span>How It Works</span>
+            </a>
+            <a href="/#support" class="top-navbar-link">
+                <i class="bi bi-envelope"></i> <span>Support</span>
+            </a>
+        </div>
+        
         <div class="top-navbar-right">
             @if(session('auth_role') === 'staff')
                 <a href="{{ route('staff.dashboard') }}" class="top-navbar-link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="3" x2="9" y2="21"></line>
-                    </svg>
+                    <i class="bi bi-layout-text-sidebar-reverse"></i>
                     <span>Staff Portal</span>
                 </a>
                 <button type="button" class="top-navbar-link border-0 bg-transparent" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
+                    <i class="bi bi-box-arrow-right"></i>
                     <span>Logout</span>
                 </button>
             @elseif(session('auth_role') === 'customer')
                 <a href="{{ route('customer.profile') }}" class="top-navbar-link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
+                    <i class="bi bi-person-circle"></i>
                     <span>{{ session('auth_name') ?? 'My Account' }}</span>
                 </a>
+                <a href="{{ route('customer.bookings') }}" class="top-navbar-link">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>My Bookings</span>
+                </a>
                 <button type="button" class="top-navbar-link border-0 bg-transparent" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="bi bi-box-arrow-right"></i>
                     <span>Logout</span>
                 </button>
             @else
-                {{-- Public navigation: Only show customer login and register --}}
                 <a href="{{ route('login') }}" class="top-navbar-link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                        <polyline points="10 17 15 12 10 7"></polyline>
-                        <line x1="15" y1="12" x2="3" y2="12"></line>
-                    </svg>
+                    <i class="bi bi-box-arrow-in-right"></i>
                     <span>Login</span>
                 </a>
                 <a href="{{ route('register') }}" class="top-navbar-btn">
                     Register
                 </a>
             @endif
-            <a href="{{ route('home') }}" class="top-navbar-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-                <span>Home</span>
-            </a>
-            <a href="#" class="top-navbar-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <span>Help</span>
-            </a>
         </div>
     </div>
 </div>

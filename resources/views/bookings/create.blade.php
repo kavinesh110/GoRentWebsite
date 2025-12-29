@@ -3,190 +3,247 @@
 @section('title', 'Book Car - Hasta GoRent')
 
 @section('content')
-<div class="container-fluid px-4 px-md-5" style="padding-top: 40px; padding-bottom: 60px;">
-    <div class="row justify-content-center">
-        <div class="col-xl-9">
-            {{-- HEADER --}}
-            <div class="mb-4 d-flex align-items-center gap-3">
-                <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <div>
-                    <h1 class="h3 fw-bold mb-0">Booking Information</h1>
-                    <p class="text-muted mb-0 small">Please fill in the details below to secure your rental.</p>
-                </div>
+
+<style>
+  :root {
+    --hasta-red: #cb3737;
+    --hasta-dark: #a92c2c;
+    --bg-light: #f8f9fa;
+    --text-main: #2d3436;
+    --text-muted: #636e72;
+  }
+
+  .booking-hero {
+    background: linear-gradient(135deg, #1e272e 0%, #000 100%);
+    padding: 60px 0 100px 0;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .booking-hero::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+    opacity: 0.1;
+  }
+
+  .booking-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    margin-top: -60px;
+    position: relative;
+    z-index: 10;
+    border: 1px solid #f0f0f0;
+  }
+
+  .summary-sticky {
+    position: sticky;
+    top: 100px;
+    background: #fff;
+    border-radius: 24px;
+    padding: 30px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  }
+
+  .form-section-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+  }
+  .form-section-title span {
+    width: 28px;
+    height: 28px;
+    background: var(--hasta);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #95a5a6;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .form-control, .form-select {
+    border: 1px solid #eee;
+    padding: 12px 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: var(--bg-light);
+  }
+  .form-control:focus, .form-select:focus {
+    background: #fff;
+    border-color: var(--hasta);
+    box-shadow: 0 0 0 4px rgba(203,55,55,0.05);
+  }
+
+  .btn-next {
+    background: var(--hasta);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: 14px;
+    font-weight: 700;
+    width: 100%;
+    transition: 0.3s;
+  }
+  .btn-next:hover {
+    background: var(--hasta-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(203,55,55,0.2);
+  }
+
+  @media (max-width: 768px) {
+    .booking-hero { padding: 40px 0 80px 0; }
+    .booking-card { padding: 25px; }
+  }
+</style>
+
+{{-- HERO SECTION --}}
+<div class="booking-hero">
+  <div class="container text-center position-relative" style="z-index: 2;">
+    <h1 class="display-5 fw-800 text-white mb-2">Booking Information</h1>
+    <p class="text-white-50">Please fill in the details below to secure your rental.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-4">
+    {{-- LEFT: FORM --}}
+    <div class="col-lg-8">
+      <div class="booking-card">
+        <form action="{{ route('bookings.store') }}" method="POST" id="bookingForm">
+          @csrf
+          <input type="hidden" name="car_id" value="{{ $car->id }}">
+
+          <h5 class="form-section-title"><span>1</span> Rental Duration</h5>
+          <div class="row g-3 mb-5">
+            <div class="col-md-6">
+              <label class="form-label">Pickup Date & Time</label>
+              <div class="input-group">
+                <input type="date" class="form-control" name="pickup_date" id="pickup_date" value="{{ $pickup_date ?? date('Y-m-d') }}" required>
+                <input type="time" class="form-control" name="pickup_time" id="pickup_time" value="{{ $pickup_time ?? '09:00' }}" required>
+              </div>
             </div>
-
-            <div class="row g-4">
-                {{-- LEFT: FORM --}}
-                <div class="col-lg-7 col-xl-8">
-                    <div class="card border-0 shadow-soft h-100" style="border-radius: 20px;">
-                        <div class="card-body p-4 p-md-5">
-                            <form action="{{ route('bookings.store') }}" method="POST" id="bookingForm">
-                                @csrf
-                                <input type="hidden" name="car_id" value="{{ $car->id }}">
-
-                                <h5 class="fw-bold mb-4 pb-2 border-bottom">1. Rental Duration</h5>
-                                <div class="row g-3 mb-5">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Pickup Date & Time</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-0"><i class="bi bi-calendar-event"></i></span>
-                                            <input type="date" class="form-control border-0 bg-light" name="pickup_date" value="{{ $pickup_date ?? date('Y-m-d') }}" required>
-                                            <input type="time" class="form-control border-0 bg-light" name="pickup_time" value="{{ $pickup_time ?? '09:00' }}" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Dropoff Date & Time</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-0"><i class="bi bi-calendar-check"></i></span>
-                                            <input type="date" class="form-control border-0 bg-light" name="dropoff_date" value="{{ $dropoff_date ?? date('Y-m-d', strtotime('+1 day')) }}" required>
-                                            <input type="time" class="form-control border-0 bg-light" name="dropoff_time" value="{{ $dropoff_time ?? '09:00' }}" required>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h5 class="fw-bold mb-4 pb-2 border-bottom">2. Pickup & Dropoff Location</h5>
-                                <div class="row g-3 mb-5">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Pickup Location</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-0"><i class="bi bi-geo-alt"></i></span>
-                                            <input type="text" class="form-control border-0 bg-light" name="pickup_location" value="{{ $pickup_location ?? 'Student Mall' }}" placeholder="Student Mall" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Dropoff Location</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-0"><i class="bi bi-geo"></i></span>
-                                            <input type="text" class="form-control border-0 bg-light" name="dropoff_location" value="{{ $dropoff_location ?? 'Student Mall' }}" placeholder="Student Mall" required>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h5 class="fw-bold mb-4 pb-2 border-bottom">3. Billing Details</h5>
-                                <div class="row g-3">
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Full Name</label>
-                                        <input type="text" class="form-control border-0 bg-light p-3" name="name" value="{{ session('auth_name') }}" placeholder="Enter your full name" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Phone Number</label>
-                                        <input type="tel" class="form-control border-0 bg-light p-3" name="phone" placeholder="e.g., 0123456789" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">City</label>
-                                        <input type="text" class="form-control border-0 bg-light p-3" name="city" placeholder="e.g., Skudai" required>
-                                    </div>
-                                    <div class="col-md-12 mb-4">
-                                        <label class="form-label fw-semibold small text-muted text-uppercase">Address</label>
-                                        <textarea class="form-control border-0 bg-light p-3" name="address" rows="2" placeholder="Your residential college or full address" required></textarea>
-                                    </div>
-                                </div>
-
-                                <div class="alert alert-info border-0 shadow-sm mb-4" style="background-color: #f0f7ff; color: #0056b3;">
-                                    <div class="d-flex gap-3">
-                                        <i class="bi bi-info-circle-fill h4 mb-0 mt-1"></i>
-                                        <div>
-                                            <h6 class="fw-bold mb-1">Deposit Payment Required</h6>
-                                            <p class="small mb-0">Your booking will only be confirmed after you upload a RM50.00 deposit receipt on the next page.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-hasta btn-lg w-100 py-3 shadow-sm fw-bold mt-2">
-                                    Review & Proceed to Payment <i class="bi bi-arrow-right ms-2"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- RIGHT: SUMMARY --}}
-                <div class="col-lg-5 col-xl-4">
-                    <div class="card border-0 shadow-soft sticky-top" style="top: 100px; border-radius: 20px;">
-                        <div class="card-body p-4">
-                            <h5 class="fw-bold mb-4">Summary</h5>
-                            
-                            {{-- CAR PREVIEW --}}
-                            <div class="bg-light rounded-3 p-3 mb-4 text-center">
-                                @if($car->image_url)
-                                    <img src="{{ $car->image_url }}" alt="{{ $car->brand }}" class="img-fluid mb-2" style="max-height: 120px; object-fit: contain;">
-                                @endif
-                                <h6 class="fw-bold mb-1">{{ $car->brand }} {{ $car->model }}</h6>
-                                <div class="small text-muted">{{ $car->plate_number }}</div>
-                            </div>
-
-                            {{-- PRICE BREAKDOWN --}}
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Rate per Hour</span>
-                                    <span class="fw-semibold text-dark">RM {{ number_format($car->base_rate_per_hour, 2) }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2" id="durationRow">
-                                    <span class="text-muted">Rental Duration</span>
-                                    <span class="fw-semibold text-dark" id="durationText">1 Hour</span>
-                                </div>
-                                <hr class="my-3 opacity-10">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold h6 mb-0">Estimated Total</span>
-                                    <span class="h4 fw-bold text-hasta mb-0" id="totalPrice">RM {{ number_format($car->base_rate_per_hour, 2) }}</span>
-                                </div>
-                            </div>
-
-                            {{-- INCLUSIONS --}}
-                            <div class="bg-light rounded-3 p-3 small">
-                                <h6 class="fw-bold mb-3" style="font-size: 13px;">INCLUSIONS & POLICIES</h6>
-                                <ul class="list-unstyled mb-0 d-grid gap-2">
-                                    <li><i class="bi bi-check2 text-success me-2"></i> Standard Insurance</li>
-                                    <li><i class="bi bi-check2 text-success me-2"></i> Road Tax Included</li>
-                                    <li><i class="bi bi-check2 text-success me-2"></i> 24/7 Support</li>
-                                    <li><i class="bi bi-info-circle text-warning me-2"></i> RM 50 Refundable Deposit</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-md-6">
+              <label class="form-label">Dropoff Date & Time</label>
+              <div class="input-group">
+                <input type="date" class="form-control" name="dropoff_date" id="dropoff_date" value="{{ $dropoff_date ?? date('Y-m-d', strtotime('+1 day')) }}" required>
+                <input type="time" class="form-control" name="dropoff_time" id="dropoff_time" value="{{ $dropoff_time ?? '09:00' }}" required>
+              </div>
             </div>
-        </div>
+          </div>
+
+          <h5 class="form-section-title"><span>2</span> Locations</h5>
+          <div class="row g-3 mb-5">
+            <div class="col-md-6">
+              <label class="form-label">Pickup Location</label>
+              <input type="text" class="form-control" name="pickup_location" value="{{ $pickup_location ?? 'Student Mall' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Dropoff Location</label>
+              <input type="text" class="form-control" name="dropoff_location" value="{{ $dropoff_location ?? 'Student Mall' }}" required>
+            </div>
+          </div>
+
+          <h5 class="form-section-title"><span>3</span> Billing Details</h5>
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" name="name" value="{{ session('auth_name') }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone Number</label>
+              <input type="tel" class="form-control" name="phone" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">City</label>
+              <input type="text" class="form-control" name="city" required>
+            </div>
+            <div class="col-md-12 mb-4">
+              <label class="form-label">Address</label>
+              <textarea class="form-control" name="address" rows="2" required></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-next mt-4">
+            Review & Proceed to Payment <i class="bi bi-arrow-right ms-2"></i>
+          </button>
+        </form>
+      </div>
     </div>
+
+    {{-- RIGHT: SUMMARY --}}
+    <div class="col-lg-4">
+      <div class="summary-sticky">
+        <h5 class="fw-800 mb-4">Summary</h5>
+        
+        <div class="bg-light rounded-4 p-3 mb-4 text-center">
+          @if($car->image_url)
+            <img src="{{ $car->image_url }}" alt="{{ $car->brand }}" class="img-fluid mb-2" style="max-height: 120px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.05));">
+          @endif
+          <h6 class="fw-bold mb-1">{{ $car->brand }} {{ $car->model }}</h6>
+          <div class="small text-muted">{{ $car->plate_number }}</div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Rate per Hour</span>
+          <span class="fw-bold">RM {{ number_format($car->base_rate_per_hour, 2) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+          <span class="text-muted small">Duration</span>
+          <span id="durationText" class="fw-bold">1 Hour</span>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <h6 class="fw-bold mb-0">Total</h6>
+          <span id="totalPrice" class="h3 fw-800 text-hasta-red mb-0">RM {{ number_format($car->base_rate_per_hour, 2) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('bookingForm');
-        const pickupDate = form.querySelector('[name="pickup_date"]');
-        const pickupTime = form.querySelector('[name="pickup_time"]');
-        const dropoffDate = form.querySelector('[name="dropoff_date"]');
-        const dropoffTime = form.querySelector('[name="dropoff_time"]');
+        const pDate = document.getElementById('pickup_date');
+        const pTime = document.getElementById('pickup_time');
+        const dDate = document.getElementById('dropoff_date');
+        const dTime = document.getElementById('dropoff_time');
         
-        const durationText = document.getElementById('durationText');
-        const totalPrice = document.getElementById('totalPrice');
+        const durTxt = document.getElementById('durationText');
+        const totPr = document.getElementById('totalPrice');
         const baseRate = {{ floatval($car->base_rate_per_hour) }};
 
-        function calculatePrice() {
-            const start = new Date(pickupDate.value + 'T' + pickupTime.value);
-            const end = new Date(dropoffDate.value + 'T' + dropoffTime.value);
-            
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-
-            const diffMs = end - start;
-            let diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
-            
-            if (diffHours < 1) diffHours = 1;
-
-            durationText.textContent = diffHours + (diffHours === 1 ? ' Hour' : ' Hours');
-            const total = diffHours * baseRate;
-            totalPrice.textContent = 'RM ' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        function update() {
+            const start = new Date(pDate.value + 'T' + pTime.value);
+            const end = new Date(dDate.value + 'T' + dTime.value);
+            if (isNaN(start) || isNaN(end)) return;
+            const hours = Math.max(1, Math.ceil((end - start) / 3600000));
+            durTxt.textContent = hours + (hours === 1 ? ' Hour' : ' Hours');
+            totPr.textContent = 'RM ' + (hours * baseRate).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
-        [pickupDate, pickupTime, dropoffDate, dropoffTime].forEach(el => {
-            el.addEventListener('change', calculatePrice);
-        });
-
-        calculatePrice();
+        [pDate, pTime, dDate, dTime].forEach(el => el.addEventListener('change', update));
+        update();
     });
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
 @endpush
 @endsection

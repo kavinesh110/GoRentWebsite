@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/cars', [App\Http\Controllers\HomeController::class, 'cars'])->name('cars.index');
 
 Route::get('/cars/{id}', [App\Http\Controllers\BookingController::class, 'show'])->name('cars.show');
 Route::get('/bookings/create', [App\Http\Controllers\BookingController::class, 'create'])->name('bookings.create');
@@ -48,6 +49,7 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::post('/cars', [App\Http\Controllers\StaffController::class, 'carsStore'])->name('cars.store');
     Route::get('/cars/{id}/edit', [App\Http\Controllers\StaffController::class, 'carsEdit'])->name('cars.edit');
     Route::put('/cars/{id}', [App\Http\Controllers\StaffController::class, 'carsUpdate'])->name('cars.update');
+    Route::delete('/cars/{id}', [App\Http\Controllers\StaffController::class, 'carsDestroy'])->name('cars.destroy');
     
     // Booking management
     Route::get('/bookings', [App\Http\Controllers\StaffController::class, 'bookings'])->name('bookings');

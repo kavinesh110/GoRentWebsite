@@ -4,675 +4,449 @@
 @section('content')
 
 @php
-  // ===== CAR INFORMATION =====
-  // Get car name and year from new schema (brand + model)
   $carName = ($car->brand ?? 'Car') . ' ' . ($car->model ?? '');
   $year = $car->year ?? null;
-  
-  // ===== RATING & REVIEWS =====
-  // Calculate actual rating from customer feedbacks (average of all ratings)
-  // Defaults to 4.0 stars if no reviews exist yet
-  $avgRating = $feedbacks ? $feedbacks->avg('rating') : 0;
-  $rating = $avgRating > 0 ? $avgRating : 4.0; // Default 4 stars if no reviews
-  $reviewCount = $feedbacks ? $feedbacks->count() : 0;
-  
-  // ===== PRICING CALCULATION =====
-  // Calculate default pricing (24 hours = 1 day)
-  // Pricing updates dynamically via JavaScript when user selects dates/times
-  // Note: Cars use base_rate_per_hour, so pricing is calculated by hours
-  $defaultHours = 24; // 1 day = 24 hours (default display value)
+  $avgRating = isset($feedbacks) && $feedbacks ? $feedbacks->avg('rating') : 0;
+  $rating = $avgRating > 0 ? $avgRating : 4.0;
+  $reviewCount = isset($feedbacks) && $feedbacks ? $feedbacks->count() : 0;
   $baseRate = $car->base_rate_per_hour ?? 0;
-  $subtotal = $baseRate * $defaultHours;
-  $tax = 0.00; // No tax currently applied
-  $total = $subtotal + $tax;
 @endphp
 
 <style>
-  .booking-page{
-    background: #F6F7FB;
-    min-height: 100vh;
-    padding: 40px 0;
-  }
-  .booking-container{
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-  .booking-grid{
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 40px;
-    margin-top: 30px;
-  }
-  
-  /* Rental Summary Section */
-  .rental-summary{
-    background: #fff;
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    height: fit-content;
-    position: sticky;
-    top: 20px;
-  }
-  .rental-summary h2{
-    font-size: 28px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 8px;
-  }
-  .rental-summary-desc{
-    font-size: 14px;
-    color: #7A7A7A;
-    margin-bottom: 32px;
-    line-height: 1.5;
-  }
-  .car-details{
-    margin-bottom: 32px;
-  }
-  .car-name-year{
-    font-size: 22px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 12px;
-  }
-  .car-rating{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-  .star-rating{
-    display: flex;
-    gap: 4px;
-  }
-  .star-filled{
-    color: #FFD700;
-    width: 18px;
-    height: 18px;
-  }
-  .star-outline{
-    color: #ddd;
-    width: 18px;
-    height: 18px;
-  }
-  .review-count{
-    font-size: 14px;
-    color: #7A7A7A;
-  }
-  .car-image-container{
-    width: 100%;
-    height: 300px;
-    background: #f8f8f8;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .detail-hero {
+    background: linear-gradient(135deg, #1e272e 0%, #000 100%);
+    padding: 60px 0 100px 0;
+    color: #fff;
+    position: relative;
     overflow: hidden;
-    margin-bottom: 32px;
   }
-  .car-image-container img{
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+  .detail-hero::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+    opacity: 0.1;
   }
-  .cost-breakdown{
-    border-top: 1px solid #f0f0f0;
-    border-bottom: 1px solid #f0f0f0;
-    padding: 20px 0;
-    margin-bottom: 24px;
-  }
-  .cost-row{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .cost-row:last-child{
-    margin-bottom: 0;
-  }
-  .cost-label{
-    font-size: 16px;
-    color: #333;
-    font-weight: 500;
-  }
-  .cost-value{
-    font-size: 16px;
-    color: #333;
-    font-weight: 600;
-  }
-  .promo-section{
-    margin-bottom: 32px;
-  }
-  .promo-input-group{
-    display: flex;
-    gap: 12px;
-  }
-  .promo-input{
-    flex: 1;
-    padding: 12px 16px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 14px;
-    background: #f8f8f8;
-    outline: none;
-    transition: all 0.2s;
-  }
-  .promo-input:focus{
-    border-color: #F98820;
+
+  .car-specs-card {
     background: #fff;
-  }
-  .promo-btn{
-    padding: 12px 24px;
-    background: transparent;
-    border: none;
-    color: #333;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.2s;
-  }
-  .promo-btn:hover{
-    background: #f0f0f0;
-  }
-  .total-section{
-    background: #f8f8f8;
-    border-radius: 12px;
-    padding: 24px;
-  }
-  .total-header{
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 6px;
-  }
-  .total-desc{
-    font-size: 13px;
-    color: #7A7A7A;
-    margin-bottom: 16px;
-  }
-  .total-price{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .total-price-label{
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-  }
-  .total-price-value{
-    font-size: 36px;
-    font-weight: 700;
-    color: #333;
-  }
-  
-  /* Booking Form Section */
-  .booking-form-section{
-    background: #fff;
-    border-radius: 20px;
+    border-radius: 24px;
     padding: 32px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    margin-bottom: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    margin-top: -60px;
+    position: relative;
+    z-index: 10;
+    border: 1px solid #f0f0f0;
   }
-  .form-header{
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-  }
-  .form-title{
-    font-size: 28px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 6px;
-  }
-  .form-desc{
-    font-size: 14px;
-    color: #7A7A7A;
-  }
-  .step-indicator{
-    font-size: 13px;
-    color: #7A7A7A;
-    font-weight: 500;
-  }
-  .form-grid{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 32px;
-  }
-  .form-group{
-    display: flex;
-    flex-direction: column;
-  }
-  .form-group.full-width{
-    grid-column: 1 / -1;
-  }
-  .form-label{
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-  }
-  .form-input{
-    padding: 12px 16px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 14px;
-    background: #f8f8f8;
-    outline: none;
-    transition: all 0.2s;
-    color: #333;
-  }
-  .form-input:focus{
-    border-color: #F98820;
-    background: #fff;
-  }
-  .form-input::placeholder{
-    color: #999;
-  }
-  .rental-section{
-    margin-top: 32px;
-    padding-top: 32px;
-    border-top: 1px solid #f0f0f0;
-  }
-  .rental-header{
+
+  .spec-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-light);
+    border-radius: 16px;
+    height: 100%;
   }
-  .rental-icon{
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #F98820;
+  .spec-icon {
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--hasta);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
   }
-  .rental-icon-dot{
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+
+  .booking-form-card {
     background: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
   }
-  .rental-title{
+
+  .summary-sticky {
+    position: sticky;
+    top: 100px;
+    background: #fff;
+    border-radius: 24px;
+    padding: 30px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  }
+
+  .form-section-title {
     font-size: 18px;
-    font-weight: 600;
-    color: #333;
+    font-weight: 800;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
   }
-  .next-btn{
-    background: #F98820;
+  .form-section-title span {
+    width: 28px;
+    height: 28px;
+    background: var(--hasta);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #95a5a6;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .form-control, .form-select {
+    border: 1px solid #eee;
+    padding: 12px 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: var(--bg-light);
+  }
+  .form-control:focus, .form-select:focus {
+    background: #fff;
+    border-color: var(--hasta);
+    box-shadow: 0 0 0 4px rgba(203,55,55,0.05);
+  }
+
+  .btn-book-now {
+    background: var(--hasta);
     color: #fff;
     border: none;
-    border-radius: 10px;
-    padding: 14px 32px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    float: right;
-    margin-top: 32px;
+    padding: 16px;
+    border-radius: 14px;
+    font-weight: 700;
+    width: 100%;
+    transition: 0.3s;
   }
-  .next-btn:hover{
-    background: #e67a1a;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(249, 136, 32, 0.3);
+  .btn-book-now:hover {
+    background: var(--hasta-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(203,55,55,0.2);
   }
-  
-  @media (max-width: 1024px){
-    .booking-grid{
-      grid-template-columns: 1fr;
-    }
-    .rental-summary{
-      position: static;
-    }
+
+  .review-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 20px;
+    border: 1px solid #eee;
+    height: 100%;
   }
-  
-  @media (max-width: 768px){
-    .booking-page{
-      padding: 20px 0;
-    }
-    .form-grid{
-      grid-template-columns: 1fr;
-    }
-    .rental-summary, .booking-form-section{
-      padding: 24px;
-    }
-    .total-price-value{
-      font-size: 28px;
-    }
+
+  @media (max-width: 768px) {
+    .detail-hero { padding: 40px 0 80px 0; }
+    .car-specs-card { padding: 20px; }
+    .booking-form-card { padding: 25px; }
   }
 </style>
 
-{{-- ===== BOOKING PAGE LAYOUT ===== --}}
-{{-- Two-column layout: Left side = Rental Summary, Right side = Booking Form --}}
-<div class="booking-page">
-  <div class="booking-container">
-    <div class="booking-grid">
-      {{-- LEFT COLUMN: Rental Summary (sticky sidebar) --}}
-      {{-- Shows car details, rating, image, pricing breakdown, and total --}}
-      <div class="rental-summary">
-        <h2>Rental Summary</h2>
-        <p class="rental-summary-desc">
-          Prices may change depending on the length of the rental and the price of your rental car.
-        </p>
-        
-        <div class="car-details">
-          <div class="car-name-year">{{ $carName }}@if($year) ({{ $year }})@endif</div>
-          <div class="car-rating">
-            <div class="star-rating">
-              @for($i = 1; $i <= 5; $i++)
-                @if($i <= floor($rating))
-                  <svg class="star-filled" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                @else
-                  <svg class="star-outline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                @endif
-              @endfor
-            </div>
-            <span class="review-count">{{ $reviewCount }} {{ $reviewCount === 1 ? 'Review' : 'Reviews' }}</span>
-            @if($avgRating > 0)
-              <span class="review-count ms-2">({{ number_format($avgRating, 1) }} avg)</span>
-            @endif
-          </div>
-          
-          <div class="car-image-container">
-            @if($car->image_url)
-              <img src="{{ $car->image_url }}" alt="{{ $carName }}">
-            @else
-              <svg width="200" height="120" viewBox="0 0 200 120" fill="none">
-                <rect x="20" y="50" width="160" height="60" rx="12" fill="#ddd"/>
-                <circle cx="50" cy="105" r="12" fill="#999"/>
-                <circle cx="150" cy="105" r="12" fill="#999"/>
-                <path d="M50 50 L100 30 L150 30 L180 50" stroke="#bbb" stroke-width="4" fill="none"/>
-              </svg>
-            @endif
-          </div>
-        </div>
-        
-        <div class="cost-breakdown">
-          <div class="cost-row">
-            <span class="cost-label">Subtotal</span>
-            <span class="cost-value" id="subtotal-display">RM {{ number_format($subtotal, 2) }}</span>
-          </div>
-          <div class="cost-row">
-            <span class="cost-label">Tax</span>
-            <span class="cost-value">RM {{ number_format($tax, 2) }}</span>
-          </div>
-        </div>
-        
-        {{-- Voucher Selection Section --}}
-        @if(isset($availableVouchers) && $availableVouchers->count() > 0)
-        <div class="promo-section" style="margin-top: 16px;">
-          <label class="form-label small fw-semibold mb-2" style="display: block;">Apply Voucher (Optional)</label>
-          <select id="voucher-select" name="voucher_id" class="form-select" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-            <option value="">No voucher</option>
-            @foreach($availableVouchers as $voucher)
-              <option value="{{ $voucher->voucher_id }}" 
-                data-discount-type="{{ $voucher->discount_type }}"
-                data-discount-value="{{ $voucher->discount_value }}">
-                {{ $voucher->code }} - 
-                @if($voucher->discount_type === 'percent')
-                  {{ number_format($voucher->discount_value) }}% off
-                @else
-                  RM {{ number_format($voucher->discount_value, 2) }} off
-                @endif
-              </option>
-            @endforeach
-          </select>
-          <small class="text-muted" style="display: block; margin-top: 4px; font-size: 12px;">
-            Select a voucher to apply discount to your booking
-          </small>
-        </div>
+{{-- HERO SECTION --}}
+<div class="detail-hero">
+  <div class="container text-center position-relative" style="z-index: 2;">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb justify-content-center mb-3">
+        <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-white-50 text-decoration-none">Home</a></li>
+        <li class="breadcrumb-item active text-white" aria-current="page">Book Car</li>
+      </ol>
+    </nav>
+    <h1 class="display-5 fw-800 text-white mb-2">{{ $carName }}</h1>
+    <p class="text-white-50">{{ $car->plate_number }} • Registered Vehicle</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {{-- CAR SPECS CARD --}}
+  <div class="car-specs-card mb-5">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-5 text-center">
+        @if($car->image_url)
+          <img src="{{ $car->image_url }}" alt="{{ $carName }}" class="img-fluid" style="max-height: 250px; filter: drop-shadow(0 15px 30px rgba(0,0,0,0.1));">
+        @else
+          <i class="bi bi-image text-muted" style="font-size: 5rem;"></i>
         @endif
-        
-        <div class="total-section">
-          <div class="total-header">Total Rental Price</div>
-          <div class="total-desc">Overall price and includes rental discount</div>
-          <div class="total-price">
-            <span class="total-price-label">Total Rental Price</span>
-            <span class="total-price-value">RM {{ number_format($total, 0) }}</span>
-          </div>
-        </div>
       </div>
-      
-      {{-- RIGHT COLUMN: Booking Form --}}
-      {{-- Contains billing information and rental date/time selection --}}
-      <div>
-        {{-- Billing Information Section --}}
-        {{-- Customer name, phone, address, city --}}
-        <div class="booking-form-section">
-          <div class="form-header">
-            <div>
-              <h2 class="form-title">Billing Info</h2>
-              <p class="form-desc">Please enter your billing info</p>
+      <div class="col-lg-7">
+        <div class="row g-3">
+          <div class="col-6 col-md-4">
+            <div class="spec-item">
+              <div class="spec-icon"><i class="bi bi-people"></i></div>
+              <div><small class="text-muted d-block">Capacity</small><strong>5 Seats</strong></div>
             </div>
-            <span class="step-indicator">Step 1 of 4</span>
           </div>
-          
-          <form id="bookingForm" method="POST" action="{{ route('bookings.store') }}">
-            @csrf
-            <input type="hidden" name="car_id" value="{{ $car->id }}">
-            
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label" for="name">Name</label>
-                <input type="text" id="name" name="name" class="form-input" placeholder="Your name" value="{{ $customer->full_name ?? '' }}" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" class="form-input" placeholder="Phone number" value="{{ $customer->phone ?? '' }}" required>
-              </div>
-              <div class="form-group full-width">
-                <label class="form-label" for="address">Address</label>
-                <input type="text" id="address" name="address" class="form-input" placeholder="Address" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="city">Town / City</label>
-                <input type="text" id="city" name="city" class="form-input" placeholder="Town or city" required>
-              </div>
+          <div class="col-6 col-md-4">
+            <div class="spec-item">
+              <div class="spec-icon"><i class="bi bi-gear"></i></div>
+              <div><small class="text-muted d-block">Trans.</small><strong>Auto</strong></div>
             </div>
-            
-            {{-- Rental Information Section --}}
-            {{-- Pickup and dropoff location, date, and time selection --}}
-            <div class="rental-section">
-              <div class="form-header">
-                <div>
-                  <h2 class="form-title">Rental Info</h2>
-                  <p class="form-desc">Please select your rental date</p>
-                </div>
-                <span class="step-indicator">Step 2 of 4</span>
-              </div>
-              
-              {{-- Pick-Up Details --}}
-              <div style="margin-bottom: 32px;">
-                <div class="rental-header">
-                  <div class="rental-icon">
-                    <div class="rental-icon-dot"></div>
-                  </div>
-                  <div class="rental-title">Pick - Up</div>
-                </div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label class="form-label" for="pickup_location">Locations</label>
-                    <select id="pickup_location" name="pickup_location" class="form-input" required>
-                      <option value="">Select pickup location</option>
-                      @foreach($locations as $location)
-                        @if(in_array($location->type, ['pickup', 'both']))
-                          <option value="{{ $location->name }}">{{ $location->name }}</option>
-                        @endif
-                      @endforeach
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="pickup_date">Date</label>
-                    <input type="date" id="pickup_date" name="pickup_date" class="form-input" placeholder="Select your date" required>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="pickup_time">Time</label>
-                    <input type="time" id="pickup_time" name="pickup_time" class="form-input" placeholder="Select your time" required>
-                  </div>
-                </div>
-              </div>
-              
-              {{-- Drop-Off Details --}}
-              <div>
-                <div class="rental-header">
-                  <div class="rental-icon">
-                    <div class="rental-icon-dot"></div>
-                  </div>
-                  <div class="rental-title">Drop - Off</div>
-                </div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label class="form-label" for="dropoff_location">Locations</label>
-                    <select id="dropoff_location" name="dropoff_location" class="form-input" required>
-                      <option value="">Select dropoff location</option>
-                      @foreach($locations as $location)
-                        @if(in_array($location->type, ['dropoff', 'both']))
-                          <option value="{{ $location->name }}">{{ $location->name }}</option>
-                        @endif
-                      @endforeach
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="dropoff_date">Date</label>
-                    <input type="date" id="dropoff_date" name="dropoff_date" class="form-input" placeholder="Select your date" required>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="dropoff_time">Time</label>
-                    <input type="time" id="dropoff_time" name="dropoff_time" class="form-input" placeholder="Select your time" required>
-                  </div>
-                </div>
-              </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="spec-item">
+              <div class="spec-icon"><i class="bi bi-fuel-pump"></i></div>
+              <div><small class="text-muted d-block">Fuel</small><strong>Petrol</strong></div>
             </div>
-            
-            <button type="submit" class="next-btn">Next</button>
-            <div style="clear: both;"></div>
-          </form>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="spec-item">
+              <div class="spec-icon"><i class="bi bi-calendar3"></i></div>
+              <div><small class="text-muted d-block">Year</small><strong>{{ $car->year }}</strong></div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="spec-item border-warning border">
+              <div class="spec-icon bg-warning-subtle text-warning"><i class="bi bi-star-fill"></i></div>
+              <div><small class="text-muted d-block">Rating</small><strong>{{ number_format($rating, 1) }} ({{ $reviewCount }})</strong></div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="spec-item">
+              <div class="spec-icon"><i class="bi bi-shield-check"></i></div>
+              <div><small class="text-muted d-block">Service</small><strong>Verified</strong></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <div class="row g-4">
+    {{-- LEFT: BOOKING FORM --}}
+    <div class="col-lg-8">
+      <div class="booking-form-card">
+        <form id="bookingForm" method="POST" action="{{ route('bookings.store') }}">
+          @csrf
+          <input type="hidden" name="car_id" value="{{ $car->id }}">
+
+          <h5 class="form-section-title"><span>1</span> Personal Information</h5>
+          <div class="row g-3 mb-5">
+            <div class="col-md-6">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="name" class="form-control" value="{{ $customer->full_name ?? '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone Number</label>
+              <input type="tel" name="phone" class="form-control" value="{{ $customer->phone ?? '' }}" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Address</label>
+              <input type="text" name="address" class="form-control" placeholder="Residential College or Street" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City</label>
+              <input type="text" name="city" class="form-control" required>
+            </div>
+          </div>
+
+          <h5 class="form-section-title"><span>2</span> Rental Details</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Pickup Location</label>
+              <select name="pickup_location" class="form-select" id="pickup_location" required>
+                @foreach($locations as $loc)
+                  @if(in_array($loc->type, ['pickup', 'both']))
+                    <option value="{{ $loc->name }}">{{ $loc->name }}</option>
+                  @endif
+                @endforeach
+              </select>
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label">Pickup Date</label>
+              <input type="date" name="pickup_date" id="pickup_date" class="form-control" required>
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label">Pickup Time</label>
+              <input type="time" name="pickup_time" id="pickup_time" class="form-control" value="09:00" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Dropoff Location</label>
+              <select name="dropoff_location" class="form-select" id="dropoff_location" required>
+                @foreach($locations as $loc)
+                  @if(in_array($loc->type, ['dropoff', 'both']))
+                    <option value="{{ $loc->name }}">{{ $loc->name }}</option>
+                  @endif
+                @endforeach
+              </select>
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label">Dropoff Date</label>
+              <input type="date" name="dropoff_date" id="dropoff_date" class="form-control" required>
+            </div>
+            <div class="col-md-3 col-6">
+              <label class="form-label">Dropoff Time</label>
+              <input type="time" name="dropoff_time" id="dropoff_time" class="form-control" value="09:00" required>
+            </div>
+          </div>
+
+          @if(isset($availableVouchers) && $availableVouchers->count() > 0)
+            <div class="bg-light p-4 rounded-4 mb-4">
+              <label class="form-label">Available Vouchers</label>
+              <select id="voucher-select" name="voucher_id" class="form-select bg-white">
+                <option value="">No voucher applied</option>
+                @foreach($availableVouchers as $voucher)
+                  <option value="{{ $voucher->voucher_id }}" data-discount-type="{{ $voucher->discount_type }}" data-discount-value="{{ $voucher->discount_value }}">
+                    {{ $voucher->code }} ({{ $voucher->discount_type === 'percent' ? $voucher->discount_value.'%' : 'RM'.$voucher->discount_value }} Off)
+                  </option>
+                @endforeach
+              </select>
+            </div>
+          @endif
+
+          <div class="alert alert-warning border-0 d-flex gap-3 p-4 rounded-4">
+            <i class="bi bi-exclamation-triangle-fill h4 mb-0"></i>
+            <div class="small">
+              <strong>Notice:</strong> A RM 50 deposit is required to confirm this booking. You will be asked to upload the payment receipt on the next page.
+            </div>
+          </div>
+
+          <button type="submit" class="btn-book-now mt-4">
+            Proceed to Payment <i class="bi bi-arrow-right ms-2"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {{-- RIGHT: SUMMARY --}}
+    <div class="col-lg-4">
+      <div class="summary-sticky">
+        <h5 class="fw-800 mb-4">Rental Summary</h5>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Rate per Hour</span>
+          <span class="fw-bold">RM {{ number_format($baseRate, 2) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+          <span class="text-muted">Base Subtotal</span>
+          <span id="subtotal-display" class="fw-bold">RM 0.00</span>
+        </div>
+        
+        <div id="voucher-discount-row" class="justify-content-between mb-2 text-success" style="display: none;">
+          <span>Voucher Discount</span>
+          <span class="fw-bold">-RM <span id="voucher-discount-amount">0.00</span></span>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <div>
+            <h6 class="fw-bold mb-0">Total Price</h6>
+            <small class="text-muted">Estimated amount</small>
+          </div>
+          <div class="text-end">
+            <span class="h3 fw-800 text-hasta-red mb-0 total-price-value">RM 0</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-top">
+          <div class="d-flex gap-2 mb-2">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <small>Insurance included</small>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <small>Verified by UTM Staff</small>
+          </div>
+          <div class="d-flex gap-2">
+            <i class="bi bi-info-circle-fill text-primary"></i>
+            <small>Refundable RM 50 Deposit</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{-- REVIEWS SECTION --}}
+  @if(isset($feedbacks) && $feedbacks->count() > 0)
+    <div class="mt-5 pt-5">
+      <h4 class="fw-800 mb-4">Customer Reviews</h4>
+      <div class="row g-4">
+        @foreach($feedbacks as $feedback)
+          <div class="col-md-6">
+            <div class="review-card">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h6 class="fw-bold mb-0">{{ $feedback->customer->full_name ?? 'Anonymous' }}</h6>
+                  <small class="text-muted">{{ $feedback->created_at->format('d M Y') }}</small>
+                </div>
+                <div class="text-warning">
+                  @for($i = 1; $i <= 5; $i++)
+                    <i class="bi bi-star{{ $i <= $feedback->rating ? '-fill' : '' }}"></i>
+                  @endfor
+                </div>
+              </div>
+              <p class="small text-muted mb-0">{{ $feedback->comment }}</p>
+            </div>
+          </div>
+        @endforeach
+      </div>
+    </div>
+  @endif
 </div>
+
+@endsection
 
 @push('scripts')
 <script>
-  // ===== DYNAMIC PRICING CALCULATION =====
-  // Updates rental price automatically when user changes pickup/dropoff dates/times
-  // Calculates hours difference and multiplies by hourly rate
-  
   const pickupDateInput = document.getElementById('pickup_date');
   const dropoffDateInput = document.getElementById('dropoff_date');
   const pickupTimeInput = document.getElementById('pickup_time');
   const dropoffTimeInput = document.getElementById('dropoff_time');
-  const pricePerHour = Number({{ json_encode(floatval($car->base_rate_per_hour ?? 0)) }});
+  const pricePerHour = Number({{ json_encode(floatval($baseRate)) }});
   const subtotalDisplay = document.getElementById('subtotal-display');
   const totalDisplay = document.querySelector('.total-price-value');
   
-  /**
-   * Calculate and update pricing display based on selected dates/times and voucher
-   * Minimum rental is 1 hour
-   */
   function updatePricing() {
     if (pickupDateInput.value && dropoffDateInput.value && pickupTimeInput.value && dropoffTimeInput.value) {
-      // Parse selected dates and times into Date objects
       const pickup = new Date(pickupDateInput.value + 'T' + pickupTimeInput.value);
       const dropoff = new Date(dropoffDateInput.value + 'T' + dropoffTimeInput.value);
       
-      // Validation: Ensure dropoff is after pickup (prevent invalid selections)
       if (dropoff < pickup) {
         dropoffDateInput.value = pickupDateInput.value;
-        dropoffTimeInput.value = pickupTimeInput.value;
         return;
       }
       
-      // Calculate rental duration in hours
-      const diffTime = Math.abs(dropoff - pickup);
-      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60)); // Convert milliseconds to hours
-      const hours = Math.max(1, diffHours); // Minimum 1 hour rental
-      
-      // Calculate base pricing: hourly rate × hours
+      const diffHours = Math.ceil(Math.abs(dropoff - pickup) / (1000 * 60 * 60));
+      const hours = Math.max(1, diffHours);
       const subtotal = pricePerHour * hours;
       
-      // Calculate voucher discount if voucher is selected
       let voucherDiscount = 0;
       const voucherSelect = document.getElementById('voucher-select');
       if (voucherSelect && voucherSelect.value) {
-        const selectedOption = voucherSelect.options[voucherSelect.selectedIndex];
-        const discountType = selectedOption.getAttribute('data-discount-type');
-        const discountValue = parseFloat(selectedOption.getAttribute('data-discount-value'));
-        
-        if (discountType === 'percent') {
-          voucherDiscount = (subtotal * discountValue) / 100;
-        } else {
-          // Fixed amount discount (can't exceed subtotal)
-          voucherDiscount = Math.min(discountValue, subtotal);
-        }
+        const opt = voucherSelect.options[voucherSelect.selectedIndex];
+        const type = opt.getAttribute('data-discount-type');
+        const val = parseFloat(opt.getAttribute('data-discount-value'));
+        voucherDiscount = (type === 'percent') ? (subtotal * val / 100) : Math.min(val, subtotal);
       }
       
-      const tax = 0.00; // No tax currently
-      const total = subtotal - voucherDiscount + tax;
+      const total = subtotal - voucherDiscount;
       
-      // Update display
-      if (subtotalDisplay) {
-        subtotalDisplay.textContent = 'RM ' + subtotal.toFixed(2);
-      }
-      if (totalDisplay) {
-        totalDisplay.textContent = 'RM ' + Math.round(total);
-      }
+      if (subtotalDisplay) subtotalDisplay.textContent = 'RM ' + subtotal.toFixed(2);
+      if (totalDisplay) totalDisplay.textContent = 'RM ' + Math.round(total);
       
-      // Show/hide voucher discount display
-      let voucherDiscountRow = document.getElementById('voucher-discount-row');
+      const discRow = document.getElementById('voucher-discount-row');
       if (voucherDiscount > 0) {
-        if (!voucherDiscountRow) {
-          // Create voucher discount row if it doesn't exist
-          const costBreakdown = document.querySelector('.cost-breakdown');
-          if (costBreakdown) {
-            voucherDiscountRow = document.createElement('div');
-            voucherDiscountRow.id = 'voucher-discount-row';
-            voucherDiscountRow.className = 'cost-row';
-            voucherDiscountRow.style.color = '#28a745';
-            voucherDiscountRow.innerHTML = '<span class="cost-label">Voucher Discount</span><span class="cost-value">-RM <span id="voucher-discount-amount">0.00</span></span>';
-            costBreakdown.appendChild(voucherDiscountRow);
-          }
-        }
-        if (voucherDiscountRow) {
-          document.getElementById('voucher-discount-amount').textContent = voucherDiscount.toFixed(2);
-          voucherDiscountRow.style.display = 'flex';
-        }
-      } else if (voucherDiscountRow) {
-        voucherDiscountRow.style.display = 'none';
+        document.getElementById('voucher-discount-amount').textContent = voucherDiscount.toFixed(2);
+        discRow.style.display = 'flex';
+      } else {
+        discRow.style.display = 'none';
       }
     }
   }
   
-  if (pickupDateInput && dropoffDateInput && pickupTimeInput && dropoffTimeInput) {
-    pickupDateInput.addEventListener('change', function() {
-      // Set minimum dropoff date to pickup date
-      dropoffDateInput.setAttribute('min', pickupDateInput.value);
-      updatePricing();
-    });
-    dropoffDateInput.addEventListener('change', updatePricing);
-    pickupTimeInput.addEventListener('change', updatePricing);
-    dropoffTimeInput.addEventListener('change', updatePricing);
-  }
+  [pickupDateInput, dropoffDateInput, pickupTimeInput, dropoffTimeInput].forEach(el => {
+    if (el) el.addEventListener('change', updatePricing);
+  });
   
-  // Update pricing when voucher selection changes
-  const voucherSelect = document.getElementById('voucher-select');
-  if (voucherSelect) {
-    voucherSelect.addEventListener('change', updatePricing);
-  }
+  const vSelect = document.getElementById('voucher-select');
+  if (vSelect) vSelect.addEventListener('change', updatePricing);
   
-  // ===== DATE VALIDATION =====
-  // Set minimum selectable date to today (prevent booking past dates)
   const today = new Date().toISOString().split('T')[0];
   if (pickupDateInput) {
     pickupDateInput.setAttribute('min', today);
@@ -682,44 +456,7 @@
     dropoffDateInput.setAttribute('min', today);
     dropoffDateInput.value = today;
   }
+  updatePricing();
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
 @endpush
-
-@if(isset($feedbacks) && $feedbacks && $feedbacks->count() > 0)
-<div class="container-custom mt-5">
-  <div class="card border-0 shadow-soft">
-    <div class="card-body p-4">
-      <h5 class="fw-bold mb-4">Customer Reviews</h5>
-      <div class="row g-3">
-        @foreach($feedbacks as $feedback)
-          <div class="col-12">
-            <div class="border-bottom pb-3 mb-3">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <div>
-                  <strong>{{ $feedback->customer->full_name ?? 'Anonymous' }}</strong>
-                  <div class="small text-muted">{{ $feedback->created_at->format('d M Y') }}</div>
-                </div>
-                <div class="d-flex gap-1">
-                  @for($i = 1; $i <= 5; $i++)
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ $i <= $feedback->rating ? '#FFD700' : '#ddd' }}" stroke="currentColor" stroke-width="2">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  @endfor
-                </div>
-              </div>
-              @if($feedback->comment)
-                <p class="mb-0">{{ $feedback->comment }}</p>
-              @endif
-              @if($feedback->reported_issue)
-                <small class="text-warning">⚠ Issue reported</small>
-              @endif
-            </div>
-          </div>
-        @endforeach
-      </div>
-    </div>
-  </div>
-</div>
-@endif
-
-@endsection
