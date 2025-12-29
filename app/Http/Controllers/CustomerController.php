@@ -13,6 +13,8 @@ use App\Models\Payment;
 use App\Models\Car;
 use App\Models\CarLocation;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Handles all customer-facing features
@@ -118,9 +120,23 @@ class CustomerController extends Controller
         $customerId = $this->getCustomerId($request);
 
         // Load booking with all related data
-        $booking = Booking::with(['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'feedback', 'payments'])
+        // Note: 'feedback' is excluded from eager loading as the table may not exist
+        $withRelations = ['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments'];
+        
+        // Only eager load feedback if the table exists
+        $feedbackTableExists = DB::getSchemaBuilder()->hasTable('feedback');
+        if ($feedbackTableExists) {
+            $withRelations[] = 'feedback';
+        }
+        
+        $booking = Booking::with($withRelations)
             ->where('customer_id', $customerId) // Security: Ensure customer can only view their own bookings
             ->findOrFail($id);
+
+        // If feedback table doesn't exist, set feedback to null to prevent lazy loading errors
+        if (!$feedbackTableExists) {
+            $booking->setRelation('feedback', null);
+        }
 
         return view('customer.bookings.show', ['booking' => $booking]);
     }
@@ -187,73 +203,94 @@ class CustomerController extends Controller
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
-        // Handle receipt upload
-        $receipt = $request->file('receipt');
-        $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
-        $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
+        // Wrap everything in a database transaction for atomicity
+        try {
+            DB::beginTransaction();
 
-        // Rebuild Carbon dates
-        $pickup = \Carbon\Carbon::parse($pending['pickup_date'] . ' ' . $pending['pickup_time']);
-        $dropoff = \Carbon\Carbon::parse($pending['dropoff_date'] . ' ' . $pending['dropoff_time']);
+            // Handle receipt upload
+            $receipt = $request->file('receipt');
+            $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+            $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
 
-        // Ensure locations exist
-        $pickupLocation = CarLocation::firstOrCreate(
-            ['name' => $pending['pickup_location']],
-            ['type' => 'both']
-        );
-        $dropoffLocation = CarLocation::firstOrCreate(
-            ['name' => $pending['dropoff_location']],
-            ['type' => 'both']
-        );
+            // Rebuild Carbon dates
+            $pickup = \Carbon\Carbon::parse($pending['pickup_date'] . ' ' . $pending['pickup_time']);
+            $dropoff = \Carbon\Carbon::parse($pending['dropoff_date'] . ' ' . $pending['dropoff_time']);
 
-        // Create booking record now that deposit receipt is submitted
-        $booking = Booking::create([
-            'customer_id' => $customerId,
-            'car_id' => $pending['car_id'],
-            'pickup_location_id' => $pickupLocation->location_id,
-            'dropoff_location_id' => $dropoffLocation->location_id,
-            'start_datetime' => $pickup,
-            'end_datetime' => $dropoff,
-            'rental_hours' => $pending['hours'],
-            'base_price' => $pending['base_price'],
-            'promo_discount' => $pending['promo_discount'],
-            'voucher_discount' => $pending['voucher_discount'],
-            'total_rental_amount' => $pending['total_rental_amount'],
-            'deposit_amount' => $pending['deposit_amount'],
-            'deposit_used_amount' => 0.00,
-            'deposit_refund_amount' => 0.00,
-            'final_amount' => $pending['final_amount'],
-            'status' => 'created',
-        ]);
+            // Ensure locations exist
+            $pickupLocation = CarLocation::firstOrCreate(
+                ['name' => $pending['pickup_location']],
+                ['type' => 'both']
+            );
+            $dropoffLocation = CarLocation::firstOrCreate(
+                ['name' => $pending['dropoff_location']],
+                ['type' => 'both']
+            );
 
-        // Create voucher redemption record if voucher was used
-        if (!empty($pending['voucher_id']) && ($pending['voucher_discount'] ?? 0) > 0) {
-            VoucherRedemption::create([
-                'voucher_id' => $pending['voucher_id'],
+            // Create booking record now that deposit receipt is submitted
+            $booking = Booking::create([
                 'customer_id' => $customerId,
-                'booking_id' => $booking->booking_id,
-                'discount_amount' => $pending['voucher_discount'],
-                'redeemed_at' => now(),
+                'car_id' => $pending['car_id'],
+                'pickup_location_id' => $pickupLocation->location_id,
+                'dropoff_location_id' => $dropoffLocation->location_id,
+                'start_datetime' => $pickup,
+                'end_datetime' => $dropoff,
+                'rental_hours' => $pending['hours'],
+                'base_price' => $pending['base_price'],
+                'promo_discount' => $pending['promo_discount'] ?? 0.00,
+                'voucher_discount' => $pending['voucher_discount'] ?? 0.00,
+                'total_rental_amount' => $pending['total_rental_amount'],
+                'deposit_amount' => $pending['deposit_amount'],
+                'deposit_used_amount' => 0.00,
+                'deposit_refund_amount' => 0.00,
+                'final_amount' => $pending['final_amount'],
+                'status' => 'created',
             ]);
+
+            // Create voucher redemption record if voucher was used
+            if (!empty($pending['voucher_id']) && ($pending['voucher_discount'] ?? 0) > 0) {
+                VoucherRedemption::create([
+                    'voucher_id' => $pending['voucher_id'],
+                    'customer_id' => $customerId,
+                    'booking_id' => $booking->booking_id,
+                    'discount_amount' => $pending['voucher_discount'],
+                    'redeemed_at' => now(),
+                ]);
+            }
+
+            // Create payment record linked to this booking
+            Payment::create([
+                'booking_id' => $booking->booking_id,
+                'penalty_id' => null,
+                'amount' => $validated['amount'],
+                'payment_type' => $validated['payment_type'],
+                'payment_method' => $validated['payment_method'],
+                'receipt_url' => $receiptPath,
+                'payment_date' => $validated['payment_date'],
+                'status' => 'pending', // Staff must verify
+            ]);
+
+            // Commit transaction
+            DB::commit();
+
+            // Clear pending booking data from session
+            $request->session()->forget('pending_booking');
+
+            return redirect()->route('customer.bookings.show', $booking->booking_id)
+                ->with('success', 'Deposit receipt uploaded. Your booking has been created and is pending verification by Hasta staff.');
+        } catch (\Exception $e) {
+            // Rollback transaction on error
+            DB::rollBack();
+            
+            // Log error for debugging
+            Log::error('Booking creation failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'pending_data' => $pending,
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Failed to create booking. Please try again. If the problem persists, contact support.']);
         }
-
-        // Create payment record linked to this booking
-        Payment::create([
-            'booking_id' => $booking->booking_id,
-            'penalty_id' => null,
-            'amount' => $validated['amount'],
-            'payment_type' => $validated['payment_type'],
-            'payment_method' => $validated['payment_method'],
-            'receipt_url' => $receiptPath,
-            'payment_date' => $validated['payment_date'],
-            'status' => 'pending', // Staff must verify
-        ]);
-
-        // Clear pending booking data from session
-        $request->session()->forget('pending_booking');
-
-        return redirect()->route('customer.bookings.show', $booking->booking_id)
-            ->with('success', 'Deposit receipt uploaded. Your booking has been created and is pending verification by Hasta staff.');
     }
 
     /**
