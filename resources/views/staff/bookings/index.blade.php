@@ -1,17 +1,26 @@
 @extends('layouts.app')
 @section('title', 'Bookings - Staff Dashboard')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+@endpush
+
 @section('content')
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
   <div class="flex-fill" style="background: var(--bg);">
-    <div class="container-custom" style="padding: 32px 24px 48px;">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <div>
-      <h1 class="h3 fw-bold mb-1" style="color:#333;">Booking Management</h1>
-      <p class="text-muted mb-0" style="font-size: 14px;">Track all deposit-first bookings, payments and rental statuses.</p>
-    </div>
-  </div>
+    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+          <h1 class="h3 fw-bold mb-1" style="color:#333;">Booking Management</h1>
+          <p class="text-muted mb-0" style="font-size: 14px;">Track all deposit-first bookings, payments and rental statuses.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ route('staff.bookings.export', request()->query()) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-download"></i> Export CSV
+          </a>
+        </div>
+      </div>
 
   @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">

@@ -5,7 +5,7 @@
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
   <div class="flex-fill" style="background: var(--bg);">
-    <div class="container-custom" style="padding: 32px 24px 48px; max-width: 1000px;">
+    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="mb-4">
     <a href="{{ route('staff.customers') }}" class="text-decoration-none small">&larr; Back to customers</a>
     <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Customer #{{ $customer->customer_id }}: {{ $customer->full_name }}</h1>

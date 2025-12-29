@@ -2,7 +2,7 @@
 @section('title', 'Booking Details - Hasta GoRent')
 
 @section('content')
-<div class="container-custom" style="padding: 32px 24px 48px; max-width: 1000px;">
+<div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="mb-4">
     <a href="{{ route('customer.bookings') }}" class="text-decoration-none small">&larr; Back to My Bookings</a>
     <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Booking #{{ $booking->booking_id }}</h1>
@@ -103,7 +103,8 @@
       </div>
 
       {{-- PAYMENT RECEIPT UPLOAD --}}
-      @if(in_array($booking->status, ['created', 'confirmed', 'active']))
+      {{-- Only show upload form if booking is in valid status AND no payments have been uploaded yet --}}
+      @if(in_array($booking->status, ['created', 'confirmed', 'active']) && (!$booking->payments || $booking->payments->count() === 0))
       <div class="card border-0 shadow-soft mb-3">
         <div class="card-body p-4">
           <h5 class="fw-bold mb-3">Upload Payment Receipt</h5>
@@ -194,6 +195,66 @@
       </div>
       @endif
 
+      {{-- RENTAL PHOTOS --}}
+      @if(in_array($booking->status, ['active', 'completed']))
+      <div class="card border-0 shadow-soft mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Rental Photos</h5>
+          <p class="small text-muted mb-3">Upload photos of the car during your rental period (before pickup, after return, damage, etc.)</p>
+          
+          {{-- UPLOAD FORM --}}
+          <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" class="mb-4">
+            @csrf
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Photo Type <span class="text-danger">*</span></label>
+                <select name="photo_type" class="form-select" required>
+                  <option value="before">Before Pickup</option>
+                  <option value="after">After Return</option>
+                  <option value="damage">Damage Report</option>
+                  <option value="key">Key/Vehicle</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Date Taken <span class="text-danger">*</span></label>
+                <input type="date" name="taken_at" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Photo <span class="text-danger">*</span></label>
+                <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png,image/jpg" required>
+                <small class="text-muted">JPEG, PNG only. Max 5MB</small>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-hasta btn-sm">Upload Photo</button>
+              </div>
+            </div>
+          </form>
+
+          {{-- UPLOADED PHOTOS GALLERY --}}
+          @if($booking->rentalPhotos && $booking->rentalPhotos->count() > 0)
+            <div class="row g-2">
+              @foreach($booking->rentalPhotos as $photo)
+                <div class="col-md-3 col-sm-4 col-6">
+                  <div class="position-relative">
+                    <img src="{{ $photo->photo_url }}" alt="Rental Photo" class="img-fluid rounded" style="height: 150px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ $photo->photo_url }}', '_blank')">
+                    <div class="position-absolute top-0 start-0 m-2">
+                      <span class="badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
+                    </div>
+                    <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-1 rounded-bottom">
+                      <small>{{ $photo->taken_at->format('d M Y') }}</small>
+                    </div>
+                  </div>
+                </div>
+              @endforeach
+            </div>
+          @else
+            <p class="text-muted mb-0 small">No photos uploaded yet.</p>
+          @endif
+        </div>
+      </div>
+      @endif
+
       @if($booking->penalties && $booking->penalties->count() > 0)
       <div class="card border-0 shadow-soft">
         <div class="card-body p-4">
@@ -276,13 +337,6 @@
         </div>
       </div>
 
-      @if($booking->car && $booking->car->image_url)
-      <div class="card border-0 shadow-soft mt-3">
-        <div class="card-body p-0">
-          <img src="{{ $booking->car->image_url }}" alt="{{ $booking->car->brand }} {{ $booking->car->model }}" class="img-fluid w-100 rounded" style="height: 200px; object-fit: cover;">
-        </div>
-      </div>
-      @endif
 
       {{-- FEEDBACK FORM --}}
       @if($booking->status === 'completed' && !$booking->feedback)

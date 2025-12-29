@@ -5,7 +5,7 @@
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
   <div class="flex-fill" style="background: var(--bg);">
-    <div class="container-custom" style="padding: 32px 24px 48px;">
+    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
       <h1 class="h3 fw-bold mb-1" style="color:#333;">Car Fleet Management</h1>

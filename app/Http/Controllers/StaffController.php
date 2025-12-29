@@ -12,6 +12,12 @@ use App\Models\Penalty;
 use App\Models\Inspection;
 use App\Models\Activity;
 use App\Models\Payment;
+use App\Models\Voucher;
+use App\Models\MaintenanceRecord;
+use App\Models\Feedback;
+use App\Models\RentalPhoto;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Handles all staff/admin functionality
@@ -45,6 +51,21 @@ class StaffController extends Controller
     {
         $this->ensureStaff($request);
 
+        // Calculate revenue statistics
+        $totalRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->sum('amount');
+        
+        $totalDeposits = Payment::where('status', 'verified')
+            ->where('payment_type', 'deposit')
+            ->sum('amount');
+        
+        $monthlyRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->whereMonth('payment_date', now()->month)
+            ->whereYear('payment_date', now()->year)
+            ->sum('amount');
+
         $stats = [
             'totalCars'           => Car::count(),
             'availableCars'       => Car::where('status', 'available')->count(),
@@ -56,6 +77,9 @@ class StaffController extends Controller
             'totalCustomers'      => Customer::count(),
             'pendingVerifications' => Customer::where('verification_status', 'pending')->count(),
             'blacklistedCustomers' => Customer::where('is_blacklisted', true)->count(),
+            'totalRevenue'        => $totalRevenue,
+            'totalDeposits'       => $totalDeposits,
+            'monthlyRevenue'      => $monthlyRevenue,
         ];
 
         // Get recent bookings that need attention
@@ -314,6 +338,7 @@ class StaffController extends Controller
             'car',
             'customer',
             'penalties',
+            'rentalPhotos',
             'inspections' => function ($q) {
                 $q->orderBy('datetime', 'asc'); // Order inspections chronologically
             },
@@ -356,10 +381,34 @@ class StaffController extends Controller
             }
         }
 
+        // Store old status to check if we're transitioning to completed
+        $oldStatus = $booking->status;
+        $isCompleting = ($oldStatus !== 'completed' && $data['status'] === 'completed');
+        $stampsToAward = 0; // Initialize variable
+
         // Update booking status
         $booking->update($data);
 
-        return redirect()->back()->with('success', 'Booking status updated!');
+        // Auto-award loyalty stamps when booking is completed
+        // Business rule: 1 stamp per 9 rental hours (as per schema comment)
+        if ($isCompleting) {
+            $customer = $booking->customer;
+            $rentalHours = $booking->rental_hours ?? 0;
+            $stampsToAward = floor($rentalHours / 9); // 1 stamp per 9 hours
+            
+            if ($stampsToAward > 0) {
+                $customer->total_stamps = ($customer->total_stamps ?? 0) + $stampsToAward;
+                $customer->total_rental_hours = ($customer->total_rental_hours ?? 0) + $rentalHours;
+                $customer->save();
+            }
+        }
+
+        $successMessage = 'Booking status updated!';
+        if ($isCompleting && $stampsToAward > 0) {
+            $successMessage .= ' Customer awarded ' . $stampsToAward . ' loyalty stamp(s).';
+        }
+
+        return redirect()->back()->with('success', $successMessage);
     }
 
     /**
@@ -790,5 +839,948 @@ class StaffController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Payment verified successfully!');
+    }
+
+    // ========== VOUCHER MANAGEMENT ==========
+
+    /**
+     * List all vouchers with filtering and search capabilities
+     * Supports filtering by active/inactive status
+     * Supports searching by code or description
+     * 
+     * @param Request $request May contain 'status' and 'search' filter parameters
+     * @return \Illuminate\View\View
+     */
+    public function vouchers(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = Voucher::query();
+
+        // Filter by active status
+        if ($request->has('status') && $request->status !== '') {
+            if ($request->status === 'active') {
+                $query->where('is_active', true)->where('expiry_date', '>=', now());
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } elseif ($request->status === 'expired') {
+                $query->where('expiry_date', '<', now());
+            }
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Paginate results (15 vouchers per page)
+        $vouchers = $query->orderBy('created_at', 'desc')->paginate(15);
+
+        return view('staff.vouchers.index', [
+            'vouchers' => $vouchers,
+            'filters' => $request->only(['status', 'search']),
+        ]);
+    }
+
+    /**
+     * Display the form to create a new voucher
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function vouchersCreate(Request $request)
+    {
+        $this->ensureStaff($request);
+        return view('staff.vouchers.create');
+    }
+
+    /**
+     * Store a newly created voucher
+     * 
+     * @param Request $request Contains voucher data
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function vouchersStore(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $data = $request->validate([
+            'code' => 'required|string|max:50|unique:vouchers,code',
+            'description' => 'nullable|string',
+            'discount_type' => 'required|in:percent,fixed',
+            'discount_value' => 'required|numeric|min:0',
+            'min_stamps_required' => 'required|integer|min:0',
+            'expiry_date' => 'required|date|after_or_equal:today',
+            'is_active' => 'boolean',
+        ]);
+
+        $data['is_active'] = $request->has('is_active');
+
+        Voucher::create($data);
+
+        return redirect()->route('staff.vouchers')->with('success', 'Voucher created successfully!');
+    }
+
+    /**
+     * Display the form to edit an existing voucher
+     * 
+     * @param Request $request
+     * @param int $id Voucher ID
+     * @return \Illuminate\View\View
+     */
+    public function vouchersEdit(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $voucher = Voucher::findOrFail($id);
+        return view('staff.vouchers.edit', ['voucher' => $voucher]);
+    }
+
+    /**
+     * Update an existing voucher
+     * 
+     * @param Request $request Contains updated voucher data
+     * @param int $id Voucher ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function vouchersUpdate(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $voucher = Voucher::findOrFail($id);
+
+        $data = $request->validate([
+            'code' => 'required|string|max:50|unique:vouchers,code,' . $id . ',voucher_id',
+            'description' => 'nullable|string',
+            'discount_type' => 'required|in:percent,fixed',
+            'discount_value' => 'required|numeric|min:0',
+            'min_stamps_required' => 'required|integer|min:0',
+            'expiry_date' => 'required|date',
+            'is_active' => 'boolean',
+        ]);
+
+        $data['is_active'] = $request->has('is_active');
+
+        $voucher->update($data);
+
+        return redirect()->route('staff.vouchers')->with('success', 'Voucher updated successfully!');
+    }
+
+    /**
+     * Delete a voucher
+     * 
+     * @param Request $request
+     * @param int $id Voucher ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function vouchersDestroy(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $voucher = Voucher::findOrFail($id);
+        $voucher->delete();
+
+        return redirect()->route('staff.vouchers')->with('success', 'Voucher deleted successfully!');
+    }
+
+    // ========== MAINTENANCE RECORDS MANAGEMENT ==========
+
+    /**
+     * List all maintenance records for a specific car
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\View\View
+     */
+    public function maintenanceRecords(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($id);
+        
+        $records = MaintenanceRecord::where('car_id', $id)
+            ->orderBy('service_date', 'desc')
+            ->paginate(15);
+
+        return view('staff.maintenance.index', [
+            'car' => $car,
+            'records' => $records,
+        ]);
+    }
+
+    /**
+     * Display the form to create a new maintenance record
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\View\View
+     */
+    public function maintenanceCreate(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($id);
+        return view('staff.maintenance.create', ['car' => $car]);
+    }
+
+    /**
+     * Store a newly created maintenance record
+     * Updates car's last_service_date and current_mileage if provided
+     * 
+     * @param Request $request Contains maintenance data
+     * @param int $id Car ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function maintenanceStore(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($id);
+
+        $data = $request->validate([
+            'service_date' => 'required|date',
+            'description' => 'nullable|string',
+            'mileage_at_service' => 'required|integer|min:0',
+            'cost' => 'nullable|numeric|min:0',
+            'update_car_mileage' => 'boolean',
+            'update_last_service_date' => 'boolean',
+        ]);
+
+        $data['car_id'] = $id;
+
+        // Create maintenance record
+        MaintenanceRecord::create($data);
+
+        // Optionally update car's mileage and last service date
+        if ($request->has('update_car_mileage')) {
+            $car->current_mileage = $data['mileage_at_service'];
+        }
+        if ($request->has('update_last_service_date')) {
+            $car->last_service_date = $data['service_date'];
+        }
+        
+        // If mileage was updated and exceeds service limit, set status to maintenance
+        if ($request->has('update_car_mileage') && $car->current_mileage >= $car->service_mileage_limit) {
+            $car->status = 'maintenance';
+        }
+        
+        $car->save();
+
+        return redirect()->route('staff.maintenance.index', $id)->with('success', 'Maintenance record created successfully!');
+    }
+
+    /**
+     * Display the form to edit an existing maintenance record
+     * 
+     * @param Request $request
+     * @param int $carId Car ID
+     * @param int $recordId Maintenance Record ID
+     * @return \Illuminate\View\View
+     */
+    public function maintenanceEdit(Request $request, $carId, $recordId)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($carId);
+        $record = MaintenanceRecord::where('car_id', $carId)->findOrFail($recordId);
+        return view('staff.maintenance.edit', ['car' => $car, 'record' => $record]);
+    }
+
+    /**
+     * Update an existing maintenance record
+     * 
+     * @param Request $request Contains updated maintenance data
+     * @param int $carId Car ID
+     * @param int $recordId Maintenance Record ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function maintenanceUpdate(Request $request, $carId, $recordId)
+    {
+        $this->ensureStaff($request);
+        $record = MaintenanceRecord::where('car_id', $carId)->findOrFail($recordId);
+
+        $data = $request->validate([
+            'service_date' => 'required|date',
+            'description' => 'nullable|string',
+            'mileage_at_service' => 'required|integer|min:0',
+            'cost' => 'nullable|numeric|min:0',
+        ]);
+
+        $record->update($data);
+
+        return redirect()->route('staff.maintenance.index', $carId)->with('success', 'Maintenance record updated successfully!');
+    }
+
+    /**
+     * Delete a maintenance record
+     * 
+     * @param Request $request
+     * @param int $carId Car ID
+     * @param int $recordId Maintenance Record ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function maintenanceDestroy(Request $request, $carId, $recordId)
+    {
+        $this->ensureStaff($request);
+        $record = MaintenanceRecord::where('car_id', $carId)->findOrFail($recordId);
+        $record->delete();
+
+        return redirect()->route('staff.maintenance.index', $carId)->with('success', 'Maintenance record deleted successfully!');
+    }
+
+    // ========== FEEDBACK MANAGEMENT ==========
+
+    /**
+     * List all customer feedback with filtering capabilities
+     * Supports filtering by rating and reported issues
+     * Supports searching by customer name or comment
+     * 
+     * @param Request $request May contain 'rating', 'reported_issue', and 'search' filter parameters
+     * @return \Illuminate\View\View
+     */
+    public function feedbacks(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        // Check if feedbacks table exists (note: table name is 'feedbacks' plural)
+        if (!DB::getSchemaBuilder()->hasTable('feedbacks')) {
+            // Create empty paginator for when table doesn't exist
+            $emptyPaginator = new LengthAwarePaginator(
+                collect([]), // Empty collection
+                0, // Total items
+                15, // Items per page
+                1, // Current page
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+            
+            return view('staff.feedbacks.index', [
+                'feedbacks' => $emptyPaginator,
+                'filters' => [],
+                'tableExists' => false,
+                'stats' => [
+                    'total' => 0,
+                    'averageRating' => 0,
+                    'reportedIssues' => 0,
+                    'ratingDistribution' => [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0],
+                ],
+            ]);
+        }
+
+        $query = Feedback::with(['customer', 'booking.car']);
+
+        // Filter by rating
+        if ($request->has('rating') && $request->rating !== '') {
+            $query->where('rating', $request->rating);
+        }
+
+        // Filter by reported issues
+        if ($request->has('reported_issue') && $request->reported_issue !== '') {
+            $query->where('reported_issue', $request->reported_issue === '1');
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('customer', function($customerQuery) use ($search) {
+                    $customerQuery->where('full_name', 'like', "%{$search}%")
+                                  ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhere('comment', 'like', "%{$search}%");
+            });
+        }
+
+        // Paginate results (15 feedbacks per page)
+        $feedbacks = $query->orderBy('created_at', 'desc')->paginate(15);
+
+        // Calculate statistics
+        $stats = [
+            'total' => Feedback::count(),
+            'averageRating' => Feedback::avg('rating') ?? 0,
+            'reportedIssues' => Feedback::where('reported_issue', true)->count(),
+            'ratingDistribution' => [
+                5 => Feedback::where('rating', 5)->count(),
+                4 => Feedback::where('rating', 4)->count(),
+                3 => Feedback::where('rating', 3)->count(),
+                2 => Feedback::where('rating', 2)->count(),
+                1 => Feedback::where('rating', 1)->count(),
+            ],
+        ];
+
+        return view('staff.feedbacks.index', [
+            'feedbacks' => $feedbacks,
+            'filters' => $request->only(['rating', 'reported_issue', 'search']),
+            'stats' => $stats,
+            'tableExists' => true,
+        ]);
+    }
+
+    // ========== CAR LOCATION MANAGEMENT ==========
+
+    /**
+     * List all car locations
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function locations(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = CarLocation::query();
+
+        // Filter by type
+        if ($request->has('type') && $request->type !== '') {
+            $query->where('type', $request->type);
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $locations = $query->orderBy('name', 'asc')->paginate(20);
+
+        return view('staff.locations.index', [
+            'locations' => $locations,
+            'filters' => $request->only(['type', 'search']),
+        ]);
+    }
+
+    /**
+     * Display the form to create a new location
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function locationsCreate(Request $request)
+    {
+        $this->ensureStaff($request);
+        return view('staff.locations.create');
+    }
+
+    /**
+     * Store a newly created location
+     * 
+     * @param Request $request Contains location data
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function locationsStore(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:100|unique:car_locations,name',
+            'type' => 'required|in:pickup,dropoff,both',
+        ]);
+
+        CarLocation::create($data);
+
+        return redirect()->route('staff.locations')->with('success', 'Location created successfully!');
+    }
+
+    /**
+     * Display the form to edit an existing location
+     * 
+     * @param Request $request
+     * @param int $id Location ID
+     * @return \Illuminate\View\View
+     */
+    public function locationsEdit(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $location = CarLocation::findOrFail($id);
+        return view('staff.locations.edit', ['location' => $location]);
+    }
+
+    /**
+     * Update an existing location
+     * 
+     * @param Request $request Contains updated location data
+     * @param int $id Location ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function locationsUpdate(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $location = CarLocation::findOrFail($id);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:100|unique:car_locations,name,' . $id . ',location_id',
+            'type' => 'required|in:pickup,dropoff,both',
+        ]);
+
+        $location->update($data);
+
+        return redirect()->route('staff.locations')->with('success', 'Location updated successfully!');
+    }
+
+    /**
+     * Delete a location
+     * 
+     * @param Request $request
+     * @param int $id Location ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function locationsDestroy(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $location = CarLocation::findOrFail($id);
+
+        // Check if location is being used in any bookings
+        $bookingsCount = Booking::where('pickup_location_id', $id)
+            ->orWhere('dropoff_location_id', $id)
+            ->count();
+
+        if ($bookingsCount > 0) {
+            return redirect()->back()->with('error', 'Cannot delete location. It is being used in ' . $bookingsCount . ' booking(s).');
+        }
+
+        $location->delete();
+
+        return redirect()->route('staff.locations')->with('success', 'Location deleted successfully!');
+    }
+
+    // ========== EXPORT FUNCTIONALITY ==========
+
+    /**
+     * Export bookings to CSV
+     * 
+     * @param Request $request May contain filters
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function bookingsExport(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = Booking::with(['car', 'customer']);
+
+        // Apply same filters as index page
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('customer', function($customerQuery) use ($search) {
+                    $customerQuery->where('full_name', 'like', "%{$search}%")
+                                  ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('car', function($carQuery) use ($search) {
+                    $carQuery->where('plate_number', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'bookings_export_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($bookings) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV Header
+            fputcsv($file, [
+                'Booking ID',
+                'Customer Name',
+                'Customer Email',
+                'Car',
+                'Plate Number',
+                'Pickup Date',
+                'Dropoff Date',
+                'Hours',
+                'Total Amount (RM)',
+                'Status',
+                'Created At'
+            ]);
+
+            // CSV Data
+            foreach ($bookings as $booking) {
+                fputcsv($file, [
+                    $booking->booking_id,
+                    $booking->customer->full_name ?? 'N/A',
+                    $booking->customer->email ?? 'N/A',
+                    ($booking->car->brand ?? '') . ' ' . ($booking->car->model ?? ''),
+                    $booking->car->plate_number ?? 'N/A',
+                    $booking->start_datetime?->format('Y-m-d H:i') ?? 'N/A',
+                    $booking->end_datetime?->format('Y-m-d H:i') ?? 'N/A',
+                    $booking->rental_hours ?? 0,
+                    number_format($booking->final_amount ?? 0, 2),
+                    ucfirst($booking->status ?? 'N/A'),
+                    $booking->created_at->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export customers to CSV
+     * 
+     * @param Request $request May contain filters
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function customersExport(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = Customer::query();
+
+        // Apply same filters as index page
+        if ($request->has('verification_status') && $request->verification_status !== '') {
+            $query->where('verification_status', $request->verification_status);
+        }
+
+        if ($request->has('is_blacklisted') && $request->is_blacklisted !== '') {
+            $query->where('is_blacklisted', $request->is_blacklisted === '1');
+        }
+
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'customers_export_' . date('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($customers) {
+            $file = fopen('php://output', 'w');
+            
+            // CSV Header
+            fputcsv($file, [
+                'Customer ID',
+                'Full Name',
+                'Email',
+                'Phone',
+                'UTM Role',
+                'Verification Status',
+                'Is Blacklisted',
+                'Deposit Balance (RM)',
+                'Total Rental Hours',
+                'Loyalty Stamps',
+                'Member Since'
+            ]);
+
+            // CSV Data
+            foreach ($customers as $customer) {
+                fputcsv($file, [
+                    $customer->customer_id,
+                    $customer->full_name,
+                    $customer->email,
+                    $customer->phone ?? 'N/A',
+                    ucfirst($customer->utm_role ?? 'N/A'),
+                    ucfirst($customer->verification_status ?? 'pending'),
+                    $customer->is_blacklisted ? 'Yes' : 'No',
+                    number_format($customer->deposit_balance ?? 0, 2),
+                    $customer->total_rental_hours ?? 0,
+                    $customer->total_stamps ?? 0,
+                    $customer->created_at->format('Y-m-d'),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    // ========== CAR AVAILABILITY CALENDAR ==========
+
+    /**
+     * Display car availability calendar
+     * Shows which cars are booked/available on each date
+     * 
+     * @param Request $request May contain car_id and month/year filters
+     * @return \Illuminate\View\View
+     */
+    public function calendar(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        // Get selected car or all cars
+        $selectedCarId = $request->get('car_id');
+        $selectedMonth = $request->get('month', now()->month);
+        $selectedYear = $request->get('year', now()->year);
+
+        $cars = Car::orderBy('plate_number')->get();
+        
+        // Get bookings for the selected month
+        $startDate = \Carbon\Carbon::create($selectedYear, $selectedMonth, 1)->startOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
+
+        $query = Booking::with(['car', 'customer'])
+            ->where(function($q) use ($startDate, $endDate) {
+                // Bookings that overlap with the selected month
+                $q->whereBetween('start_datetime', [$startDate, $endDate])
+                  ->orWhereBetween('end_datetime', [$startDate, $endDate])
+                  ->orWhere(function($subQ) use ($startDate, $endDate) {
+                      $subQ->where('start_datetime', '<=', $startDate)
+                           ->where('end_datetime', '>=', $endDate);
+                  });
+            })
+            ->whereIn('status', ['created', 'confirmed', 'active']); // Only active bookings
+
+        if ($selectedCarId) {
+            $query->where('car_id', $selectedCarId);
+        }
+
+        $bookings = $query->get();
+
+        // Build calendar data structure
+        $calendarData = [];
+        $daysInMonth = $startDate->daysInMonth;
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $date = \Carbon\Carbon::create($selectedYear, $selectedMonth, $day);
+            $calendarData[$day] = [
+                'date' => $date,
+                'bookings' => [],
+            ];
+
+            foreach ($bookings as $booking) {
+                $bookingStart = \Carbon\Carbon::parse($booking->start_datetime);
+                $bookingEnd = \Carbon\Carbon::parse($booking->end_datetime);
+
+                if ($date->between($bookingStart->startOfDay(), $bookingEnd->endOfDay())) {
+                    $calendarData[$day]['bookings'][] = $booking;
+                }
+            }
+        }
+
+        return view('staff.calendar.index', [
+            'cars' => $cars,
+            'selectedCarId' => $selectedCarId,
+            'selectedMonth' => $selectedMonth,
+            'selectedYear' => $selectedYear,
+            'startDate' => $startDate,
+            'calendarData' => $calendarData,
+        ]);
+    }
+
+    // ========== ADVANCED REPORTING ==========
+
+    /**
+     * Display advanced reports and analytics
+     * 
+     * @param Request $request May contain date range filters
+     * @return \Illuminate\View\View
+     */
+    public function reports(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $startDate = $request->get('start_date', now()->subMonths(3)->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->format('Y-m-d'));
+
+        $start = \Carbon\Carbon::parse($startDate);
+        $end = \Carbon\Carbon::parse($endDate)->endOfDay();
+
+        // Revenue by month
+        $monthlyRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->whereBetween('payment_date', [$start, $end])
+            ->selectRaw('DATE_FORMAT(payment_date, "%Y-%m") as month, SUM(amount) as total')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        // Bookings by status
+        $bookingsByStatus = Booking::whereBetween('created_at', [$start, $end])
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status');
+
+        // Top customers by revenue
+        $topCustomers = Customer::with(['bookings' => function($q) use ($start, $end) {
+            $q->whereBetween('created_at', [$start, $end]);
+        }])
+            ->get()
+            ->map(function($customer) {
+                $customer->total_revenue = $customer->bookings->sum('final_amount');
+                return $customer;
+            })
+            ->sortByDesc('total_revenue')
+            ->take(10)
+            ->values();
+
+        // Top cars by bookings
+        $topCars = Car::withCount(['bookings' => function($q) use ($start, $end) {
+            $q->whereBetween('created_at', [$start, $end]);
+        }])
+            ->orderBy('bookings_count', 'desc')
+            ->take(10)
+            ->get();
+
+        // Penalty statistics
+        $penaltyStats = Penalty::whereBetween('created_at', [$start, $end])
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN status = "paid" THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_count,
+                SUM(amount) as total_amount,
+                SUM(CASE WHEN status = "paid" THEN amount ELSE 0 END) as paid_amount
+            ')
+            ->first();
+
+        return view('staff.reports.index', [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'monthlyRevenue' => $monthlyRevenue,
+            'bookingsByStatus' => $bookingsByStatus,
+            'topCustomers' => $topCustomers,
+            'topCars' => $topCars,
+            'penaltyStats' => $penaltyStats,
+        ]);
+    }
+
+    // ========== DEPOSIT REFUND MANAGEMENT ==========
+
+    /**
+     * Process deposit refund for a completed booking
+     * 
+     * @param Request $request Contains refund decision and amount
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bookingsProcessRefund(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $booking = Booking::with('customer')->findOrFail($id);
+
+        // Only allow refund processing for completed bookings
+        if ($booking->status !== 'completed') {
+            return redirect()->back()->with('error', 'Refunds can only be processed for completed bookings.');
+        }
+
+        $data = $request->validate([
+            'deposit_decision' => 'required|in:refund,carry_forward,burn',
+            'deposit_refund_amount' => 'required|numeric|min:0|max:' . $booking->deposit_amount,
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Update booking with refund decision
+            $booking->update([
+                'deposit_decision' => $data['deposit_decision'],
+                'deposit_refund_amount' => $data['deposit_refund_amount'],
+            ]);
+
+            // If refunding, update customer deposit balance
+            if ($data['deposit_decision'] === 'refund' && $data['deposit_refund_amount'] > 0) {
+                $customer = $booking->customer;
+                $customer->deposit_balance = ($customer->deposit_balance ?? 0) + $data['deposit_refund_amount'];
+                $customer->save();
+
+                // Create refund payment record
+                Payment::create([
+                    'booking_id' => $booking->booking_id,
+                    'penalty_id' => null,
+                    'amount' => $data['deposit_refund_amount'],
+                    'payment_type' => 'refund',
+                    'payment_method' => 'bank_transfer', // Default for refunds
+                    'receipt_url' => '', // No receipt for refunds
+                    'payment_date' => now(),
+                    'status' => 'verified', // Auto-verified refunds
+                ]);
+            } elseif ($data['deposit_decision'] === 'carry_forward' && $data['deposit_refund_amount'] > 0) {
+                // Carry forward: add to customer deposit balance
+                $customer = $booking->customer;
+                $customer->deposit_balance = ($customer->deposit_balance ?? 0) + $data['deposit_refund_amount'];
+                $customer->save();
+            }
+            // 'burn' decision: deposit is forfeited, no action needed
+
+            DB::commit();
+
+            $message = 'Deposit processed successfully. ';
+            if ($data['deposit_decision'] === 'refund') {
+                $message .= 'RM ' . number_format($data['deposit_refund_amount'], 2) . ' refunded to customer deposit balance.';
+            } elseif ($data['deposit_decision'] === 'carry_forward') {
+                $message .= 'RM ' . number_format($data['deposit_refund_amount'], 2) . ' carried forward to customer deposit balance.';
+            } else {
+                $message .= 'Deposit forfeited.';
+            }
+
+            return redirect()->back()->with('success', $message);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to process refund: ' . $e->getMessage());
+        }
+    }
+
+    // ========== ENHANCED PENALTY MANAGEMENT ==========
+
+    /**
+     * List all penalties with enhanced filtering and statistics
+     * 
+     * @param Request $request May contain filters
+     * @return \Illuminate\View\View
+     */
+    public function penaltiesIndex(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = Penalty::with(['booking.car', 'booking.customer', 'payments']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by type
+        if ($request->has('type') && $request->type !== '') {
+            $query->where('penalty_type', $request->type);
+        }
+
+        // Search
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('booking.customer', function($customerQuery) use ($search) {
+                    $customerQuery->where('full_name', 'like', "%{$search}%")
+                                  ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('booking.car', function($carQuery) use ($search) {
+                    $carQuery->where('plate_number', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $penalties = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        // Calculate statistics
+        $stats = [
+            'total' => Penalty::count(),
+            'pending' => Penalty::where('status', 'pending')->count(),
+            'paid' => Penalty::where('status', 'paid')->count(),
+            'total_amount' => Penalty::sum('amount'),
+            'paid_amount' => Penalty::where('status', 'paid')->sum('amount'),
+            'pending_amount' => Penalty::where('status', 'pending')->sum('amount'),
+        ];
+
+        return view('staff.penalties.index', [
+            'penalties' => $penalties,
+            'stats' => $stats,
+            'filters' => $request->only(['status', 'type', 'search']),
+        ]);
     }
 }

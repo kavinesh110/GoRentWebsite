@@ -20,6 +20,24 @@
       <a href="{{ route('staff.activities') }}" class="nav-link {{ request()->routeIs('staff.activities*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
         Activities & Promotions
       </a>
+      <a href="{{ route('staff.vouchers') }}" class="nav-link {{ request()->routeIs('staff.vouchers*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Vouchers
+      </a>
+      <a href="{{ route('staff.feedbacks') }}" class="nav-link {{ request()->routeIs('staff.feedbacks*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Customer Feedback
+      </a>
+      <a href="{{ route('staff.locations') }}" class="nav-link {{ request()->routeIs('staff.locations*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Locations
+      </a>
+      <a href="{{ route('staff.calendar') }}" class="nav-link {{ request()->routeIs('staff.calendar*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Calendar
+      </a>
+      <a href="{{ route('staff.reports') }}" class="nav-link {{ request()->routeIs('staff.reports*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Reports
+      </a>
+      <a href="{{ route('staff.penalties') }}" class="nav-link {{ request()->routeIs('staff.penalties*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Penalties
+      </a>
       <hr class="my-2">
       <a href="{{ route('home') }}" class="nav-link" style="color: #666; padding: 10px 16px; border-radius: 8px; font-size: 13px;">
         Back to Home

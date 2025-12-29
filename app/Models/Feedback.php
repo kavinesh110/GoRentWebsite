@@ -12,6 +12,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Feedback extends Model
 {
+    /**
+     * The table associated with the model
+     * Note: Table name is 'feedbacks' (plural) as per migration
+     */
+    protected $table = 'feedbacks';
+    
     protected $primaryKey = 'feedback_id';
 
     /**

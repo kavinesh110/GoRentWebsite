@@ -35,6 +35,7 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::get('/loyalty-rewards', [App\Http\Controllers\CustomerController::class, 'loyaltyRewards'])->name('loyalty-rewards');
     Route::post('/bookings/{id}/feedback', [App\Http\Controllers\CustomerController::class, 'bookingsSubmitFeedback'])->name('bookings.feedback.store');
     Route::post('/bookings/{id}/receipt', [App\Http\Controllers\CustomerController::class, 'bookingsUploadReceipt'])->name('bookings.receipt.upload');
+    Route::post('/bookings/{id}/photos', [App\Http\Controllers\CustomerController::class, 'bookingsUploadPhoto'])->name('bookings.photos.upload');
 });
 
 // Staff routes (protected by ensureStaff middleware in controller)
@@ -72,4 +73,47 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::get('/activities/{id}/edit', [App\Http\Controllers\StaffController::class, 'activitiesEdit'])->name('activities.edit');
     Route::put('/activities/{id}', [App\Http\Controllers\StaffController::class, 'activitiesUpdate'])->name('activities.update');
     Route::delete('/activities/{id}', [App\Http\Controllers\StaffController::class, 'activitiesDestroy'])->name('activities.destroy');
+    
+    // Voucher management
+    Route::get('/vouchers', [App\Http\Controllers\StaffController::class, 'vouchers'])->name('vouchers');
+    Route::get('/vouchers/create', [App\Http\Controllers\StaffController::class, 'vouchersCreate'])->name('vouchers.create');
+    Route::post('/vouchers', [App\Http\Controllers\StaffController::class, 'vouchersStore'])->name('vouchers.store');
+    Route::get('/vouchers/{id}/edit', [App\Http\Controllers\StaffController::class, 'vouchersEdit'])->name('vouchers.edit');
+    Route::put('/vouchers/{id}', [App\Http\Controllers\StaffController::class, 'vouchersUpdate'])->name('vouchers.update');
+    Route::delete('/vouchers/{id}', [App\Http\Controllers\StaffController::class, 'vouchersDestroy'])->name('vouchers.destroy');
+    
+    // Maintenance records management
+    Route::get('/cars/{id}/maintenance', [App\Http\Controllers\StaffController::class, 'maintenanceRecords'])->name('maintenance.index');
+    Route::get('/cars/{id}/maintenance/create', [App\Http\Controllers\StaffController::class, 'maintenanceCreate'])->name('maintenance.create');
+    Route::post('/cars/{id}/maintenance', [App\Http\Controllers\StaffController::class, 'maintenanceStore'])->name('maintenance.store');
+    Route::get('/cars/{carId}/maintenance/{recordId}/edit', [App\Http\Controllers\StaffController::class, 'maintenanceEdit'])->name('maintenance.edit');
+    Route::put('/cars/{carId}/maintenance/{recordId}', [App\Http\Controllers\StaffController::class, 'maintenanceUpdate'])->name('maintenance.update');
+    Route::delete('/cars/{carId}/maintenance/{recordId}', [App\Http\Controllers\StaffController::class, 'maintenanceDestroy'])->name('maintenance.destroy');
+    
+    // Feedback management
+    Route::get('/feedbacks', [App\Http\Controllers\StaffController::class, 'feedbacks'])->name('feedbacks');
+    
+    // Car location management
+    Route::get('/locations', [App\Http\Controllers\StaffController::class, 'locations'])->name('locations');
+    Route::get('/locations/create', [App\Http\Controllers\StaffController::class, 'locationsCreate'])->name('locations.create');
+    Route::post('/locations', [App\Http\Controllers\StaffController::class, 'locationsStore'])->name('locations.store');
+    Route::get('/locations/{id}/edit', [App\Http\Controllers\StaffController::class, 'locationsEdit'])->name('locations.edit');
+    Route::put('/locations/{id}', [App\Http\Controllers\StaffController::class, 'locationsUpdate'])->name('locations.update');
+    Route::delete('/locations/{id}', [App\Http\Controllers\StaffController::class, 'locationsDestroy'])->name('locations.destroy');
+    
+    // Export functionality
+    Route::get('/bookings/export', [App\Http\Controllers\StaffController::class, 'bookingsExport'])->name('bookings.export');
+    Route::get('/customers/export', [App\Http\Controllers\StaffController::class, 'customersExport'])->name('customers.export');
+    
+    // Calendar
+    Route::get('/calendar', [App\Http\Controllers\StaffController::class, 'calendar'])->name('calendar');
+    
+    // Reports
+    Route::get('/reports', [App\Http\Controllers\StaffController::class, 'reports'])->name('reports');
+    
+    // Deposit refund
+    Route::post('/bookings/{id}/process-refund', [App\Http\Controllers\StaffController::class, 'bookingsProcessRefund'])->name('bookings.process-refund');
+    
+    // Penalties
+    Route::get('/penalties', [App\Http\Controllers\StaffController::class, 'penaltiesIndex'])->name('penalties');
 });

@@ -5,7 +5,7 @@
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
   <div class="flex-fill" style="background: var(--bg);">
-    <div class="container-custom" style="padding: 32px 24px 48px;">
+    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
       <h1 class="h3 fw-bold mb-1" style="color:#333;">Hasta Staff Dashboard</h1>
@@ -55,6 +55,37 @@
           <div class="small text-muted text-uppercase mb-1">Completed bookings</div>
           <div class="h4 fw-bold mb-0">{{ $stats['completedBookings'] }}</div>
           <div class="small text-muted mt-1">{{ $stats['blacklistedCustomers'] }} blacklisted</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{-- REVENUE STATS --}}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="card-body py-3 px-3">
+          <div class="small text-white-50 text-uppercase mb-1">Total Revenue</div>
+          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalRevenue'] ?? 0, 2) }}</div>
+          <div class="small text-white-50 mt-1">All verified rental payments</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+        <div class="card-body py-3 px-3">
+          <div class="small text-white-50 text-uppercase mb-1">This Month Revenue</div>
+          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['monthlyRevenue'] ?? 0, 2) }}</div>
+          <div class="small text-white-50 mt-1">{{ now()->format('F Y') }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+        <div class="card-body py-3 px-3">
+          <div class="small text-white-50 text-uppercase mb-1">Total Deposits</div>
+          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalDeposits'] ?? 0, 2) }}</div>
+          <div class="small text-white-50 mt-1">Verified deposit payments</div>
         </div>
       </div>
     </div>

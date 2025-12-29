@@ -2,7 +2,7 @@
 @section('title', 'Dashboard - Hasta GoRent')
 
 @section('content')
-<div class="container-custom" style="padding: 32px 24px 48px;">
+<div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
       <h1 class="h3 fw-bold mb-1" style="color:#333;">Welcome back, {{ $customer->full_name }}!</h1>

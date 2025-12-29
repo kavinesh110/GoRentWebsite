@@ -5,7 +5,7 @@
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
   <div class="flex-fill" style="background: var(--bg);">
-    <div class="container-custom" style="padding: 32px 24px 48px; max-width: 1000px;">
+    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="mb-4">
     <a href="{{ route('staff.bookings') }}" class="text-decoration-none small">&larr; Back to bookings</a>
     <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Booking #{{ $booking->booking_id }}</h1>
@@ -171,8 +171,42 @@
         </div>
       </div>
 
+      {{-- DEPOSIT REFUND (Only for completed bookings) --}}
+      @if($booking->status === 'completed')
+        <div class="card border-0 shadow-soft mb-3 border-warning">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-3">Deposit Refund Processing</h5>
+            @if($booking->deposit_decision)
+              <div class="alert alert-info mb-3">
+                <strong>Decision:</strong> {{ ucfirst(str_replace('_', ' ', $booking->deposit_decision)) }}<br>
+                <strong>Refund Amount:</strong> RM {{ number_format($booking->deposit_refund_amount ?? 0, 2) }}
+              </div>
+            @else
+              <form method="POST" action="{{ route('staff.bookings.process-refund', $booking->booking_id) }}">
+                @csrf
+                <div class="mb-3">
+                  <label class="form-label">Deposit Decision <span class="text-danger">*</span></label>
+                  <select name="deposit_decision" class="form-select" required>
+                    <option value="">Select decision...</option>
+                    <option value="refund">Refund to Customer Deposit Balance</option>
+                    <option value="carry_forward">Carry Forward to Next Booking</option>
+                    <option value="burn">Forfeit Deposit</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Refund Amount (RM) <span class="text-danger">*</span></label>
+                  <input type="number" name="deposit_refund_amount" class="form-control" step="0.01" min="0" max="{{ $booking->deposit_amount }}" value="{{ $booking->deposit_amount }}" required>
+                  <small class="text-muted">Maximum: RM {{ number_format($booking->deposit_amount, 2) }}</small>
+                </div>
+                <button type="submit" class="btn btn-warning">Process Deposit Refund</button>
+              </form>
+            @endif
+          </div>
+        </div>
+      @endif
+
       {{-- PENALTIES LIST --}}
-      <div class="card border-0 shadow-soft">
+      <div class="card border-0 shadow-soft mb-3">
         <div class="card-body p-4">
           <h5 class="fw-bold mb-3">Penalties for this booking</h5>
           @if($booking->penalties && $booking->penalties->count() > 0)
@@ -205,6 +239,37 @@
             </div>
           @else
             <p class="text-muted mb-0">No penalties recorded for this booking.</p>
+          @endif
+        </div>
+      </div>
+
+      {{-- RENTAL PHOTOS --}}
+      <div class="card border-0 shadow-soft">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Rental Photos</h5>
+          @if($booking->rentalPhotos && $booking->rentalPhotos->count() > 0)
+            <div class="row g-3">
+              @foreach($booking->rentalPhotos as $photo)
+                <div class="col-md-4 col-sm-6">
+                  <div class="position-relative border rounded overflow-hidden">
+                    <img src="{{ $photo->photo_url }}" alt="Rental Photo" class="img-fluid w-100" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="window.open('{{ $photo->photo_url }}', '_blank')">
+                    <div class="position-absolute top-0 start-0 m-2">
+                      <span class="badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
+                    </div>
+                    <div class="p-2 bg-light">
+                      <div class="small">
+                        <strong>Uploaded by:</strong> {{ $photo->uploaded_by_role === 'customer' ? 'Customer' : 'Staff' }}
+                      </div>
+                      <div class="small text-muted">
+                        Taken: {{ $photo->taken_at->format('d M Y, H:i') }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              @endforeach
+            </div>
+          @else
+            <p class="text-muted mb-0">No rental photos uploaded for this booking.</p>
           @endif
         </div>
       </div>

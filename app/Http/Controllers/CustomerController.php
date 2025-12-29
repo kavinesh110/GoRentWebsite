@@ -12,6 +12,7 @@ use App\Models\Feedback;
 use App\Models\Payment;
 use App\Models\Car;
 use App\Models\CarLocation;
+use App\Models\RentalPhoto;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -121,7 +122,7 @@ class CustomerController extends Controller
 
         // Load booking with all related data
         // Note: 'feedback' is excluded from eager loading as the table may not exist
-        $withRelations = ['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments'];
+        $withRelations = ['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments', 'rentalPhotos'];
         
         // Only eager load feedback if the table exists
         $feedbackTableExists = DB::getSchemaBuilder()->hasTable('feedback');
@@ -548,5 +549,52 @@ class CustomerController extends Controller
 
         return redirect()->route('customer.bookings.show', $id)
             ->with('success', 'Payment receipt uploaded successfully! Staff will verify your payment shortly.');
+    }
+
+    /**
+     * Upload rental photos for an active booking
+     * Allows customers to upload photos during active bookings (before/after, damage, etc.)
+     * 
+     * @param Request $request Contains photo file and metadata
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bookingsUploadPhoto(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        $booking = Booking::where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        // Only allow photo uploads for active or completed bookings
+        if (!in_array($booking->status, ['active', 'completed'])) {
+            return redirect()->back()
+                ->with('error', 'Photos can only be uploaded for active or completed bookings.');
+        }
+
+        $validated = $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'photo_type' => 'required|in:before,after,key,damage,other',
+            'taken_at' => 'required|date',
+        ]);
+
+        // Handle photo upload
+        $photo = $request->file('photo');
+        $photoName = time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+        $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+        // Create rental photo record
+        RentalPhoto::create([
+            'booking_id' => $booking->booking_id,
+            'uploaded_by_user_id' => $customerId,
+            'uploaded_by_role' => 'customer',
+            'photo_type' => $validated['photo_type'],
+            'photo_url' => $photoPath,
+            'taken_at' => $validated['taken_at'],
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Photo uploaded successfully!');
     }
 }

@@ -2,7 +2,7 @@
 @section('title', 'Loyalty Rewards - Hasta GoRent')
 
 @section('content')
-<div class="container-custom" style="padding: 32px 24px 48px;">
+<div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="mb-4">
     <h1 class="h3 fw-bold mb-1" style="color:#333;">Loyalty Rewards</h1>
     <p class="text-muted mb-0" style="font-size: 14px;">Redeem vouchers and track your loyalty stamps.</p>

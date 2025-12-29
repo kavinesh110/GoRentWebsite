@@ -1,791 +1,418 @@
 @extends('layouts.app')
-@section('title','Home - Hasta GoRent')
+@section('title', 'Home - Hasta GoRent')
 
 {{-- ===== HOMEPAGE ===== --}}
-{{-- Displays: Secondary navigation, hero section, activities/promotions, car listings --}}
+{{-- Premium UI/UX with Integrated Activity Carousel & Search --}}
 @section('content')
 
 <style>
-  .secondary-nav{
-    background: #fff;
-    padding: 16px 0;
-    margin-bottom: 0;
-    border-bottom: 1px solid #e9ecef;
+  :root {
+    --hasta-red: #cb3737;
+    --hasta-dark: #a92c2c;
+    --bg-light: #f8f9fa;
+    --text-main: #2d3436;
+    --text-muted: #636e72;
   }
-  .secondary-nav .nav-items{
+
+  /* Sticky Secondary Nav */
+  .secondary-nav {
+    background: #fff;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+  .secondary-nav .nav-items {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
+    gap: 30px;
     max-width: 1400px;
     margin: 0 auto;
+    flex-wrap: wrap;
     padding: 0 24px;
   }
-  .secondary-nav .nav-item-icon{
+  .secondary-nav .nav-item-link {
     display: flex;
-    flex-direction: row;
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    color: #333;
+    color: var(--text-muted);
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    transition: 0.3s ease;
   }
-  .secondary-nav .nav-item-icon:hover{
-    color: var(--hasta);
-    background: #f8f8f8;
-  }
-  .secondary-nav .nav-item-icon.active{
-    color: var(--hasta);
-    font-weight: 600;
-  }
-  .secondary-nav .icon-circle{
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--hasta);
-  }
-  .secondary-nav .icon-circle svg{
-    width: 20px;
-    height: 20px;
+  .secondary-nav .nav-item-link:hover, 
+  .secondary-nav .nav-item-link.active {
+    background: rgba(203,55,55,0.05);
+    color: var(--hasta-red);
   }
 
-  .container-custom{
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  .hero-gocar{ 
-    position: relative; 
-    overflow: visible; 
-    padding-bottom: 80px;
-    padding-top: 80px;
-    margin-top: 20px;
-    margin-bottom: 120px;
-    background: linear-gradient(135deg, rgba(236, 89, 43, 1) 0%, rgba(236, 89, 43, 1) 50%, rgba(236, 89, 43, 1) 100%);
-    border-radius: 26px;
-    min-height: 460px;
+  /* Professional Hero Section with Activity Carousel */
+  .hero-section {
+    position: relative;
+    padding-top: 30px;
+    background: #1e272e;
+    border-radius: 0 0 0 0;
+    color: #fff;
+    overflow: hidden;
+    min-height: 550px;
     display: flex;
     align-items: center;
-    justify-content: center;
-  }
-  .hero-gocar .hero-inner{
-    padding: 84px 70px 140px 70px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .hero-activity-image{
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: center;
-  }
-  .hero-activity-image img{
-    max-height: 220px;
-    width: auto;
-    max-width: 100%;
-    border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-    object-fit: contain;
-  }
-  .hero-gocar .carousel-control-prev,
-  .hero-gocar .carousel-control-next{
-    width: 50px;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.8;
-    transition: all 0.3s;
-  }
-  .hero-gocar .carousel-control-prev:hover,
-  .hero-gocar .carousel-control-next:hover{
-    background: rgba(255, 255, 255, 0.3);
-    opacity: 1;
-  }
-  .hero-gocar .carousel-control-prev{
-    left: 20px;
-  }
-  .hero-gocar .carousel-control-next{
-    right: 20px;
-  }
-  .hero-gocar .carousel-control-prev-icon,
-  .hero-gocar .carousel-control-next-icon{
-    width: 24px;
-    height: 24px;
-    filter: brightness(0) invert(1);
-  }
-  .hero-searchbar{
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: -60px;
-    background: #fff;
-    max-width: 1150px;
-    width: calc(100% - 48px);
-    padding: 20px 24px;
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    z-index: 30;
-  }
-  .hero-searchbar .seg{ 
-    flex: 1 1 0; 
-    padding: 8px 16px; 
-    display:flex; 
-    flex-direction:column; 
-    justify-content:center; 
-    border-right: 1px solid #e9ecef;
-    min-width: 0;
-  }
-  .hero-searchbar .seg.location-seg{
-    flex: 1.5 1 0;
-  }
-  .hero-searchbar .seg:last-of-type{ border-right: none; }
-  .hero-searchbar .seg .label{ 
-    font-size: 12px; 
-    color: #6c757d; 
-    font-weight: 600;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .hero-searchbar .seg .value{ 
-    font-weight:600; 
-    font-size:15px; 
-    color:#111;
-    border: none;
-    padding: 0;
-    background: transparent;
-    width: 100%;
-    outline: none;
-  }
-  /* Dropdown styling for location select in hero searchbar */
-  .hero-searchbar .seg.location-seg select.value{
-    background: #fff;
-    border: none;
-    padding: 8px;
-    width: 100%;
-    font-weight: 600;
-    font-size: 15px;
-    color: #333;
-    cursor: pointer;
-  }
-  .hero-searchbar .seg .value::placeholder{
-    color: #999;
-    font-weight: 500;
-  }
-  .hero-searchbar .search-action{ 
-    width:56px; 
-    height:56px; 
-    border-radius:50%; 
-    background: var(--hasta-darker); 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
-    color:#fff; 
-    box-shadow:0 4px 16px rgba(138,36,36,0.4); 
-    flex:0 0 56px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .hero-searchbar .search-action:hover{
-    background: var(--hasta-darker);
-    transform: scale(1.08);
-    box-shadow:0 6px 20px rgba(138,36,36,0.5);
-  }
-  .hero-searchbar .search-action svg{
-    width: 22px;
-    height: 22px;
-  }
-
-  .car-section-header{
-    margin-bottom: 32px;
-    margin-top: 40px;
-  }
-  .car-section-header h2{
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--hasta-darker);
-    margin-bottom: 4px;
-    letter-spacing: -0.5px;
   }
   
-  .car-card{
-    transition: all 0.3s ease;
-    border: none !important;
-    background: #fff;
-    border-radius: 16px !important;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  }
-  .car-card:hover{
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
-  }
-  .car-card-header{
-    padding: 16px 16px 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    position: relative;
-  }
-  .car-card-name-year{
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
-    line-height: 1.3;
-  }
-  .car-card-type{
-    font-size: 13px;
-    color: #7A7A7A;
-    font-weight: 400;
-  }
-  .car-card-favorite{
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .car-card-favorite:hover{
-    transform: scale(1.1);
-  }
-  .car-card-favorite svg{
-    width: 20px;
-    height: 20px;
-  }
-  .car-card-favorite.favorited svg{
-    fill: #e74c3c;
-    stroke: #e74c3c;
-  }
-  .car-card-favorite:not(.favorited) svg{
-    fill: none;
-    stroke: #ccc;
-  }
-  .car-card-image{
-    height: 180px;
-    background: #f8f8f8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    padding: 20px;
-  }
-  .car-card-image img{
+  .hero-carousel {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    transition: transform 0.3s ease;
+    min-height: 550px;
   }
-  .car-card:hover .car-card-image img{
-    transform: scale(1.05);
+  
+  .hero-carousel .carousel-item {
+    min-height: 550px;
+    position: relative;
   }
-  .car-card-footer{
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid #f0f0f0;
+
+  /* Background Image styling */
+  .hero-bg-image {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    opacity: 0.5;
   }
-  .car-card-price{
-    display: flex;
-    flex-direction: column;
+  
+  /* Text readability overlay */
+  .hero-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 100%);
+    z-index: 2;
   }
-  .car-card-price-amount{
-    font-size: 18px;
-    font-weight: 700;
-    color: #333;
-    line-height: 1.2;
+
+  .hero-content {
+    position: relative;
+    z-index: 10;
+    padding: 100px 60px;
+    max-width: 850px;
   }
-  .car-card-price-period{
-    font-size: 12px;
-    color: #7A7A7A;
-    font-weight: 400;
-  }
-  .car-card-btn{
-    background: #F98820;
+
+  .hero-title {
+    font-size: 58px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    line-height: 1.1;
     color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    text-decoration: none;
-    transition: all 0.2s;
-    white-space: nowrap;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
   }
-  .car-card-btn:hover{
-    background: #e67a1a;
-    color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(249, 136, 32, 0.3);
+  .hero-subtitle {
+    font-size: 20px;
+    opacity: 0.95;
+    margin-bottom: 35px;
+    max-width: 650px;
+    line-height: 1.5;
   }
 
-  /* Tablet responsiveness for hero search bar & cards */
-  @media (max-width: 1024px){
-    .hero-gocar{
-      padding-bottom: 70px;
-      margin-bottom: 150px;
-      min-height: 420px;
-    }
-    .hero-gocar .hero-inner{
-      padding: 58px 40px 140px 40px;
-    }
-    .hero-searchbar{
-      bottom: -120px;
-      padding: 16px 18px;
-      width: calc(100% - 40px);
-      flex-wrap: wrap;
-      align-items: stretch;
-      gap: 8px 12px;
-    }
-    .hero-searchbar .seg{
-      flex: 1 1 45%;
-      border-right: none;
-      border-bottom: 1px solid #e9ecef;
-      padding: 10px 12px;
-    }
-    .hero-searchbar .seg.location-seg{
-      flex: 1 1 100%;
-      border-bottom: none;
-    }
-    .hero-searchbar .search-action{
-      flex: 1 1 100%;
-      width: 100%;
-      height: 52px;
-      border-radius: 14px;
-    }
+  /* Floating Search Card */
+  .search-card-container {
+    max-width: 1200px;
+    margin: -70px auto 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 100;
   }
-
-  @media (max-width: 767px){
-    .secondary-nav .nav-items{ gap: 16px; }
-    .secondary-nav .nav-item-icon{ flex-direction: column; gap: 4px; }
-    .hero-gocar{ 
-      padding-bottom: 60px; 
-      margin-bottom: 180px; 
-      min-height: 420px;
-    }
-    .hero-gocar .hero-inner{
-      padding: 58px 24px 140px 24px;
-    }
-    .hero-title{ font-size: 36px; }
-    .hero-searchbar{ 
-      flex-direction: column; 
-      width: calc(100% - 32px); 
-      bottom: -160px; 
-      padding: 16px; 
-    }
-    .hero-searchbar .seg{ 
-      width: 100%; 
-      border-right: none; 
-      border-bottom: 1px solid #e9ecef; 
-      padding: 10px 12px;
-    }
-    .hero-searchbar .seg:last-of-type{ border-bottom: none; }
-    .hero-searchbar .search-action{ width: 100%; border-radius: 12px; height: 48px; }
-    .car-section-header h2{ font-size: 24px; }
-    .car-card-footer{
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .car-card-btn{
-      width: 100%;
-      text-align: center;
-    }
-  }
-
-  /* Hasta GoRent @ UTM intro strip */
-  .utm-intro{
-    margin-top: 24px;
-    margin-bottom: 32px;
-    padding: 20px 24px;
-    border-radius: 18px;
+  .search-card {
     background: #fff;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-items: center;
-    justify-content: space-between;
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+    border: 1px solid #f0f0f0;
   }
-  .utm-intro-main{
-    max-width: 520px;
-  }
-  .utm-intro-badge{
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(203,55,55,0.08);
-    color: var(--hasta-darker);
+  .search-card .form-label {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: .08em;
+    color: #95a5a6;
     text-transform: uppercase;
-    margin-bottom: 6px;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
   }
-  .utm-intro-title{
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 6px;
-    color: #222;
-  }
-  .utm-intro-text{
-    font-size: 14px;
-    color: #666;
-    margin: 0;
-  }
-  .utm-intro-grid{
-    display: grid;
-    grid-template-columns: repeat(3,minmax(0,1fr));
-    gap: 16px;
-    min-width: 260px;
-  }
-  .utm-intro-pill{
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: #faf5f5;
-    font-size: 12px;
-    color: #444;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .utm-intro-pill span{
+  .search-card .form-control, 
+  .search-card .form-select {
+    border: 1px solid #eee;
+    padding: 14px 16px;
     font-weight: 600;
-    color: var(--hasta-darker);
+    font-size: 15px;
+    border-radius: 12px;
+    transition: 0.2s;
+  }
+  .search-card .form-control:focus, 
+  .search-card .form-select:focus {
+    border-color: var(--hasta-red);
+    box-shadow: 0 0 0 4px rgba(203,55,55,0.1);
   }
 
-  @media (max-width: 992px){
-    .utm-intro{
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .utm-intro-grid{
-      width: 100%;
-      grid-template-columns: repeat(2,minmax(0,1fr));
-    }
+  /* Car Cards */
+  .car-card {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+    transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
-  @media (max-width: 576px){
-    .utm-intro-grid{
-      grid-template-columns: minmax(0,1fr);
-    }
+  .car-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+  .car-img-container {
+    height: 220px;
+    background: #fcfcfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    position: relative;
+  }
+  .car-img-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.08));
+  }
+
+  .btn-hasta-primary {
+    background: var(--hasta-red);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-weight: 700;
+    transition: 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-hasta-primary:hover {
+    background: var(--hasta-dark);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(203,55,55,0.3);
+  }
+
+  @media (max-width: 991px) {
+    .hero-title { font-size: 46px; }
+    .hero-section { min-height: 500px; }
+    .hero-carousel, .hero-carousel .carousel-item { min-height: 500px; }
+  }
+
+  @media (max-width: 767px) {
+    .hero-title { font-size: 36px; }
+    .hero-content { padding: 80px 24px; }
+    .search-card { padding: 20px; }
+    .search-card-container { margin-top: -50px; }
+    .secondary-nav .nav-items { gap: 10px; overflow-x: auto; justify-content: flex-start; padding: 0 15px; }
   }
 </style>
 
 {{-- SECONDARY NAVIGATION --}}
 <div class="secondary-nav">
   <div class="nav-items">
-    <a href="{{ route('home') }}" class="nav-item-icon {{ request()->routeIs('home') ? 'active' : '' }}">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 17h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-          <circle cx="7" cy="17" r="2"/>
-          <circle cx="17" cy="17" r="2"/>
-        </svg>
-      </div>
-      <span>Car Rental</span>
+    <a href="{{ route('home') }}" class="nav-item-link {{ request()->routeIs('home') ? 'active' : '' }}">
+      <i class="bi bi-car-front"></i> <span>Browse Cars</span>
     </a>
     @if(session('auth_role') === 'customer')
-      <a href="{{ route('customer.bookings') }}" class="nav-item-icon {{ request()->routeIs('customer.bookings*') ? 'active' : '' }}">
-        <div class="icon-circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-            <polyline points="17 11 19 13 23 9"></polyline>
-          </svg>
-        </div>
-        <span>My Bookings</span>
+      <a href="{{ route('customer.bookings') }}" class="nav-item-link">
+        <i class="bi bi-calendar-check"></i> <span>My Bookings</span>
       </a>
-      <a href="{{ route('customer.loyalty-rewards') }}" class="nav-item-icon {{ request()->routeIs('customer.loyalty-rewards') ? 'active' : '' }}">
-        <div class="icon-circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-            <line x1="7" y1="7" x2="7.01" y2="7"></line>
-          </svg>
-        </div>
-        <span>Loyalty Rewards</span>
+      <a href="{{ route('customer.loyalty-rewards') }}" class="nav-item-link">
+        <i class="bi bi-gift"></i> <span>Loyalty Rewards</span>
       </a>
     @endif
-    <a href="#" class="nav-item-icon">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-      </div>
-      <span>How It Works</span>
+    <a href="#how-it-works" class="nav-item-link">
+      <i class="bi bi-info-circle"></i> <span>How It Works</span>
     </a>
-    <a href="#" class="nav-item-icon">
-      <div class="icon-circle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      </div>
-      <span>Contact Us</span>
+    <a href="#support" class="nav-item-link">
+      <i class="bi bi-envelope"></i> <span>Support</span>
     </a>
   </div>
 </div>
 
-<div class="container-custom">
-  {{-- HERO SECTION --}}
-  <div class="hero-gocar shadow-soft">
-    <div class="hero-inner">
-      <div class="hero-meta">
-        @if(isset($activities) && $activities->count() > 0)
-          {{-- Activity & Promotion Slider (cut slider) --}}
-          <div id="heroActivityCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="2500">
-            <div class="carousel-inner">
-              @foreach($activities as $index => $activity)
-                <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
-                  @if($activity->image_url)
-                    <div class="hero-activity-image">
-                      <img src="{{ $activity->image_url }}" alt="{{ $activity->title }}">
-                    </div>
-                  @endif
-                  <h1 class="hero-title">
-                    {{ $activity->title }}
-                  </h1>
-                  @if($activity->description)
-                    <p class="hero-sub">
-                      {{ \Illuminate\Support\Str::limit($activity->description, 160) }}
-                    </p>
-                  @endif
-                  <p class="hero-sub" style="font-size: 14px; opacity: 0.9;">
-                    {{ $activity->start_date->format('d M Y') }} – {{ $activity->end_date->format('d M Y') }}
-                  </p>
-                </div>
-              @endforeach
-            </div>
-            @if($activities->count() > 1)
-              <button class="carousel-control-prev" type="button" data-bs-target="#heroActivityCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Previous</span>
-              </button>
-              <button class="carousel-control-next" type="button" data-bs-target="#heroActivityCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Next</span>
-              </button>
+{{-- HERO SECTION WITH ACTIVITY SLIDER --}}
+<div class="hero-section">
+  @if(isset($activities) && $activities->count() > 0)
+    <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
+      <div class="carousel-inner h-100">
+        @foreach($activities as $index => $activity)
+          <div class="carousel-item h-100 {{ $index === 0 ? 'active' : '' }}">
+            @if($activity->image_url)
+              <img src="{{ $activity->image_url }}" class="hero-bg-image" alt="{{ $activity->title }}">
+              <div class="hero-overlay"></div>
             @endif
+            <div class="container h-100 d-flex align-items-center">
+              <div class="hero-content">
+                <h1 class="hero-title">{{ $activity->title }}</h1>
+                <p class="hero-subtitle">{{ $activity->description }}</p>
+                @if(!$activity->image_url)
+                  <div class="badge bg-primary px-3 py-2">
+                    <i class="bi bi-calendar-event me-2"></i> Active: {{ $activity->start_date->format('d M') }} - {{ $activity->end_date->format('d M Y') }}
+                  </div>
+                @endif
+              </div>
+            </div>
           </div>
-        @else
-          {{-- Fallback static hero content when no activities --}}
-          <h1 class="hero-title">Smart car rentals for UTM students & staff</h1>
-          <p class="hero-sub">
-            Centralised, deposit-first booking with loyalty rewards, maintenance tracking and campus-focused pricing for Hasta Travels & Tours.
-          </p>
-        @endif
+        @endforeach
       </div>
+      @if($activities->count() > 1)
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" style="z-index: 30; width: 5%;">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" style="z-index: 30; width: 5%;">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+      @endif
     </div>
+  @else
+    <div class="container hero-content">
+      <h1 class="hero-title">Your Premium UTM Ride.<br>Simplified.</h1>
+      <p class="hero-subtitle">Affordable, reliable, and verified vehicles for UTM students and staff. Zero hidden fees.</p>
+    </div>
+  @endif
+</div>
 
-    {{-- FLOATING SEARCH BAR --}}
-    <form id="heroSearchForm" class="hero-searchbar" method="GET" action="/cars">
-      <div class="seg">
-        <label class="label" for="start_date">Start Date</label>
-        <input id="start_date" name="start_date" type="date" class="value" value="2025-12-14">
+{{-- FLOATING SEARCH CARD --}}
+<div class="search-card-container">
+  <div class="search-card">
+    <form action="/cars" method="GET" class="row g-3">
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label">Pickup Location</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-muted"></i></span>
+          <select name="location" class="form-select border-start-0">
+            @if(isset($locations) && $locations->count() > 0)
+              @foreach($locations as $loc)
+                <option value="{{ $loc->name }}" {{ $loc->name === 'Student Mall' ? 'selected' : '' }}>{{ $loc->name }}</option>
+              @endforeach
+            @else
+              <option value="Student Mall" selected>Student Mall</option>
+            @endif
+          </select>
+        </div>
       </div>
-      <div class="seg">
-        <label class="label" for="end_date">End Date</label>
-        <input id="end_date" name="end_date" type="date" class="value" value="2025-12-14">
+      <div class="col-lg-2 col-md-3 col-6">
+        <label class="form-label">Pickup Date</label>
+        <input type="date" name="start_date" class="form-control" value="{{ date('Y-m-d') }}">
       </div>
-      <div class="seg">
-        <label class="label" for="start_time">Start Time</label>
-        <input id="start_time" name="start_time" type="time" class="value" value="02:00">
+      <div class="col-lg-2 col-md-3 col-6">
+        <label class="form-label">Return Date</label>
+        <input type="date" name="end_date" class="form-control" value="{{ date('Y-m-d', strtotime('+1 day')) }}">
       </div>
-      <div class="seg">
-        <label class="label" for="end_time">End Time</label>
-        <input id="end_time" name="end_time" type="time" class="value" value="05:00">
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label">Car Type</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0"><i class="bi bi-funnel text-muted"></i></span>
+          <select name="type" class="form-select border-start-0">
+            <option value="">All Categories</option>
+            <option value="hatchback">Hatchback (Budget)</option>
+            <option value="sedan">Sedan (Comfort)</option>
+            <option value="suv">SUV (Family)</option>
+            <option value="van">Van (Group)</option>
+          </select>
+        </div>
       </div>
-      <div class="seg location-seg">
-        <label class="label" for="location">Location</label>
-        <select id="location" name="location" class="value">
-          @if(isset($locations) && $locations->count() > 0)
-            @foreach($locations as $location)
-              <option value="{{ $location->name }}" {{ $location->name === 'Student Mall' ? 'selected' : '' }}>
-                {{ $location->name }}
-              </option>
-            @endforeach
-          @else
-            <option value="Student Mall" selected>Student Mall</option>
-          @endif
-        </select>
+      <div class="col-lg-2 col-md-6 d-flex align-items-end">
+        <button type="submit" class="btn-hasta-primary w-100"><i class="bi bi-search me-2"></i> Find Cars</button>
       </div>
-      <button type="submit" class="search-action" title="Search" aria-label="Search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
-      </button>
     </form>
   </div>
+</div>
 
-  
-
-  {{-- UTM-FOCUSED SYSTEM INTRO --}}
-  <div class="utm-intro">
-    <div class="utm-intro-main">
-      <div class="utm-intro-badge">Designed for UTM community</div>
-      <h2 class="utm-intro-title">Centralised car rental system for Hasta Travels & Tours</h2>
-      
+<div class="container mt-5 pt-5">
+  {{-- CAR GRID --}}
+  <div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+      <h2 class="fw-bold mb-1">Recommended Vehicles</h2>
+      <p class="text-muted small">Hand-picked deals for the UTM community.</p>
     </div>
-    <div class="utm-intro-grid">
-      <div class="utm-intro-pill">
-        <span>Booking & payments</span>
-        Deposit-first flow, manual receipt upload and clear agreement signing for every rental.
-      </div>
-      <div class="utm-intro-pill">
-        <span>Fleet & maintenance</span>
-        Real-time car status, mileage-based service alerts and before / after inspection photos.
-      </div>
-      <div class="utm-intro-pill">
-        <span>Loyalty & analytics</span>
-        Stamps for every 9 rental hours, vouchers for frequent renters and insights by college.
-      </div>
-    </div>
+    <a href="/cars" class="text-decoration-none fw-bold" style="color: var(--hasta-red);">View All Fleet <i class="bi bi-arrow-right ms-1"></i></a>
   </div>
 
-  {{-- ===== CAR LISTINGS SECTION ===== --}}
-  {{-- Displays all available cars in a grid layout --}}
-  {{-- Each car card shows: image, name, type, price, and "Rent Now" button --}}
-  <div class="car-section-header">
-    <h2>Car rental deals found in Student Mall</h2>
-  </div>
-
-  <div class="row g-4 mb-5">
-    @forelse($cars as $car)
-      @php
-        // Get car name and year from new schema
-        $brand = trim($car->brand ?? '');
-        $model = trim($car->model ?? '');
-        $carName = $brand . ($brand && $model ? ' ' : '') . $model;
-        if (empty($carName)) {
-            $carName = 'Car #' . $car->id; // Fallback if brand/model are empty
-        }
-        $year = $car->year ?? null;
-        
-        // Determine car type (default to Hatchback if not specified)
-        $carType = 'Hatchback';
-        $modelLower = strtolower($car->model ?? '');
-        if(strpos($modelLower, 'suv') !== false || strpos($modelLower, 'aruz') !== false) {
-          $carType = 'SUV';
-        } elseif(strpos($modelLower, 'sedan') !== false || strpos($modelLower, 'bezza') !== false) {
-          $carType = 'Sedan';
-        } elseif(strpos($modelLower, 'van') !== false || strpos($modelLower, 'starex') !== false || strpos($modelLower, 'vellfire') !== false || strpos($modelLower, 'alphard') !== false) {
-          $carType = 'Van';
-        }
-        
-        // Calculate price per day (base_rate_per_hour * 24)
-        $pricePerDay = ($car->base_rate_per_hour ?? 0) * 24;
-      @endphp
-      <div class="col-md-6 col-lg-4 col-xl-3">
-        <div class="card h-100 car-card" data-name="{{ strtolower($carName) }}" data-status="available">
-          <div class="car-card-header">
-            <div>
-              <div class="car-card-name-year">
-                {{ trim($carName) }}@if($year) ({{ $year }})@endif
-              </div>
-              <div class="car-card-type">{{ $carType }}</div>
-            </div>
-            <button class="car-card-favorite" type="button" onclick="toggleFavorite(this)" aria-label="Add to favorites">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="car-card-image">
+  <div class="row g-4 mb-5 pb-5">
+    @forelse($cars->take(4) as $car)
+      <div class="col-lg-3 col-md-6">
+        <div class="car-card">
+          <div class="car-img-container">
             @if($car->image_url)
-              <img src="{{ $car->image_url }}" alt="{{ trim($carName) }}">
+              <img src="{{ $car->image_url }}" alt="{{ $car->brand }}">
             @else
-              <svg width="120" height="80" viewBox="0 0 120 80" fill="none">
-                <rect x="10" y="30" width="100" height="40" rx="8" fill="#ddd"/>
-                <circle cx="30" cy="65" r="8" fill="#999"/>
-                <circle cx="90" cy="65" r="8" fill="#999"/>
-                <path d="M30 30 L50 15 L70 15 L90 30" stroke="#bbb" stroke-width="3" fill="none"/>
-              </svg>
+              <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
             @endif
           </div>
-          <div class="car-card-footer">
-            <div class="car-card-price">
-              <span class="car-card-price-amount">RM {{ number_format($pricePerDay, 0) }}</span>
-              <span class="car-card-price-period">/ day</span>
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-1">{{ $car->brand }} {{ $car->model }}</h6>
+            <div class="d-flex gap-3 mb-4 text-muted" style="font-size: 12px;">
+              <span><i class="bi bi-people me-1"></i> 5 Seats</span>
+              <span><i class="bi bi-gear me-1"></i> Auto</span>
             </div>
-            <a href="{{ route('cars.show', $car->id) }}" class="car-card-btn">Rent Now</a>
+            <div class="d-flex justify-content-between align-items-center mt-auto">
+              <div>
+                <span class="h5 fw-bold mb-0">RM {{ number_format($car->base_rate_per_hour * 24, 0) }}</span>
+                <span class="text-muted small">/day</span>
+              </div>
+              <a href="{{ route('cars.show', $car->id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold">Rent Now</a>
+            </div>
           </div>
         </div>
       </div>
     @empty
-      <div class="col-12">
-        <div class="text-center py-5">
-          <p class="text-muted">No cars available at the moment. Please check back later.</p>
-        </div>
+      <div class="col-12 text-center py-5">
+        <p class="text-muted">No cars available for these dates.</p>
       </div>
     @endforelse
   </div>
 </div>
 
+{{-- HOW IT WORKS --}}
+<section id="how-it-works" class="py-5" style="background: #fafafa; border-top: 1px solid #eee;">
+  <div class="container py-5">
+    <div class="text-center mb-5">
+      <h6 class="text-uppercase fw-bold text-primary small mb-2" style="letter-spacing: 2px;">The Process</h6>
+      <h2 class="fw-bold">How to Rent Your Car</h2>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4 text-center">
+        <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+          <i class="bi bi-search h3 mb-0 text-primary"></i>
+        </div>
+        <h5 class="fw-bold">1. Select Car</h5>
+        <p class="text-muted small px-lg-4">Choose from our verified fleet based on your needs and budget.</p>
+      </div>
+      <div class="col-md-4 text-center">
+        <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+          <i class="bi bi-credit-card h3 mb-0 text-primary"></i>
+        </div>
+        <h5 class="fw-bold">2. Pay Deposit</h5>
+        <p class="text-muted small px-lg-4">Secure your booking with a simple RM 50 deposit and receipt upload.</p>
+      </div>
+      <div class="col-md-4 text-center">
+        <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+          <i class="bi bi-key h3 mb-0 text-primary"></i>
+        </div>
+        <h5 class="fw-bold">3. Pick Up & Go</h5>
+        <p class="text-muted small px-lg-4">Meet us at Student Mall and drive away in minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 @endsection
 
 @push('scripts')
-<script>
-  (function(){
-    const form = document.getElementById('heroSearchForm');
-    if(!form) return;
-
-    const locationField = form.querySelector('[name="location"]');
-
-    function normalize(s){ return (s||'').toString().trim().toLowerCase(); }
-
-    form.addEventListener('submit', function(e){
-      e.preventDefault();
-
-      const qLocation = normalize(locationField ? locationField.value : '');
-      const qName = qLocation;
-
-      const cards = document.querySelectorAll('.car-card');
-      if (cards.length === 0) {
-        console.warn('No car cards found on page');
-        return;
-      }
-      
-      cards.forEach(card => {
-        const name = card.getAttribute('data-name') || '';
-        const status = card.getAttribute('data-status') || '';
-
-        // If no search query, show all cards
-        const matches = (!qName) || name.indexOf(qName) !== -1;
-
-        card.style.display = matches ? '' : 'none';
-      });
-    });
-  })();
-
-  function toggleFavorite(button) {
-    button.classList.toggle('favorited');
-  }
-
-</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
 @endpush
