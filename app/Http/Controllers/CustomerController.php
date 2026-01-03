@@ -388,15 +388,64 @@ class CustomerController extends Controller
     }
 
     /**
-     * Cancel a customer booking
-     * Only allows cancellation if booking status is 'created' or 'confirmed'
-     * Cannot cancel bookings that are already active, completed, or cancelled
+     * Show the cancellation request form
+     * Customer must fill out reason, bank details for refund, and optional proof
+     * 
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\View\View
+     */
+    public function bookingsCancelForm(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        // Find booking and ensure it belongs to this customer
+        $booking = Booking::with(['car', 'pickupLocation', 'dropoffLocation', 'cancellationRequest'])
+            ->where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        // Business rule: Only allow cancellation if booking hasn't started yet
+        if (!in_array($booking->status, ['created', 'confirmed'])) {
+            return redirect()->route('customer.bookings.show', $id)
+                ->with('error', 'Cannot cancel a booking that is already active, completed, or cancelled.');
+        }
+
+        // Check if cancellation request already exists
+        if ($booking->hasCancellationRequest()) {
+            return redirect()->route('customer.bookings.show', $id)
+                ->with('error', 'A cancellation request for this booking already exists.');
+        }
+
+        // Business rule: Cancellation requests are only available 24 hours before pickup time
+        if ($booking->start_datetime) {
+            $hoursUntilPickup = now()->diffInHours($booking->start_datetime, false);
+            
+            if ($hoursUntilPickup < 24) {
+                return redirect()->route('customer.bookings.show', $id)
+                    ->with('error', 'Cancellation requests are only available at least 24 hours before the pickup time. Since your pickup is scheduled for ' . $booking->start_datetime->format('d M Y, H:i') . ', cancellation is no longer available. Please proceed with your booking as scheduled.');
+            }
+        }
+
+        // Get reason types for dropdown
+        $reasonTypes = \App\Models\CancellationRequest::getReasonTypes();
+
+        return view('customer.bookings.cancel', [
+            'booking' => $booking,
+            'reasonTypes' => $reasonTypes,
+        ]);
+    }
+
+    /**
+     * Submit a cancellation request
+     * Creates a new CancellationRequest record with customer's details
+     * Booking status is NOT changed immediately - staff must approve first
      * 
      * @param Request $request
      * @param int $id Booking ID
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function bookingsCancel(Request $request, $id)
+    public function bookingsCancelSubmit(Request $request, $id)
     {
         $this->ensureCustomer($request);
         $customerId = $this->getCustomerId($request);
@@ -411,13 +460,56 @@ class CustomerController extends Controller
                 ->with('error', 'Cannot cancel a booking that is already active, completed, or cancelled.');
         }
 
-        // Update booking status to cancelled
-        $booking->update([
-            'status' => 'cancelled',
+        // Check if cancellation request already exists
+        if ($booking->hasCancellationRequest()) {
+            return redirect()->route('customer.bookings.show', $id)
+                ->with('error', 'A cancellation request for this booking already exists.');
+        }
+
+        // Business rule: Cancellation requests are only available 24 hours before pickup time
+        if ($booking->start_datetime) {
+            $hoursUntilPickup = now()->diffInHours($booking->start_datetime, false);
+            
+            if ($hoursUntilPickup < 24) {
+                return redirect()->route('customer.bookings.show', $id)
+                    ->with('error', 'Cancellation requests are only available at least 24 hours before the pickup time. Since your pickup is scheduled for ' . $booking->start_datetime->format('d M Y, H:i') . ', cancellation is no longer available. Please proceed with your booking as scheduled.');
+            }
+        }
+
+        // Validate the form
+        $validated = $request->validate([
+            'reason_type' => 'required|in:change_of_plans,found_alternative,financial_reasons,emergency,vehicle_issue,service_issue,other',
+            'reason_details' => 'nullable|string|max:1000',
+            'bank_name' => 'required|string|max:100',
+            'bank_account_number' => 'required|string|max:50',
+            'bank_account_holder' => 'required|string|max:100',
+            'proof_document' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+            'agree_terms' => 'required|accepted',
+        ]);
+
+        // Handle proof document upload
+        $proofDocumentPath = null;
+        if ($request->hasFile('proof_document')) {
+            $file = $request->file('proof_document');
+            $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $proofDocumentPath = $file->storeAs('images/cancellation-proofs', $fileName, 'public');
+        }
+
+        // Create cancellation request
+        \App\Models\CancellationRequest::create([
+            'booking_id' => $booking->booking_id,
+            'customer_id' => $customerId,
+            'reason_type' => $validated['reason_type'],
+            'reason_details' => $validated['reason_details'],
+            'bank_name' => $validated['bank_name'],
+            'bank_account_number' => $validated['bank_account_number'],
+            'bank_account_holder' => $validated['bank_account_holder'],
+            'proof_document_url' => $proofDocumentPath,
+            'status' => 'pending',
         ]);
 
         return redirect()->route('customer.bookings.show', $id)
-            ->with('success', 'Booking cancelled successfully.');
+            ->with('success', 'Your cancellation request has been submitted successfully. Our staff will review it and process your refund within 3-5 business days.');
     }
 
     /**
@@ -567,15 +659,15 @@ class CustomerController extends Controller
         $booking = Booking::where('customer_id', $customerId)
             ->findOrFail($id);
 
-        // Only allow photo uploads for active or completed bookings
-        if (!in_array($booking->status, ['active', 'completed'])) {
+        // Allow photo uploads for confirmed, active, or completed bookings (for phases 3 and 4)
+        if (!in_array($booking->status, ['confirmed', 'active', 'completed'])) {
             return redirect()->back()
-                ->with('error', 'Photos can only be uploaded for active or completed bookings.');
+                ->with('error', 'Photos can only be uploaded for confirmed, active, or completed bookings.');
         }
 
         $validated = $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
-            'photo_type' => 'required|in:before,after,key,damage,other',
+            'photo_type' => 'required|in:before,after,key,damage,other,agreement,pickup,parking',
             'taken_at' => 'required|date',
         ]);
 
@@ -594,7 +686,49 @@ class CustomerController extends Controller
             'taken_at' => $validated['taken_at'],
         ]);
 
+        // If uploading an agreement photo, also mark the agreement as signed
+        if ($validated['photo_type'] === 'agreement' && !$booking->agreement_signed_at) {
+            $booking->agreement_signed_at = now();
+            $booking->save();
+        }
+
         return redirect()->back()
             ->with('success', 'Photo uploaded successfully!');
+    }
+
+    /**
+     * Sign the digital rental agreement
+     * Updates the agreement_signed_at timestamp on the booking
+     * 
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bookingsSignAgreement(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        $booking = Booking::where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        // Only allow signing for confirmed or active bookings
+        if (!in_array($booking->status, ['confirmed', 'active'])) {
+            return redirect()->back()
+                ->with('error', 'Agreement can only be signed for confirmed or active bookings.');
+        }
+
+        // Check if already signed
+        if ($booking->agreement_signed_at) {
+            return redirect()->back()
+                ->with('error', 'Agreement has already been signed.');
+        }
+
+        // Sign the agreement
+        $booking->agreement_signed_at = now();
+        $booking->save();
+
+        return redirect()->back()
+            ->with('success', 'Rental agreement signed successfully! Please proceed to upload pickup photos.');
     }
 }

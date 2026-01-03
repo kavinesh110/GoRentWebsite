@@ -141,4 +141,147 @@ class Booking extends Model
     {
         return $this->hasMany(Payment::class, 'booking_id', 'booking_id');
     }
+
+    /**
+     * Get the cancellation request for this booking (if any)
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function cancellationRequest(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CancellationRequest::class, 'booking_id', 'booking_id');
+    }
+
+    /**
+     * Check if booking has a pending or approved cancellation request
+     * @return bool
+     */
+    public function hasCancellationRequest(): bool
+    {
+        return $this->cancellationRequest()
+            ->whereIn('status', ['pending', 'approved', 'refunded'])
+            ->exists();
+    }
+
+    /**
+     * Determine the current booking phase (1-4)
+     * Phase 1: Payment - User pays deposit + rental
+     * Phase 2: Verification - Hasta verifies booking
+     * Phase 3: Pickup - User signs agreement, uploads pickup photos
+     * Phase 4: Return - User returns car, uploads return photos
+     * 
+     * @return int Current phase number (1-4)
+     */
+    public function getCurrentPhase(): int
+    {
+        // Phase 4: Completed - rental finished
+        if ($this->status === 'completed') {
+            return 4;
+        }
+
+        // Phase 3: Active rental - user has picked up the car
+        if ($this->status === 'active') {
+            return 3;
+        }
+
+        // Phase 2: Confirmed - waiting for pickup / agreement signing
+        if ($this->status === 'confirmed') {
+            return 2;
+        }
+
+        // Phase 1: Created - pending payment or verification
+        return 1;
+    }
+
+    /**
+     * Check if Phase 1 (Payment) is complete
+     * Phase 1 is complete when customer has uploaded a deposit payment receipt
+     * (doesn't need to be verified yet - that's Phase 2)
+     * @return bool
+     */
+    public function isPhase1Complete(): bool
+    {
+        // Phase 1 is complete when any deposit payment has been uploaded (regardless of status)
+        $hasPayment = $this->payments()
+            ->where('payment_type', 'deposit')
+            ->exists();
+        
+        return $hasPayment;
+    }
+
+    /**
+     * Check if payment has been verified by staff
+     * @return bool
+     */
+    public function isPaymentVerified(): bool
+    {
+        return $this->payments()
+            ->where('payment_type', 'deposit')
+            ->where('status', 'verified')
+            ->exists();
+    }
+
+    /**
+     * Check if Phase 2 (Verification) is complete
+     * @return bool
+     */
+    public function isPhase2Complete(): bool
+    {
+        // Phase 2 is complete when booking is confirmed or beyond
+        return in_array($this->status, ['confirmed', 'active', 'completed']);
+    }
+
+    /**
+     * Check if Phase 3 (Pickup) is complete
+     * @return bool
+     */
+    public function isPhase3Complete(): bool
+    {
+        // Phase 3 is complete when agreement is signed AND pickup photos exist
+        $hasAgreement = $this->agreement_signed_at !== null;
+        $hasPickupPhotos = $this->rentalPhotos()
+            ->whereIn('photo_type', ['before', 'pickup', 'agreement'])
+            ->exists();
+        
+        return $hasAgreement && $hasPickupPhotos && in_array($this->status, ['active', 'completed']);
+    }
+
+    /**
+     * Check if Phase 4 (Return) is complete
+     * @return bool
+     */
+    public function isPhase4Complete(): bool
+    {
+        // Phase 4 is complete when booking is completed with return photos
+        if ($this->status !== 'completed') {
+            return false;
+        }
+
+        $hasReturnPhotos = $this->rentalPhotos()
+            ->whereIn('photo_type', ['after', 'key', 'parking'])
+            ->exists();
+        
+        return $hasReturnPhotos;
+    }
+
+    /**
+     * Get pickup photos for this booking
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getPickupPhotos()
+    {
+        return $this->rentalPhotos()
+            ->whereIn('photo_type', ['before', 'pickup', 'agreement'])
+            ->get();
+    }
+
+    /**
+     * Get return photos for this booking
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getReturnPhotos()
+    {
+        return $this->rentalPhotos()
+            ->whereIn('photo_type', ['after', 'key', 'parking'])
+            ->get();
+    }
 }

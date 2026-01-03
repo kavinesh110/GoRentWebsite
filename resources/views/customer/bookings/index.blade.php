@@ -22,6 +22,21 @@
     </div>
   @endif
 
+  {{-- Cancellation Policy Notice --}}
+  <div class="alert alert-info border-0 shadow-soft mb-4" role="alert" style="background: #e7f3ff; border-left: 4px solid #0d6efd !important;">
+    <div class="d-flex align-items-start">
+      <i class="bi bi-info-circle-fill me-3 mt-1" style="color: #0d6efd; font-size: 20px;"></i>
+      <div class="flex-grow-1">
+        <strong class="d-block mb-2" style="color: #0d6efd; font-size: 15px;">Cancellation Policy</strong>
+        <p class="mb-0" style="color: #0a58ca; font-size: 14px;">
+          Cancellation requests are only available <strong>24 hours before</strong> the desired renting/pickup time. 
+          If you need to cancel your booking, please submit a cancellation request at least 24 hours before your scheduled pickup time. 
+          Cancellations made after this period may be subject to fees as per our cancellation policy.
+        </p>
+      </div>
+    </div>
+  </div>
+
   {{-- FILTERS --}}
   <div class="card border-0 shadow-soft mb-4">
     <div class="card-body p-4">

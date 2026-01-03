@@ -29,7 +29,8 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::get('/bookings/{id}', [App\Http\Controllers\CustomerController::class, 'bookingsShow'])->name('bookings.show');
     Route::get('/booking/payment', [App\Http\Controllers\CustomerController::class, 'bookingsPayment'])->name('bookings.payment');
     Route::post('/booking/payment', [App\Http\Controllers\CustomerController::class, 'bookingsPaymentSubmit'])->name('bookings.payment.submit');
-    Route::post('/bookings/{id}/cancel', [App\Http\Controllers\CustomerController::class, 'bookingsCancel'])->name('bookings.cancel');
+    Route::get('/bookings/{id}/cancel', [App\Http\Controllers\CustomerController::class, 'bookingsCancelForm'])->name('bookings.cancel.form');
+    Route::post('/bookings/{id}/cancel', [App\Http\Controllers\CustomerController::class, 'bookingsCancelSubmit'])->name('bookings.cancel.submit');
     Route::get('/profile', [App\Http\Controllers\CustomerController::class, 'profile'])->name('profile');
     Route::post('/profile', [App\Http\Controllers\CustomerController::class, 'profileUpdate'])->name('profile.update');
     Route::post('/profile/documents', [App\Http\Controllers\CustomerController::class, 'profileDocumentsUpdate'])->name('profile.documents.update');
@@ -37,6 +38,7 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::post('/bookings/{id}/feedback', [App\Http\Controllers\CustomerController::class, 'bookingsSubmitFeedback'])->name('bookings.feedback.store');
     Route::post('/bookings/{id}/receipt', [App\Http\Controllers\CustomerController::class, 'bookingsUploadReceipt'])->name('bookings.receipt.upload');
     Route::post('/bookings/{id}/photos', [App\Http\Controllers\CustomerController::class, 'bookingsUploadPhoto'])->name('bookings.photos.upload');
+    Route::post('/bookings/{id}/sign-agreement', [App\Http\Controllers\CustomerController::class, 'bookingsSignAgreement'])->name('bookings.sign-agreement');
 });
 
 // Staff routes (protected by ensureStaff middleware in controller)
@@ -57,6 +59,11 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::patch('/bookings/{id}/status', [App\Http\Controllers\StaffController::class, 'bookingsUpdateStatus'])->name('bookings.update-status');
     Route::post('/bookings/{id}/penalties', [App\Http\Controllers\StaffController::class, 'bookingsAddPenalty'])->name('bookings.penalties.store');
     Route::post('/bookings/{id}/inspections', [App\Http\Controllers\StaffController::class, 'bookingsAddInspection'])->name('bookings.inspections.store');
+    
+    // Cancellation request management
+    Route::get('/cancellation-requests', [App\Http\Controllers\StaffController::class, 'cancellationRequests'])->name('cancellation-requests');
+    Route::get('/cancellation-requests/{id}', [App\Http\Controllers\StaffController::class, 'cancellationRequestsShow'])->name('cancellation-requests.show');
+    Route::patch('/cancellation-requests/{id}/process', [App\Http\Controllers\StaffController::class, 'cancellationRequestsProcess'])->name('cancellation-requests.process');
     
     // Payment management
     Route::post('/bookings/{id}/payments', [App\Http\Controllers\StaffController::class, 'paymentsStore'])->name('payments.store');

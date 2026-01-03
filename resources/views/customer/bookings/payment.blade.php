@@ -184,6 +184,23 @@
                 <small class="text-muted d-block mt-2">Maximum file size: 5MB</small>
               </div>
             </div>
+            
+            {{-- Cancellation Policy Notice --}}
+            <div class="col-12 mt-4">
+              <div class="alert alert-info border-0 shadow-sm" role="alert" style="background: #e7f3ff; border-left: 4px solid #0d6efd !important;">
+                <div class="d-flex align-items-start">
+                  <i class="bi bi-info-circle-fill me-2 mt-1" style="color: #0d6efd; font-size: 18px;"></i>
+                  <div>
+                    <strong class="d-block mb-1" style="color: #0d6efd;">Cancellation Policy</strong>
+                    <p class="mb-0 small" style="color: #0a58ca;">
+                      Please note that cancellation requests are only available <strong>24 hours before</strong> the desired renting/pickup time. 
+                      Cancellations made after this period may be subject to fees as per our cancellation policy.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="col-12 mt-4">
               <button type="submit" class="btn-upload">
                 <i class="bi bi-cloud-upload me-2"></i> Confirm & Complete Booking

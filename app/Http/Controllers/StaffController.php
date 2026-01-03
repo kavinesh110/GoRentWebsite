@@ -16,6 +16,7 @@ use App\Models\Voucher;
 use App\Models\MaintenanceRecord;
 use App\Models\Feedback;
 use App\Models\RentalPhoto;
+use App\Models\CancellationRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -1888,5 +1889,139 @@ class StaffController extends Controller
             'stats' => $stats,
             'filters' => $request->only(['status', 'type', 'search']),
         ]);
+    }
+
+    // ========== CANCELLATION REQUEST MANAGEMENT ==========
+
+    /**
+     * List all cancellation requests with filtering
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function cancellationRequests(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = CancellationRequest::with(['booking.car', 'customer']);
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Search by customer name or booking ID
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('booking_id', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->paginate(15);
+
+        // Stats
+        $stats = [
+            'total' => CancellationRequest::count(),
+            'pending' => CancellationRequest::where('status', 'pending')->count(),
+            'approved' => CancellationRequest::where('status', 'approved')->count(),
+            'refunded' => CancellationRequest::where('status', 'refunded')->count(),
+            'rejected' => CancellationRequest::where('status', 'rejected')->count(),
+        ];
+
+        return view('staff.cancellation-requests.index', [
+            'requests' => $requests,
+            'stats' => $stats,
+            'filters' => $request->only(['status', 'search']),
+        ]);
+    }
+
+    /**
+     * Show details of a specific cancellation request
+     * 
+     * @param Request $request
+     * @param int $id CancellationRequest ID
+     * @return \Illuminate\View\View
+     */
+    public function cancellationRequestsShow(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+
+        $cancelRequest = CancellationRequest::with([
+            'booking.car', 
+            'booking.customer', 
+            'booking.payments',
+            'customer'
+        ])->findOrFail($id);
+
+        return view('staff.cancellation-requests.show', [
+            'cancelRequest' => $cancelRequest,
+        ]);
+    }
+
+    /**
+     * Process a cancellation request (approve, reject, or mark as refunded)
+     * 
+     * @param Request $request
+     * @param int $id CancellationRequest ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function cancellationRequestsProcess(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $staffId = session('auth_id');
+
+        $cancelRequest = CancellationRequest::with('booking')->findOrFail($id);
+
+        $validated = $request->validate([
+            'action' => 'required|in:approve,reject,refund',
+            'staff_notes' => 'nullable|string|max:1000',
+            'refund_amount' => 'nullable|numeric|min:0',
+            'refund_reference' => 'nullable|string|max:100',
+        ]);
+
+        $action = $validated['action'];
+
+        if ($action === 'approve') {
+            $cancelRequest->update([
+                'status' => 'approved',
+                'processed_by_staff_id' => $staffId,
+                'processed_at' => now(),
+                'staff_notes' => $validated['staff_notes'],
+            ]);
+
+            // Update booking status to cancelled
+            $cancelRequest->booking->update(['status' => 'cancelled']);
+
+            return redirect()->back()->with('success', 'Cancellation request approved. Booking has been cancelled.');
+
+        } elseif ($action === 'reject') {
+            $cancelRequest->update([
+                'status' => 'rejected',
+                'processed_by_staff_id' => $staffId,
+                'processed_at' => now(),
+                'staff_notes' => $validated['staff_notes'],
+            ]);
+
+            return redirect()->back()->with('success', 'Cancellation request rejected.');
+
+        } elseif ($action === 'refund') {
+            $cancelRequest->update([
+                'status' => 'refunded',
+                'processed_by_staff_id' => $staffId,
+                'refund_amount' => $validated['refund_amount'],
+                'refund_reference' => $validated['refund_reference'],
+                'refunded_at' => now(),
+                'staff_notes' => $validated['staff_notes'],
+            ]);
+
+            return redirect()->back()->with('success', 'Refund has been marked as processed.');
+        }
+
+        return redirect()->back()->with('error', 'Invalid action.');
     }
 }

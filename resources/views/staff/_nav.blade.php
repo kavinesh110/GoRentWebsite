@@ -14,6 +14,9 @@
       <a href="{{ route('staff.bookings') }}" class="nav-link {{ request()->routeIs('staff.bookings*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
         Bookings
       </a>
+      <a href="{{ route('staff.cancellation-requests') }}" class="nav-link {{ request()->routeIs('staff.cancellation-requests*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
+        Cancellation Requests
+      </a>
       <a href="{{ route('staff.customers') }}" class="nav-link {{ request()->routeIs('staff.customers*') ? 'active' : '' }}" style="color: #333; padding: 10px 16px; border-radius: 8px;">
         Customers
       </a>
