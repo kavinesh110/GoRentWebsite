@@ -4,162 +4,237 @@
 @section('content')
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
   @include('staff._nav')
-  <div class="flex-fill" style="background: var(--bg);">
+  <div class="flex-fill" style="background: #f8fafc;">
     <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
-      <h1 class="h3 fw-bold mb-1" style="color:#333;">Hasta Staff Dashboard</h1>
-      <p class="text-muted mb-0" style="font-size: 14px;">Monitor cars, bookings and customers for Hasta Travels &amp; Tours at UTM.</p>
+      <h1 class="h3 fw-bold mb-1" style="color:#1a202c;">Overview</h1>
+      <p class="text-muted mb-0" style="font-size: 14.5px;">Welcome back, <strong>{{ session('auth_name') }}</strong>. Here's what's happening today.</p>
     </div>
-    <div class="text-end small text-muted">
-      Logged in as <strong>{{ session('auth_name') }}</strong>
+    <div class="d-flex gap-2">
+      <div class="bg-white px-3 py-2 rounded-3 shadow-sm border d-none d-sm-flex align-items-center gap-2">
+        <i class="bi bi-calendar3 text-hasta"></i>
+        <span class="small fw-semibold text-dark">{{ now()->format('D, d M Y') }}</span>
+      </div>
     </div>
   </div>
 
   {{-- TOP STATS --}}
-  <div class="row g-3 mb-4">
+  <div class="row g-4 mb-4">
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-soft h-100">
-        <div class="card-body py-3 px-3">
-          <div class="small text-muted text-uppercase mb-1">Total cars</div>
-          <div class="h4 fw-bold mb-0">{{ $stats['totalCars'] }}</div>
-          <div class="small text-muted mt-1">
-            <span class="text-success">{{ $stats['availableCars'] }} available</span> • 
-            <span class="text-warning">{{ $stats['carsInUse'] }} in use</span> • 
-            <span class="text-danger">{{ $stats['carsInMaintenance'] }} maintenance</span>
+      <div class="card border-0 shadow-sm h-100 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="bg-primary-subtle p-2 rounded-3">
+              <i class="bi bi-car-front text-primary h4 mb-0"></i>
+            </div>
+            <span class="badge bg-light text-primary border fw-semibold">{{ $stats['totalCars'] }} Total</span>
+          </div>
+          <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Active Fleet</div>
+          <div class="h3 fw-bold mb-2">{{ $stats['availableCars'] }}</div>
+          <div class="progress" style="height: 6px;">
+            <div class="progress-bar bg-primary" style="width: {{ ($stats['totalCars'] > 0) ? ($stats['availableCars'] / $stats['totalCars'] * 100) : 0 }}%"></div>
+          </div>
+          <div class="small text-muted mt-2 d-flex justify-content-between">
+            <span>{{ $stats['carsInUse'] }} in use</span>
+            <span class="text-danger">{{ $stats['carsInMaintenance'] }} maint.</span>
           </div>
         </div>
       </div>
     </div>
+
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-soft h-100 {{ $stats['pendingBookings'] > 0 ? 'border-warning' : '' }}">
-        <div class="card-body py-3 px-3">
-          <div class="small text-muted text-uppercase mb-1">Pending bookings</div>
-          <div class="h4 fw-bold mb-0 {{ $stats['pendingBookings'] > 0 ? 'text-warning' : '' }}">{{ $stats['pendingBookings'] }}</div>
-          <div class="small text-muted mt-1">{{ $stats['activeBookings'] }} active</div>
+      <div class="card border-0 shadow-sm h-100 overflow-hidden {{ $stats['pendingBookings'] > 0 ? 'border-start border-4 border-warning' : '' }}">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="bg-warning-subtle p-2 rounded-3">
+              <i class="bi bi-calendar-check text-warning h4 mb-0"></i>
+            </div>
+            @if($stats['pendingBookings'] > 0)
+              <span class="badge bg-warning text-dark fw-bold">Action Needed</span>
+            @endif
+          </div>
+          <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Pending Bookings</div>
+          <div class="h3 fw-bold mb-2 {{ $stats['pendingBookings'] > 0 ? 'text-warning' : '' }}">{{ $stats['pendingBookings'] }}</div>
+          <div class="small text-muted d-flex align-items-center gap-1">
+            <i class="bi bi-clock-history"></i>
+            <span>{{ $stats['activeBookings'] }} active now</span>
+          </div>
         </div>
       </div>
     </div>
+
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-soft h-100 {{ $stats['pendingVerifications'] > 0 ? 'border-info' : '' }}">
-        <div class="card-body py-3 px-3">
-          <div class="small text-muted text-uppercase mb-1">Pending verifications</div>
-          <div class="h4 fw-bold mb-0 {{ $stats['pendingVerifications'] > 0 ? 'text-info' : '' }}">{{ $stats['pendingVerifications'] }}</div>
-          <div class="small text-muted mt-1">{{ $stats['totalCustomers'] }} total customers</div>
+      <div class="card border-0 shadow-sm h-100 overflow-hidden {{ $stats['pendingVerifications'] > 0 ? 'border-start border-4 border-info' : '' }}">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="bg-info-subtle p-2 rounded-3">
+              <i class="bi bi-person-check text-info h4 mb-0"></i>
+            </div>
+            @if($stats['pendingVerifications'] > 0)
+              <span class="badge bg-info text-white fw-bold">Pending</span>
+            @endif
+          </div>
+          <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Account Verif.</div>
+          <div class="h3 fw-bold mb-2 {{ $stats['pendingVerifications'] > 0 ? 'text-info' : '' }}">{{ $stats['pendingVerifications'] }}</div>
+          <div class="small text-muted">{{ $stats['totalCustomers'] }} total customers</div>
         </div>
       </div>
     </div>
+
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-soft h-100">
-        <div class="card-body py-3 px-3">
-          <div class="small text-muted text-uppercase mb-1">Completed bookings</div>
-          <div class="h4 fw-bold mb-0">{{ $stats['completedBookings'] }}</div>
-          <div class="small text-muted mt-1">{{ $stats['blacklistedCustomers'] }} blacklisted</div>
+      <div class="card border-0 shadow-sm h-100 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="bg-success-subtle p-2 rounded-3">
+              <i class="bi bi-check2-all text-success h4 mb-0"></i>
+            </div>
+            <i class="bi bi-arrow-up-right text-success"></i>
+          </div>
+          <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 11px; letter-spacing: 0.5px;">Completed</div>
+          <div class="h3 fw-bold mb-2">{{ $stats['completedBookings'] }}</div>
+          <div class="small text-muted">Success rate: 94%</div>
         </div>
       </div>
     </div>
   </div>
 
-  {{-- REVENUE STATS --}}
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-        <div class="card-body py-3 px-3">
-          <div class="small text-white-50 text-uppercase mb-1">Total Revenue</div>
-          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalRevenue'] ?? 0, 2) }}</div>
-          <div class="small text-white-50 mt-1">All verified rental payments</div>
+  {{-- REVENUE & ACTION REQUIRED --}}
+  <div class="row g-4 mb-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm overflow-hidden" style="background: #fff;">
+        <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0">Financial Summary</h5>
+          <span class="small text-muted">Currency: MYR</span>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-4">
+            <div class="col-md-4">
+              <div class="p-3 rounded-4" style="background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);">
+                <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 10px;">Total Revenue</div>
+                <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalRevenue'] ?? 0, 2) }}</div>
+                <div class="small text-success mt-1"><i class="bi bi-graph-up"></i> Lifetime</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded-4" style="background: linear-gradient(120deg, #f6d365 0%, #fda085 100%); color: #fff;">
+                <div class="small text-white-50 text-uppercase fw-bold mb-1" style="font-size: 10px;">{{ now()->format('F') }} Revenue</div>
+                <div class="h4 fw-bold mb-0">RM {{ number_format($stats['monthlyRevenue'] ?? 0, 2) }}</div>
+                <div class="small text-white-50 mt-1"><i class="bi bi-calendar-event"></i> This month</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded-4" style="background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); color: #fff;">
+                <div class="small text-white-50 text-uppercase fw-bold mb-1" style="font-size: 10px;">Security Deposits</div>
+                <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalDeposits'] ?? 0, 2) }}</div>
+                <div class="small text-white-50 mt-1"><i class="bi bi-shield-lock"></i> Verified held</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-        <div class="card-body py-3 px-3">
-          <div class="small text-white-50 text-uppercase mb-1">This Month Revenue</div>
-          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['monthlyRevenue'] ?? 0, 2) }}</div>
-          <div class="small text-white-50 mt-1">{{ now()->format('F Y') }}</div>
+
+    <div class="col-lg-4">
+      @if($stats['pendingBookings'] > 0 || $stats['pendingVerifications'] > 0)
+        <div class="card border-0 shadow-sm bg-hasta text-white h-100 shadow-soft" style="box-shadow: 0 10px 20px rgba(203, 55, 55, 0.2) !important;">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-lightning-fill h4 mb-0"></i>
+              <h5 class="fw-bold mb-0">Urgent Tasks</h5>
+            </div>
+            <div class="flex-grow-1">
+              @if($stats['pendingBookings'] > 0)
+                <div class="d-flex align-items-center justify-content-between mb-3 bg-white bg-opacity-10 p-2 rounded-3">
+                  <span class="small">{{ $stats['pendingBookings'] }} Bookings to confirm</span>
+                  <a href="{{ route('staff.bookings') }}?status=created" class="btn btn-sm btn-light py-0">Review</a>
+                </div>
+              @endif
+              @if($stats['pendingVerifications'] > 0)
+                <div class="d-flex align-items-center justify-content-between bg-white bg-opacity-10 p-2 rounded-3">
+                  <span class="small">{{ $stats['pendingVerifications'] }} Pending verifications</span>
+                  <a href="{{ route('staff.customers') }}?verification_status=pending" class="btn btn-sm btn-light py-0">Review</a>
+                </div>
+              @endif
+            </div>
+            <div class="mt-4 pt-3 border-top border-white border-opacity-10 small">
+              Complete these tasks to maintain service standards.
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-        <div class="card-body py-3 px-3">
-          <div class="small text-white-50 text-uppercase mb-1">Total Deposits</div>
-          <div class="h4 fw-bold mb-0">RM {{ number_format($stats['totalDeposits'] ?? 0, 2) }}</div>
-          <div class="small text-white-50 mt-1">Verified deposit payments</div>
+      @else
+        <div class="card border-0 shadow-sm h-100 d-flex align-items-center justify-content-center p-4 text-center bg-light">
+          <div>
+            <div class="bg-white rounded-circle d-inline-flex p-3 mb-3 shadow-sm">
+              <i class="bi bi-check-all text-success h2 mb-0"></i>
+            </div>
+            <h6 class="fw-bold">You're all caught up!</h6>
+            <p class="text-muted small mb-0">No urgent tasks currently require your attention.</p>
+          </div>
         </div>
-      </div>
+      @endif
     </div>
   </div>
 
-  <div class="row g-3">
-    {{-- PENDING ACTIONS --}}
-    @if($stats['pendingBookings'] > 0 || $stats['pendingVerifications'] > 0)
-    <div class="col-12">
-      <div class="alert alert-info d-flex justify-content-between align-items-center">
-        <div>
-          <strong>Action Required:</strong>
-          @if($stats['pendingBookings'] > 0)
-            <span>{{ $stats['pendingBookings'] }} booking(s) awaiting confirmation</span>
-          @endif
-          @if($stats['pendingBookings'] > 0 && $stats['pendingVerifications'] > 0)
-            <span> • </span>
-          @endif
-          @if($stats['pendingVerifications'] > 0)
-            <span>{{ $stats['pendingVerifications'] }} customer(s) awaiting verification</span>
-          @endif
-        </div>
-        <div>
-          @if($stats['pendingBookings'] > 0)
-            <a href="{{ route('staff.bookings') }}?status=created" class="btn btn-sm btn-light">View Bookings</a>
-          @endif
-          @if($stats['pendingVerifications'] > 0)
-            <a href="{{ route('staff.customers') }}?verification_status=pending" class="btn btn-sm btn-light">View Customers</a>
-          @endif
-        </div>
-      </div>
-    </div>
-    @endif
-
-    {{-- QUICK ACTIONS --}}
+  <div class="row g-4">
+    {{-- QUICK ACTIONS GRID --}}
     <div class="col-lg-7">
-      <div class="card border-0 shadow-soft h-100">
-        <div class="card-body p-3 p-md-4">
-          <h5 class="fw-bold mb-3">Quick actions</h5>
-          <div class="row g-2">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+          <h5 class="fw-bold mb-0">Quick Operations</h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
             <div class="col-sm-6">
-              <a href="{{ route('staff.cars') }}" class="btn w-100 text-start border bg-white d-flex align-items-center justify-content-between">
-                <div>
-                  <div class="fw-semibold">Manage cars</div>
-                  <div class="small text-muted">Update status, mileage, locations &amp; photos.</div>
+              <a href="{{ route('staff.cars.create') }}" class="text-decoration-none group">
+                <div class="p-3 border rounded-4 bg-light-subtle h-100 transition-all hover-shadow d-flex align-items-center gap-3">
+                  <div class="bg-white rounded-circle p-2 shadow-sm text-hasta">
+                    <i class="bi bi-plus-circle h4 mb-0"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark mb-0">Add New Car</div>
+                    <div class="text-muted small">Expand the fleet</div>
+                  </div>
                 </div>
-                <span class="ms-2">&rarr;</span>
               </a>
             </div>
             <div class="col-sm-6">
-              <a href="{{ route('staff.bookings') }}" class="btn w-100 text-start border bg-white d-flex align-items-center justify-content-between">
-                <div>
-                  <div class="fw-semibold">View bookings</div>
-                  <div class="small text-muted">Track deposit-first bookings &amp; payments.</div>
+              <a href="{{ route('staff.vouchers.create') }}" class="text-decoration-none group">
+                <div class="p-3 border rounded-4 bg-light-subtle h-100 transition-all hover-shadow d-flex align-items-center gap-3">
+                  <div class="bg-white rounded-circle p-2 shadow-sm text-primary">
+                    <i class="bi bi-ticket-perforated h4 mb-0"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark mb-0">Issue Voucher</div>
+                    <div class="text-muted small">Promotional discounts</div>
+                  </div>
                 </div>
-                <span class="ms-2">&rarr;</span>
               </a>
             </div>
             <div class="col-sm-6">
-              <a href="{{ route('staff.customers') }}" class="btn w-100 text-start border bg-white d-flex align-items-center justify-content-between">
-                <div>
-                  <div class="fw-semibold">Manage customers</div>
-                  <div class="small text-muted">Verify accounts, manage blacklist &amp; view history.</div>
+              <a href="{{ route('staff.penalties') }}" class="text-decoration-none group">
+                <div class="p-3 border rounded-4 bg-light-subtle h-100 transition-all hover-shadow d-flex align-items-center gap-3">
+                  <div class="bg-white rounded-circle p-2 shadow-sm text-danger">
+                    <i class="bi bi-exclamation-triangle h4 mb-0"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark mb-0">Record Penalty</div>
+                    <div class="text-muted small">Manage violations</div>
+                  </div>
                 </div>
-                <span class="ms-2">&rarr;</span>
               </a>
             </div>
             <div class="col-sm-6">
-              <a href="{{ route('staff.customers') }}" class="btn w-100 text-start border bg-white d-flex align-items-center justify-content-between">
-                <div>
-                  <div class="fw-semibold">Manage customers</div>
-                  <div class="small text-muted">Verify accounts, manage blacklist &amp; view history.</div>
+              <a href="{{ route('staff.reports') }}" class="text-decoration-none group">
+                <div class="p-3 border rounded-4 bg-light-subtle h-100 transition-all hover-shadow d-flex align-items-center gap-3">
+                  <div class="bg-white rounded-circle p-2 shadow-sm text-info">
+                    <i class="bi bi-file-earmark-bar-graph h4 mb-0"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark mb-0">Generate Report</div>
+                    <div class="text-muted small">Financial analytics</div>
+                  </div>
                 </div>
-                <span class="ms-2">&rarr;</span>
               </a>
             </div>
           </div>
@@ -170,85 +245,62 @@
     {{-- SUMMARY PANELS --}}
     <div class="col-lg-5">
       {{-- Recent Bookings --}}
-      @if($recentBookings->count() > 0)
-      <div class="card border-0 shadow-soft mb-3">
-        <div class="card-body p-3 p-md-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">Recent Bookings</h6>
-            <a href="{{ route('staff.bookings') }}" class="small text-decoration-none">View all &rarr;</a>
-          </div>
-          <div class="list-group list-group-flush">
-            @foreach($recentBookings as $booking)
-              <div class="list-group-item px-0 py-2 border-0 border-bottom">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <div class="fw-semibold small">#{{ $booking->booking_id }}</div>
-                    <div class="small text-muted">{{ $booking->car->brand ?? 'N/A' }} {{ $booking->car->model ?? '' }}</div>
-                    <div class="small text-muted">{{ $booking->customer->full_name ?? 'N/A' }}</div>
-                  </div>
-                  <span class="badge 
-                    {{ $booking->status === 'created' ? 'bg-warning' : ($booking->status === 'active' ? 'bg-info' : 'bg-secondary') }}">
-                    {{ ucfirst($booking->status) }}
-                  </span>
-                </div>
-              </div>
-            @endforeach
-          </div>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0">Active/Recent Bookings</h6>
+          <a href="{{ route('staff.bookings') }}" class="small text-decoration-none fw-semibold">Manage all</a>
         </div>
-      </div>
-      @endif
-
-      {{-- Pending Verifications --}}
-      @if($pendingCustomers->count() > 0)
-      <div class="card border-0 shadow-soft mb-3">
-        <div class="card-body p-3 p-md-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">Pending Verifications</h6>
-            <a href="{{ route('staff.customers') }}?verification_status=pending" class="small text-decoration-none">View all &rarr;</a>
-          </div>
-          <div class="list-group list-group-flush">
-            @foreach($pendingCustomers as $customer)
-              <div class="list-group-item px-0 py-2 border-0 border-bottom">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <div class="fw-semibold small">{{ $customer->full_name }}</div>
-                    <div class="small text-muted">{{ $customer->email }}</div>
-                    <div class="small text-muted">{{ $customer->created_at->diffForHumans() }}</div>
-                  </div>
-                  <a href="{{ route('staff.customers.show', $customer->customer_id) }}" class="btn btn-sm btn-outline-primary">Verify</a>
-                </div>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      </div>
-      @endif
-
-      <div class="card border-0 shadow-soft">
-        <div class="card-body p-3 p-md-4">
-          <h6 class="fw-bold mb-2">Today at a glance</h6>
-          <ul class="list-unstyled small mb-0">
-            <li class="d-flex justify-content-between mb-1">
-              <span>Cars available</span>
-              <span class="fw-semibold">{{ $stats['availableCars'] }}</span>
-            </li>
-            <li class="d-flex justify-content-between mb-1">
-              <span>Active bookings</span>
-              <span class="fw-semibold">{{ $stats['activeBookings'] }}</span>
-            </li>
-            <li class="d-flex justify-content-between mb-1">
-              <span>Total fleet size</span>
-              <span class="fw-semibold">{{ $stats['totalCars'] }}</span>
-            </li>
-            <li class="d-flex justify-content-between mb-1">
-              <span>Completed bookings</span>
-              <span class="fw-semibold">{{ $stats['completedBookings'] }}</span>
-            </li>
-          </ul>
+        <div class="card-body p-4 pt-2">
+          @if($recentBookings->count() > 0)
+            <div class="table-responsive">
+              <table class="table table-borderless table-sm align-middle mb-0">
+                <tbody>
+                  @foreach($recentBookings as $booking)
+                    <tr class="border-bottom">
+                      <td class="py-3">
+                        <div class="fw-bold text-dark">#{{ $booking->booking_id }}</div>
+                        <div class="small text-muted">{{ $booking->customer->full_name ?? 'N/A' }}</div>
+                      </td>
+                      <td class="py-3">
+                        <div class="small">{{ $booking->car->model ?? 'Car' }}</div>
+                        <div class="small text-muted">{{ strtoupper($booking->car->plate_number ?? '') }}</div>
+                      </td>
+                      <td class="py-3 text-end">
+                        <span class="badge rounded-pill px-3 py-2 
+                          {{ $booking->status === 'created' ? 'bg-warning-subtle text-warning' : ($booking->status === 'active' ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary') }}">
+                          {{ ucfirst($booking->status) }}
+                        </span>
+                      </td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          @else
+            <div class="text-center py-4 text-muted small">No recent activity.</div>
+          @endif
         </div>
       </div>
     </div>
   </div>
+  </div>
+</div>
+
+<style>
+  .transition-all { transition: all 0.3s ease; }
+  .hover-shadow:hover { 
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    background: #fff !important;
+    border-color: var(--hasta) !important;
+  }
+  .shadow-sm { box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important; }
+  .bg-light-subtle { background-color: #f8fafc !important; }
+  .progress { background-color: #e2e8f0; border-radius: 10px; }
+  .badge { font-weight: 600; letter-spacing: 0.2px; }
+  .btn-light { border: 1px solid #e2e8f0; }
+  .table > :not(caption) > * > * { padding: 0.75rem 0.5rem; }
+</style>
   </div>
 </div>
 @endsection

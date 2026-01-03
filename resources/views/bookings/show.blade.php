@@ -299,30 +299,19 @@
             </div>
           </div>
 
+          {{-- Hidden voucher field for form submission --}}
           @if(isset($availableVouchers) && $availableVouchers->count() > 0)
-            <div class="bg-light p-4 rounded-4 mb-4">
-              <label class="form-label">Available Vouchers</label>
-              <select id="voucher-select" name="voucher_id" class="form-select bg-white">
-                <option value="">No voucher applied</option>
-                @foreach($availableVouchers as $voucher)
-                  <option value="{{ $voucher->voucher_id }}" data-discount-type="{{ $voucher->discount_type }}" data-discount-value="{{ $voucher->discount_value }}">
-                    {{ $voucher->code }} ({{ $voucher->discount_type === 'percent' ? $voucher->discount_value.'%' : 'RM'.$voucher->discount_value }} Off)
-                  </option>
-                @endforeach
-              </select>
-            </div>
+            <select id="voucher-select-hidden" name="voucher_id" style="display: none;">
+              <option value="">No voucher applied</option>
+              @foreach($availableVouchers as $voucher)
+                <option value="{{ $voucher->voucher_id }}" data-discount-type="{{ $voucher->discount_type }}" data-discount-value="{{ $voucher->discount_value }}">
+                  {{ $voucher->code }} ({{ $voucher->discount_type === 'percent' ? $voucher->discount_value.'%' : 'RM'.$voucher->discount_value }} Off)
+                </option>
+              @endforeach
+            </select>
+          @else
+            <input type="hidden" name="voucher_id" value="">
           @endif
-
-          <div class="alert alert-warning border-0 d-flex gap-3 p-4 rounded-4">
-            <i class="bi bi-exclamation-triangle-fill h4 mb-0"></i>
-            <div class="small">
-              <strong>Notice:</strong> A RM 50 deposit is required to confirm this booking. You will be asked to upload the payment receipt on the next page.
-            </div>
-          </div>
-
-          <button type="submit" class="btn-book-now mt-4">
-            Proceed to Payment <i class="bi bi-arrow-right ms-2"></i>
-          </button>
         </form>
       </div>
     </div>
@@ -354,6 +343,36 @@
             <span class="h3 fw-800 text-hasta-red mb-0 total-price-value">RM 0</span>
           </div>
         </div>
+
+        {{-- Available Vouchers --}}
+        @if(isset($availableVouchers) && $availableVouchers->count() > 0)
+          <div class="mt-4 pt-4 border-top">
+            <label class="form-label mb-2">Available Vouchers</label>
+            <select id="voucher-select" class="form-select form-select-sm">
+              <option value="">No voucher applied</option>
+              @foreach($availableVouchers as $voucher)
+                <option value="{{ $voucher->voucher_id }}" data-discount-type="{{ $voucher->discount_type }}" data-discount-value="{{ $voucher->discount_value }}">
+                  {{ $voucher->code }} ({{ $voucher->discount_type === 'percent' ? $voucher->discount_value.'%' : 'RM'.$voucher->discount_value }} Off)
+                </option>
+              @endforeach
+            </select>
+          </div>
+        @endif
+
+        {{-- Notice Alert --}}
+        <div class="mt-4">
+          <div class="alert alert-warning border-0 d-flex gap-2 p-3 rounded-3 mb-0">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div class="small">
+              <strong>Notice:</strong> A RM 50 deposit is required to confirm this booking. You will be asked to upload the payment receipt on the next page.
+            </div>
+          </div>
+        </div>
+
+        {{-- Proceed Button --}}
+        <button type="button" id="submitBookingForm" class="btn-book-now mt-4 w-100">
+          Proceed to Payment <i class="bi bi-arrow-right ms-2"></i>
+        </button>
 
         <div class="mt-4 pt-4 border-top">
           <div class="d-flex gap-2 mb-2">
@@ -455,8 +474,32 @@
     if (el) el.addEventListener('change', updatePricing);
   });
   
+  // Handle voucher selection (sync visible select with hidden form field)
   const vSelect = document.getElementById('voucher-select');
-  if (vSelect) vSelect.addEventListener('change', updatePricing);
+  const vSelectHidden = document.getElementById('voucher-select-hidden');
+  
+  if (vSelect && vSelectHidden) {
+    vSelect.addEventListener('change', function() {
+      // Sync visible select value to hidden select for form submission
+      vSelectHidden.value = this.value;
+      updatePricing();
+    });
+  } else if (vSelect) {
+    vSelect.addEventListener('change', updatePricing);
+  }
+
+  // Handle form submission from summary button
+  const submitBtn = document.getElementById('submitBookingForm');
+  const bookingForm = document.getElementById('bookingForm');
+  if (submitBtn && bookingForm) {
+    submitBtn.addEventListener('click', function() {
+      // Sync voucher value before submission
+      if (vSelect && vSelectHidden) {
+        vSelectHidden.value = vSelect.value;
+      }
+      bookingForm.submit();
+    });
+  }
   
   const today = new Date().toISOString().split('T')[0];
   if (pickupDateInput) {
