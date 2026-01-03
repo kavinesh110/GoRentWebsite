@@ -155,6 +155,155 @@
         .top-navbar-link i, .top-navbar-link svg { font-size: 18px; }
     }
 
+    /* ===== MOBILE SIDEBAR (768px and below only) ===== */
+    .mobile-sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1100;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .mobile-sidebar-overlay.active {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+    .mobile-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 280px;
+        height: 100%;
+        background: #fff;
+        z-index: 1200;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+        visibility: hidden;
+    }
+    .mobile-sidebar.active {
+        left: 0;
+        visibility: visible;
+    }
+    .mobile-sidebar-header {
+        background: var(--hasta-darker);
+        color: #fff;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .mobile-sidebar-header img {
+        height: 32px;
+    }
+    .mobile-sidebar-close {
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    .mobile-sidebar-close:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    .mobile-sidebar-nav {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .mobile-sidebar-nav-item {
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .mobile-sidebar-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        color: #333;
+        text-decoration: none;
+        font-size: 15px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .mobile-sidebar-nav-link:hover,
+    .mobile-sidebar-nav-link.active {
+        background: #f8f9fa;
+        color: var(--hasta);
+    }
+    .mobile-sidebar-nav-link i {
+        font-size: 20px;
+        width: 24px;
+        text-align: center;
+        color: #666;
+    }
+    .mobile-sidebar-nav-link.active i,
+    .mobile-sidebar-nav-link:hover i {
+        color: var(--hasta);
+    }
+    .mobile-sidebar-divider {
+        height: 8px;
+        background: #f0f0f0;
+    }
+    .mobile-sidebar-section-title {
+        padding: 16px 20px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .mobile-menu-toggle {
+        display: none;
+    }
+    
+    @media (max-width: 768px) {
+        .mobile-menu-toggle {
+            display: flex;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            padding: 8px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            min-width: 44px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .mobile-menu-toggle:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .top-navbar {
+            height: 60px;
+        }
+        .top-navbar .container-fluid {
+            padding: 0 16px;
+        }
+        .top-navbar-badge {
+            display: none;
+        }
+        .top-navbar-nav {
+            display: none;
+        }
+        .top-navbar-right .top-navbar-link span {
+            display: none;
+        }
+        .navbar-logo {
+            height: 28px;
+        }
+    }
+
     </style>
 
 
@@ -162,10 +311,113 @@
 </head>
 <body>
 
+{{-- MOBILE SIDEBAR OVERLAY --}}
+<div class="mobile-sidebar-overlay" id="mobileSidebarOverlay"></div>
+
+{{-- MOBILE SIDEBAR --}}
+<div class="mobile-sidebar" id="mobileSidebar">
+    <div class="mobile-sidebar-header">
+        <img src="{{ asset('images/hastalogo.jpg') }}" alt="Hasta GoRent" onerror="this.outerHTML='<span style=\'font-weight:700;font-size:16px;\'>Hasta GoRent</span>'">
+        <button type="button" class="mobile-sidebar-close" id="mobileSidebarClose">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <ul class="mobile-sidebar-nav">
+        @if(session('auth_role') === 'customer')
+            <div class="mobile-sidebar-section-title">My Account</div>
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('customer.profile') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.profile') ? 'active' : '' }}">
+                    <i class="bi bi-person-circle"></i>
+                    <span>My Profile</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('customer.bookings') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.bookings*') ? 'active' : '' }}">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>My Bookings</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('customer.loyalty-rewards') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.loyalty-rewards') ? 'active' : '' }}">
+                    <i class="bi bi-gift"></i>
+                    <span>Loyalty Rewards</span>
+                </a>
+            </li>
+            <div class="mobile-sidebar-divider"></div>
+        @endif
+        
+        <div class="mobile-sidebar-section-title">Browse</div>
+        <li class="mobile-sidebar-nav-item">
+            <a href="{{ route('home') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('home') ? 'active' : '' }}">
+                <i class="bi bi-house"></i>
+                <span>Home</span>
+            </a>
+        </li>
+        <li class="mobile-sidebar-nav-item">
+            <a href="{{ route('cars.index') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('cars.*') ? 'active' : '' }}">
+                <i class="bi bi-car-front"></i>
+                <span>Browse Cars</span>
+            </a>
+        </li>
+        <li class="mobile-sidebar-nav-item">
+            <a href="/#how-it-works" class="mobile-sidebar-nav-link">
+                <i class="bi bi-info-circle"></i>
+                <span>How It Works</span>
+            </a>
+        </li>
+        <li class="mobile-sidebar-nav-item">
+            <a href="/#support" class="mobile-sidebar-nav-link">
+                <i class="bi bi-envelope"></i>
+                <span>Support</span>
+            </a>
+        </li>
+        
+        <div class="mobile-sidebar-divider"></div>
+        
+        @if(session('auth_role') === 'staff')
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('staff.dashboard') }}" class="mobile-sidebar-nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Staff Portal</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <button type="button" class="mobile-sidebar-nav-link w-100 text-start border-0 bg-transparent" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </button>
+            </li>
+        @elseif(session('auth_role') === 'customer')
+            <li class="mobile-sidebar-nav-item">
+                <button type="button" class="mobile-sidebar-nav-link w-100 text-start border-0 bg-transparent" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </button>
+            </li>
+        @else
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('login') }}" class="mobile-sidebar-nav-link">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Login</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('register') }}" class="mobile-sidebar-nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Register</span>
+                </a>
+            </li>
+        @endif
+    </ul>
+</div>
+
 {{-- TOP NAVIGATION BAR (Dark Red) --}}
 <div class="top-navbar">
     <div class="container-fluid">
         <div class="top-navbar-left">
+            <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="bi bi-list"></i>
+            </button>
             <a href="{{ route('home') }}" class="top-navbar-brand">
                 <img src="{{ asset('images/hastalogo.jpg') }}" alt="Hasta GoRent Logo" class="navbar-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
                 <span style="display: none;">Hasta GoRent.</span>
@@ -198,7 +450,7 @@
             @elseif(session('auth_role') === 'customer')
                 <a href="{{ route('customer.profile') }}" class="top-navbar-link">
                     <i class="bi bi-person-circle"></i>
-                    <span>{{ session('auth_name') ?? 'My Account' }}</span>
+                    <span>{{ explode(' ', session('auth_name') ?? 'User')[0] }}...</span>
                 </a>
                 <a href="{{ route('customer.bookings') }}" class="top-navbar-link">
                     <i class="bi bi-calendar-check"></i>
@@ -292,6 +544,37 @@
     </div>
 </div>
 @endif
+
+{{-- Mobile Sidebar Toggle Script --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('mobileSidebar');
+    const overlay = document.getElementById('mobileSidebarOverlay');
+    const toggleBtn = document.getElementById('mobileMenuToggle');
+    const closeBtn = document.getElementById('mobileSidebarClose');
+
+    function openSidebar() {
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar when clicking a link
+    document.querySelectorAll('.mobile-sidebar-nav-link').forEach(function(link) {
+        link.addEventListener('click', closeSidebar);
+    });
+});
+</script>
 
 @stack('scripts')
 </body>

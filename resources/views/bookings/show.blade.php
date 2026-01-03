@@ -151,6 +151,13 @@
   }
 </style>
 
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: linear-gradient(135deg, #1e272e 0%, #000 100%); padding: 12px 16px;">
+  <a href="{{ route('cars.index') }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back to Cars
+  </a>
+</div>
+
 {{-- HERO SECTION --}}
 <div class="detail-hero">
   <div class="container text-center position-relative" style="z-index: 2;">
@@ -237,13 +244,17 @@
               <label class="form-label">Phone Number</label>
               <input type="tel" name="phone" class="form-control" value="{{ $customer->phone ?? '' }}" required>
             </div>
-            <div class="col-md-8">
-              <label class="form-label">Address</label>
-              <input type="text" name="address" class="form-control" placeholder="Residential College or Street" required>
+            <div class="col-md-6">
+              <label class="form-label">Residential College (Kolej)</label>
+              <input type="text" name="college" class="form-control" value="{{ $customer->college_name ?? '' }}" placeholder="e.g., Kolej Tun Razak">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label">City</label>
               <input type="text" name="city" class="form-control" required>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Address</label>
+              <input type="text" name="address" class="form-control" placeholder="Street address or room number" required>
             </div>
           </div>
 

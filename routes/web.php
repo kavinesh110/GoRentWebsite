@@ -17,6 +17,12 @@ Route::post('/register', [App\Http\Controllers\AuthController::class, 'register'
 Route::get('/register/success', [App\Http\Controllers\AuthController::class, 'showRegisterSuccess'])->name('register.success');
 Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout'])->name('logout');
 
+// Password reset routes
+Route::get('/password/forgot', [App\Http\Controllers\AuthController::class, 'showForgotPassword'])->name('password.forgot');
+Route::post('/password/forgot', [App\Http\Controllers\AuthController::class, 'sendPasswordReset'])->name('password.email');
+Route::get('/password/reset/{token}', [App\Http\Controllers\AuthController::class, 'showResetPassword'])->name('password.reset');
+Route::post('/password/reset', [App\Http\Controllers\AuthController::class, 'resetPassword'])->name('password.update');
+
 // Staff authentication routes (separate from customer login)
 Route::get('/staff/login', [App\Http\Controllers\AuthController::class, 'showStaffLogin'])->name('staff.login');
 Route::post('/staff/login', [App\Http\Controllers\AuthController::class, 'login'])->name('staff.login.post');
@@ -24,7 +30,6 @@ Route::get('/staff/register', [App\Http\Controllers\AuthController::class, 'show
 
 // Customer routes (protected by ensureCustomer middleware in controller)
 Route::prefix('customer')->name('customer.')->group(function () {
-    Route::get('/dashboard', [App\Http\Controllers\CustomerController::class, 'dashboard'])->name('dashboard');
     Route::get('/bookings', [App\Http\Controllers\CustomerController::class, 'bookings'])->name('bookings');
     Route::get('/bookings/{id}', [App\Http\Controllers\CustomerController::class, 'bookingsShow'])->name('bookings.show');
     Route::get('/booking/payment', [App\Http\Controllers\CustomerController::class, 'bookingsPayment'])->name('bookings.payment');
@@ -34,6 +39,7 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::get('/profile', [App\Http\Controllers\CustomerController::class, 'profile'])->name('profile');
     Route::post('/profile', [App\Http\Controllers\CustomerController::class, 'profileUpdate'])->name('profile.update');
     Route::post('/profile/documents', [App\Http\Controllers\CustomerController::class, 'profileDocumentsUpdate'])->name('profile.documents.update');
+    Route::post('/profile/password', [App\Http\Controllers\CustomerController::class, 'profilePasswordUpdate'])->name('profile.password.update');
     Route::get('/loyalty-rewards', [App\Http\Controllers\CustomerController::class, 'loyaltyRewards'])->name('loyalty-rewards');
     Route::post('/bookings/{id}/feedback', [App\Http\Controllers\CustomerController::class, 'bookingsSubmitFeedback'])->name('bookings.feedback.store');
     Route::post('/bookings/{id}/receipt', [App\Http\Controllers\CustomerController::class, 'bookingsUploadReceipt'])->name('bookings.receipt.upload');

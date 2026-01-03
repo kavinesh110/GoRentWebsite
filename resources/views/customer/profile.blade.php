@@ -4,316 +4,676 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 <style>
-  :root {
-    --hasta-secondary: #a02a2a;
+  /* ===== PROFILE PAGE STYLES ===== */
+  .profile-container {
+    width: 100%;
+    padding: 32px 24px 60px;
   }
-  .profile-header-gradient {
-    background: linear-gradient(135deg, var(--hasta) 0%, var(--hasta-secondary) 100%);
-    border-radius: 24px;
-    padding: 3rem 2rem;
+  @media (min-width: 768px) {
+    .profile-container {
+      padding: 32px 40px 60px;
+    }
+  }
+  @media (min-width: 1200px) {
+    .profile-container {
+      padding: 32px 60px 60px;
+    }
+  }
+  
+  /* Profile Header */
+  .profile-header {
+    background: linear-gradient(135deg, var(--hasta) 0%, #a02a2a 100%);
+    border-radius: 20px;
+    padding: 28px;
     color: white;
-    margin-bottom: -2rem;
-    position: relative;
-    z-index: 1;
+    margin-bottom: 24px;
   }
-  .profile-card {
-    border-radius: 24px;
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    margin-top: 1rem;
-  }
-  .avatar-circle {
-    width: 120px;
-    height: 120px;
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
     background: rgba(255,255,255,0.2);
-    border: 4px solid rgba(255,255,255,0.3);
+    border: 3px solid rgba(255,255,255,0.4);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: 700;
+    flex-shrink: 0;
   }
-  .stat-card {
-    border-radius: 20px;
-    padding: 1.5rem;
-    height: 100%;
-    background: #fdfdfd;
-    border: 1px solid #f0f0f0;
-    transition: all 0.3s ease;
+  .profile-name {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
   }
-  .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  .profile-email {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-bottom: 12px;
   }
-  .document-box {
-    border: 2px dashed #e9ecef;
-    border-radius: 20px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
+  .profile-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .document-box:hover {
-    border-color: var(--hasta);
-    background-color: #fdf4f4;
-  }
-  .btn-edit-profile {
+  .profile-badge {
     background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.4);
-    color: white;
-    border-radius: 12px;
-    padding: 0.5rem 1.25rem;
-    transition: all 0.3s ease;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
   }
-  .btn-edit-profile:hover {
-    background: white;
+  .profile-badge.verified { background: #28a745; }
+  .profile-badge.pending { background: #ffc107; color: #333; }
+  .profile-badge.rejected { background: #dc3545; }
+  
+  /* Section Cards */
+  .section-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #eee;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title i {
     color: var(--hasta);
+  }
+  .section-body {
+    padding: 24px;
+  }
+  
+  /* Info Grid */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .info-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+  }
+  .info-value.empty {
+    color: #bbb;
+    font-style: italic;
+  }
+  
+  /* Stats Row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--hasta);
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+  }
+  
+  /* Document Grid */
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .doc-item {
+    border: 2px dashed #e0e0e0;
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .doc-item:hover {
+    border-color: var(--hasta);
+    background: #fdf6f6;
+  }
+  .doc-item.uploaded {
+    border-style: solid;
+    border-color: #28a745;
+    background: #f0fff4;
+  }
+  .doc-icon {
+    font-size: 28px;
+    color: var(--hasta);
+    margin-bottom: 10px;
+  }
+  .doc-item.uploaded .doc-icon {
+    color: #28a745;
+  }
+  .doc-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .doc-status {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 10px;
+  }
+  .doc-item.uploaded .doc-status {
+    color: #28a745;
+  }
+  
+  /* Form Styles */
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-label-custom {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .form-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--hasta);
+    box-shadow: 0 0 0 3px rgba(203, 55, 55, 0.1);
+  }
+  .form-input:disabled {
+    background: #f8f9fa;
+    color: #999;
+  }
+  
+  /* Buttons */
+  .btn-primary-custom {
+    background: var(--hasta);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary-custom:hover {
+    background: #a82c2c;
+    transform: translateY(-1px);
+  }
+  .btn-secondary-custom {
+    background: #f0f0f0;
+    color: #333;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary-custom:hover {
+    background: #e0e0e0;
+  }
+  .btn-sm-custom {
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  
+  
+  /* Alerts */
+  .alert-custom {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .alert-success-custom {
+    background: #d4edda;
+    color: #155724;
+  }
+  .alert-danger-custom {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width: 767px) {
+    .profile-container {
+      padding: 20px 16px 40px;
+    }
+    .profile-header {
+      padding: 24px 20px;
+      border-radius: 16px;
+    }
+    .profile-avatar {
+      width: 64px;
+      height: 64px;
+      font-size: 1.5rem;
+    }
+    .profile-name {
+      font-size: 20px;
+    }
+    .profile-email {
+      font-size: 13px;
+    }
+    .profile-badge {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+    .section-header {
+      padding: 16px 20px;
+    }
+    .section-body {
+      padding: 20px;
+    }
+    .info-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .stats-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .stat-box {
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+    }
+    .stat-value {
+      font-size: 20px;
+      margin-bottom: 0;
+      order: 2;
+    }
+    .stat-label {
+      order: 1;
+    }
+    .doc-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      text-align: left;
+      padding: 16px;
+      gap: 16px;
+    }
+    .doc-icon {
+      font-size: 24px;
+      margin-bottom: 0;
+    }
+    .doc-info {
+      flex: 1;
+    }
+    .doc-name {
+      margin-bottom: 4px;
+    }
+    .doc-status {
+      margin-bottom: 0;
+    }
+    .doc-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-primary-custom,
+    .btn-secondary-custom {
+      width: 100%;
+    }
+    .button-row {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 </style>
 @endpush
 
 @section('content')
-<div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 60px;">
-  
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: var(--hasta-darker); padding: 12px 16px;">
+  <a href="{{ route('home') }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="profile-container">
+  {{-- Alerts --}}
   @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-      <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="alert-custom alert-success-custom">
+      <i class="bi bi-check-circle-fill"></i>
+      <span>{{ session('success') }}</span>
+    </div>
+  @endif
+  @if($errors->any())
+    <div class="alert-custom alert-danger-custom">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      <span>{{ $errors->first() }}</span>
     </div>
   @endif
 
-  {{-- PROFILE HEADER SECTION --}}
-  <div class="profile-header-gradient shadow-lg mb-5">
-    <div class="row align-items-center">
-      <div class="col-auto">
-        <div class="avatar-circle">
-          {{ strtoupper(substr($customer->full_name, 0, 1)) }}
-        </div>
+  {{-- PROFILE HEADER --}}
+  <div class="profile-header">
+    <div class="d-flex align-items-center gap-3 gap-md-4">
+      <div class="profile-avatar">
+        {{ strtoupper(substr($customer->full_name, 0, 1)) }}
       </div>
-      <div class="col mt-3 mt-md-0">
-        <h1 class="fw-bold mb-1">{{ $customer->full_name }}</h1>
-        <p class="mb-3 opacity-75 d-flex align-items-center gap-2">
-          <i class="bi bi-envelope"></i> {{ $customer->email }}
-        </p>
-        <div class="d-flex flex-wrap gap-2">
-          <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+      <div class="flex-grow-1">
+        <div class="profile-name">{{ $customer->full_name }}</div>
+        <div class="profile-email"><i class="bi bi-envelope me-1"></i> {{ $customer->email }}</div>
+        <div class="profile-badges">
+          <span class="profile-badge">
             <i class="bi bi-person-badge me-1"></i> {{ ucfirst($customer->utm_role ?? 'Customer') }}
           </span>
-          <span class="badge rounded-pill px-3 py-2 
-            {{ $customer->verification_status === 'approved' ? 'bg-success' : ($customer->verification_status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark') }}">
-            <i class="bi bi-patch-check me-1"></i> {{ ucfirst($customer->verification_status ?? 'Pending') }} Verification
+          <span class="profile-badge {{ $customer->verification_status === 'approved' ? 'verified' : ($customer->verification_status === 'rejected' ? 'rejected' : 'pending') }}">
+            <i class="bi bi-patch-check me-1"></i> {{ ucfirst($customer->verification_status ?? 'Pending') }}
           </span>
           @if($customer->is_blacklisted)
-            <span class="badge bg-dark rounded-pill px-3 py-2">Blacklisted</span>
+            <span class="profile-badge" style="background: #333;">Blacklisted</span>
           @endif
         </div>
       </div>
-      <div class="col-auto mt-4 mt-md-0 text-md-end">
-        <button type="button" class="btn btn-edit-profile" onclick="toggleEditMode()" id="editToggleBtn">
-          <i class="bi bi-pencil-square"></i> Edit Profile
-        </button>
-      </div>
     </div>
   </div>
 
-  <div class="row g-4 mt-2">
-    {{-- LEFT COLUMN --}}
-    <div class="col-lg-8">
+  {{-- STATS ROW --}}
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-label">Deposit Balance</div>
+      <div class="stat-value">RM {{ number_format($customer->deposit_balance ?? 0, 2) }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total Rentals</div>
+      <div class="stat-value">{{ $customer->bookings->count() }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Loyalty Stamps</div>
+      <div class="stat-value">{{ $customer->total_stamps ?? 0 }} <i class="bi bi-star-fill" style="font-size: 16px;"></i></div>
+    </div>
+  </div>
+
+  {{-- PERSONAL INFORMATION --}}
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title"><i class="bi bi-person"></i> Personal Information</h2>
+      <button type="button" class="btn-secondary-custom btn-sm-custom" onclick="toggleEditProfile()" id="editProfileBtn">
+        <i class="bi bi-pencil"></i> Edit
+      </button>
+    </div>
+    <div class="section-body">
+      {{-- Display Mode --}}
+      <div id="profileDisplay">
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Full Name</span>
+            <span class="info-value">{{ $customer->full_name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Email Address</span>
+            <span class="info-value">{{ $customer->email }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Phone Number</span>
+            <span class="info-value {{ !$customer->phone ? 'empty' : '' }}">{{ $customer->phone ?? 'Not provided' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">UTM Role</span>
+            <span class="info-value">{{ ucfirst($customer->utm_role ?? 'Not specified') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Residential College (Kolej)</span>
+            <span class="info-value {{ !$customer->college_name ? 'empty' : '' }}">{{ $customer->college_name ?? 'Not provided' }}</span>
+          </div>
+        </div>
+      </div>
       
-      {{-- INFO SECTION --}}
-      <div class="card profile-card mb-4">
-        <div class="card-body p-4 p-md-5">
-          <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
-            <h5 class="fw-bold mb-0">Personal Information</h5>
+      {{-- Edit Mode --}}
+      <form method="POST" action="{{ route('customer.profile.update') }}" id="profileForm" style="display: none;">
+        @csrf
+        <div class="info-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Full Name</label>
+            <input type="text" name="full_name" class="form-input" value="{{ old('full_name', $customer->full_name) }}" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Email Address</label>
+            <input type="email" class="form-input" value="{{ $customer->email }}" disabled>
+            <small class="text-muted" style="font-size: 11px;">Email cannot be changed</small>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Phone Number</label>
+            <input type="tel" name="phone" class="form-input" value="{{ old('phone', $customer->phone ?? '') }}" placeholder="e.g., 0123456789">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">UTM Role</label>
+            <select name="utm_role" class="form-input">
+              <option value="">Select role</option>
+              <option value="student" {{ old('utm_role', $customer->utm_role) === 'student' ? 'selected' : '' }}>Student</option>
+              <option value="staff" {{ old('utm_role', $customer->utm_role) === 'staff' ? 'selected' : '' }}>Staff</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Residential College (Kolej)</label>
+            <input type="text" name="college_name" class="form-input" value="{{ old('college_name', $customer->college_name ?? '') }}" placeholder="e.g., Kolej Tun Razak">
+          </div>
+        </div>
+        <div class="d-flex gap-3 mt-4 button-row">
+          <button type="submit" class="btn-primary-custom">Save Changes</button>
+          <button type="button" class="btn-secondary-custom" onclick="toggleEditProfile()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {{-- IDENTITY DOCUMENTS --}}
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title"><i class="bi bi-file-earmark-person"></i> Identity Documents</h2>
+    </div>
+    <div class="section-body">
+      <p class="text-muted small mb-4">Upload clear copies of your documents for verification. All three documents are required.</p>
+      
+      <form method="POST" action="{{ route('customer.profile.documents.update') }}" enctype="multipart/form-data">
+        @csrf
+        
+        {{-- Desktop Grid --}}
+        <div class="doc-grid d-none d-md-grid">
+          {{-- IC / Passport --}}
+          <div class="doc-item {{ $customer->ic_url ? 'uploaded' : '' }}">
+            <i class="bi bi-person-vcard doc-icon"></i>
+            <div class="doc-name">IC / Passport</div>
+            <div class="doc-status">{{ $customer->ic_url ? 'Uploaded' : 'Not uploaded' }}</div>
+            @if($customer->ic_url)
+              <a href="{{ $customer->ic_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
+                <i class="bi bi-eye"></i> View
+              </a>
+            @endif
+            <input type="file" name="ic_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
           </div>
           
-          {{-- EDIT FORM --}}
-          <form method="POST" action="{{ route('customer.profile.update') }}" id="profileForm" style="display: none;">
-            @csrf
-            <div class="row g-4">
-              <div class="col-md-6">
-                <label class="form-label fw-bold small text-muted text-uppercase">Full Name</label>
-                <input type="text" name="full_name" class="form-control border-0 bg-light p-3" value="{{ old('full_name', $customer->full_name) }}" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-bold small text-muted text-uppercase">Phone Number</label>
-                <input type="tel" name="phone" class="form-control border-0 bg-light p-3" value="{{ old('phone', $customer->phone ?? '') }}" placeholder="e.g., 0123456789">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-bold small text-muted text-uppercase">UTM Role</label>
-                <select name="utm_role" class="form-select border-0 bg-light p-3">
-                  <option value="">Select role</option>
-                  <option value="student" {{ old('utm_role', $customer->utm_role) === 'student' ? 'selected' : '' }}>Student</option>
-                  <option value="staff" {{ old('utm_role', $customer->utm_role) === 'staff' ? 'selected' : '' }}>Staff</option>
-                </select>
-              </div>
-              <div class="col-12 mt-4">
-                <div class="d-flex gap-3">
-                  <button type="submit" class="btn btn-hasta px-4 py-2">Save Changes</button>
-                  <button type="button" class="btn btn-outline-secondary px-4 py-2" onclick="toggleEditMode()">Cancel</button>
-                </div>
-              </div>
+          {{-- UTM ID --}}
+          <div class="doc-item {{ $customer->utmid_url ? 'uploaded' : '' }}">
+            <i class="bi bi-credit-card doc-icon"></i>
+            <div class="doc-name">UTM Student/Staff ID</div>
+            <div class="doc-status">{{ $customer->utmid_url ? 'Uploaded' : 'Not uploaded' }}</div>
+            @if($customer->utmid_url)
+              <a href="{{ $customer->utmid_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
+                <i class="bi bi-eye"></i> View
+              </a>
+            @endif
+            <input type="file" name="utmid_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
+          </div>
+          
+          {{-- Driving License --}}
+          <div class="doc-item {{ $customer->license_url ? 'uploaded' : '' }}">
+            <i class="bi bi-car-front doc-icon"></i>
+            <div class="doc-name">Driving License</div>
+            <div class="doc-status">{{ $customer->license_url ? 'Uploaded' : 'Not uploaded' }}</div>
+            @if($customer->license_url)
+              <a href="{{ $customer->license_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
+                <i class="bi bi-eye"></i> View
+              </a>
+            @endif
+            <input type="file" name="license_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
+          </div>
+        </div>
+        
+        {{-- Mobile List --}}
+        <div class="doc-grid d-md-none">
+          {{-- IC / Passport --}}
+          <div class="doc-item {{ $customer->ic_url ? 'uploaded' : '' }}">
+            <i class="bi bi-person-vcard doc-icon"></i>
+            <div class="doc-info">
+              <div class="doc-name">IC / Passport</div>
+              <div class="doc-status">{{ $customer->ic_url ? 'Uploaded' : 'Not uploaded' }}</div>
             </div>
-          </form>
-
-          {{-- DISPLAY VIEW --}}
-          <div id="profileDisplay">
-            <div class="row g-4">
-              <div class="col-md-6">
-                <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 1px;">Full Name</div>
-                <div class="h6 mb-0">{{ $customer->full_name }}</div>
-              </div>
-              <div class="col-md-6">
-                <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 1px;">Phone Number</div>
-                <div class="h6 mb-0">{{ $customer->phone ?? '--' }}</div>
-              </div>
-              <div class="col-md-6">
-                <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 1px;">UTM Role</div>
-                <div class="h6 mb-0">{{ ucfirst($customer->utm_role ?? 'Not specified') }}</div>
-              </div>
-              <div class="col-md-6">
-                <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 1px;">Account Status</div>
-                <div class="h6 mb-0 text-success">Active</div>
-              </div>
+            <div class="doc-actions">
+              @if($customer->ic_url)
+                <a href="{{ $customer->ic_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
+              @endif
+              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
+                <i class="bi bi-upload"></i>
+                <input type="file" name="ic_document" accept="image/*,.pdf" style="display: none;">
+              </label>
             </div>
           </div>
-        </div>
-      </div>
-
-      {{-- DOCUMENTS SECTION --}}
-      <div class="card profile-card">
-        <div class="card-body p-4 p-md-5">
-          <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
-            <h5 class="fw-bold mb-0">Identity Verification</h5>
-          </div>
-          <p class="text-muted small mb-4">Please ensure all uploaded documents are clear and valid for verification.</p>
-
-          <form method="POST" action="{{ route('customer.profile.documents.update') }}" enctype="multipart/form-data">
-            @csrf
-            <div class="row g-4">
-              <div class="col-md-4">
-                <div class="document-box">
-                  <i class="bi bi-person-bounding-box h1 text-hasta mb-3 d-block"></i>
-                  <h6 class="fw-bold small mb-3">IC / Passport</h6>
-                  @if($customer->ic_url)
-                    <a href="{{ $customer->ic_url }}" target="_blank" class="btn btn-sm btn-light rounded-pill px-3 mb-3">
-                      <i class="bi bi-eye"></i> View File
-                    </a>
-                  @endif
-                  <input type="file" name="ic_document" class="form-control form-control-sm" accept="image/*,.pdf">
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="document-box">
-                  <i class="bi bi-credit-card h1 text-hasta mb-3 d-block"></i>
-                  <h6 class="fw-bold small mb-3">UTM Student/Staff ID</h6>
-                  @if($customer->utmid_url)
-                    <a href="{{ $customer->utmid_url }}" target="_blank" class="btn btn-sm btn-light rounded-pill px-3 mb-3">
-                      <i class="bi bi-eye"></i> View File
-                    </a>
-                  @endif
-                  <input type="file" name="utmid_document" class="form-control form-control-sm" accept="image/*,.pdf">
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="document-box">
-                  <i class="bi bi-car-front h1 text-hasta mb-3 d-block"></i>
-                  <h6 class="fw-bold small mb-3">Driving License</h6>
-                  @if($customer->license_url)
-                    <a href="{{ $customer->license_url }}" target="_blank" class="btn btn-sm btn-light rounded-pill px-3 mb-3">
-                      <i class="bi bi-eye"></i> View File
-                    </a>
-                  @endif
-                  <input type="file" name="license_document" class="form-control form-control-sm" accept="image/*,.pdf">
-                </div>
-              </div>
-              <div class="col-12 mt-4 text-center">
-                <button type="submit" class="btn btn-hasta px-5">Upload All Documents</button>
-              </div>
+          
+          {{-- UTM ID --}}
+          <div class="doc-item {{ $customer->utmid_url ? 'uploaded' : '' }}">
+            <i class="bi bi-credit-card doc-icon"></i>
+            <div class="doc-info">
+              <div class="doc-name">UTM ID</div>
+              <div class="doc-status">{{ $customer->utmid_url ? 'Uploaded' : 'Not uploaded' }}</div>
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {{-- RIGHT COLUMN --}}
-    <div class="col-lg-4">
-      {{-- STATS SECTION --}}
-      <div class="row g-3 mb-4">
-        <div class="col-12">
-          <div class="stat-card">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="text-muted small fw-bold text-uppercase" style="letter-spacing: 1px;">Deposit Balance</div>
-              <div class="bg-light rounded p-2 text-hasta"><i class="bi bi-wallet2 h5 mb-0"></i></div>
+            <div class="doc-actions">
+              @if($customer->utmid_url)
+                <a href="{{ $customer->utmid_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
+              @endif
+              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
+                <i class="bi bi-upload"></i>
+                <input type="file" name="utmid_document" accept="image/*,.pdf" style="display: none;">
+              </label>
             </div>
-            <div class="h3 fw-bold mb-0">RM {{ number_format($customer->deposit_balance ?? 0, 2) }}</div>
-            <div class="small text-muted mt-2">Refundable upon completion</div>
+          </div>
+          
+          {{-- Driving License --}}
+          <div class="doc-item {{ $customer->license_url ? 'uploaded' : '' }}">
+            <i class="bi bi-car-front doc-icon"></i>
+            <div class="doc-info">
+              <div class="doc-name">Driving License</div>
+              <div class="doc-status">{{ $customer->license_url ? 'Uploaded' : 'Not uploaded' }}</div>
+            </div>
+            <div class="doc-actions">
+              @if($customer->license_url)
+                <a href="{{ $customer->license_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
+              @endif
+              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
+                <i class="bi bi-upload"></i>
+                <input type="file" name="license_document" accept="image/*,.pdf" style="display: none;">
+              </label>
+            </div>
           </div>
         </div>
-        <div class="col-6">
-          <div class="stat-card">
-            <div class="text-muted small fw-bold text-uppercase mb-2" style="letter-spacing: 1px;">Rentals</div>
-            <div class="h4 fw-bold mb-0">{{ $customer->bookings->count() }}</div>
-          </div>
+        
+        <div class="text-center mt-4">
+          <button type="submit" class="btn-primary-custom">
+            <i class="bi bi-cloud-upload me-2"></i> Upload Documents
+          </button>
         </div>
-        <div class="col-6">
-          <div class="stat-card">
-            <div class="text-muted small fw-bold text-uppercase mb-2" style="letter-spacing: 1px;">Stamps</div>
-            <div class="h4 fw-bold mb-0 text-warning">{{ $customer->total_stamps ?? 0 }} <i class="bi bi-star-fill small"></i></div>
-          </div>
-        </div>
-      </div>
-
-      {{-- QUICK LINKS --}}
-      <div class="card profile-card">
-        <div class="card-body p-4">
-          <h6 class="fw-bold mb-4">Account Dashboard</h6>
-          <div class="list-group list-group-flush">
-            <a href="{{ route('customer.bookings') }}" class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center py-3">
-              <span><i class="bi bi-calendar3 me-3 text-hasta"></i> My Bookings</span>
-              <i class="bi bi-chevron-right small text-muted"></i>
-            </a>
-            <a href="{{ route('customer.loyalty-rewards') }}" class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center py-3">
-              <span><i class="bi bi-gift me-3 text-hasta"></i> Loyalty Rewards</span>
-              <i class="bi bi-chevron-right small text-muted"></i>
-            </a>
-            <a href="{{ route('home') }}" class="list-group-item list-group-item-action border-0 px-0 d-flex justify-content-between align-items-center py-3">
-              <span><i class="bi bi-plus-circle me-3 text-hasta"></i> Rent a Car</span>
-              <i class="bi bi-chevron-right small text-muted"></i>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {{-- HELP & SUPPORT --}}
-      <div class="card profile-card mt-4 bg-light">
-        <div class="card-body p-4 text-center">
-          <i class="bi bi-headset h1 text-hasta mb-3 d-block"></i>
-          <h6 class="fw-bold mb-2">Need Help?</h6>
-          <p class="text-muted small mb-0">Contact our support team for any assistance regarding your account or rentals.</p>
-        </div>
-      </div>
+      </form>
     </div>
   </div>
+
+  {{-- CHANGE PASSWORD --}}
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title"><i class="bi bi-shield-lock"></i> Change Password</h2>
+    </div>
+    <div class="section-body">
+      <form method="POST" action="{{ route('customer.profile.password.update') }}" id="passwordForm">
+        @csrf
+        <div class="info-grid">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Current Password</label>
+            <input type="password" name="current_password" class="form-input" placeholder="Enter current password" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">New Password</label>
+            <input type="password" name="new_password" class="form-input" placeholder="Enter new password" required minlength="8">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label-custom">Confirm New Password</label>
+            <input type="password" name="new_password_confirmation" class="form-input" placeholder="Confirm new password" required>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button type="submit" class="btn-primary-custom">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
 
 @push('scripts')
 <script>
-  function toggleEditMode() {
+  function toggleEditProfile() {
     const form = document.getElementById('profileForm');
     const display = document.getElementById('profileDisplay');
-    const btn = document.getElementById('editToggleBtn');
+    const btn = document.getElementById('editProfileBtn');
     
     if (form.style.display === 'none' || form.style.display === '') {
       form.style.display = 'block';
       display.style.display = 'none';
-      btn.innerHTML = '<i class="bi bi-x-circle me-2"></i> Cancel Edit';
-      btn.classList.add('bg-white', 'text-hasta');
+      btn.innerHTML = '<i class="bi bi-x"></i> Cancel';
     } else {
       form.style.display = 'none';
       display.style.display = 'block';
-      btn.innerHTML = '<i class="bi bi-pencil-square me-2"></i> Edit Profile';
-      btn.classList.remove('bg-white', 'text-hasta');
+      btn.innerHTML = '<i class="bi bi-pencil"></i> Edit';
     }
   }
 </script>

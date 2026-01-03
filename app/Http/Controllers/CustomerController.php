@@ -7,7 +7,6 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Voucher;
 use App\Models\VoucherRedemption;
-use App\Models\ResidentialCollege;
 use App\Models\Feedback;
 use App\Models\Payment;
 use App\Models\Car;
@@ -330,6 +329,7 @@ class CustomerController extends Controller
             'full_name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:30',
             'utm_role' => 'nullable|in:student,staff',
+            'college_name' => 'nullable|string|max:100',
         ]);
 
         // Update customer profile
@@ -337,6 +337,7 @@ class CustomerController extends Controller
             'full_name' => $validated['full_name'],
             'phone' => $validated['phone'] ?? $customer->phone, // Keep existing if not provided
             'utm_role' => $validated['utm_role'] ?? $customer->utm_role,
+            'college_name' => $validated['college_name'] ?? $customer->college_name,
         ]);
 
         // Update session name if it changed (so it reflects in navigation)
@@ -385,6 +386,40 @@ class CustomerController extends Controller
 
         return redirect()->route('customer.profile')
             ->with('success', 'Documents updated successfully!');
+    }
+
+    /**
+     * Update customer password
+     * Requires current password verification before allowing change
+     * 
+     * @param Request $request Contains current_password, new_password, new_password_confirmation
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function profilePasswordUpdate(Request $request)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+        $customer = Customer::findOrFail($customerId);
+
+        // Validate password fields
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        // Verify current password
+        if (!password_verify($validated['current_password'], $customer->password_hash)) {
+            return redirect()->route('customer.profile')
+                ->with('error', 'Current password is incorrect.');
+        }
+
+        // Update password
+        $customer->update([
+            'password_hash' => password_hash($validated['new_password'], PASSWORD_BCRYPT),
+        ]);
+
+        return redirect()->route('customer.profile')
+            ->with('success', 'Password updated successfully!');
     }
 
     /**

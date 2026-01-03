@@ -56,7 +56,7 @@
     border-radius: 24px;
     overflow: hidden;
     transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-    background: #fff;
+    background: #FFFFFF !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     height: 100%;
     display: flex;
@@ -68,7 +68,7 @@
   }
   .car-img-container {
     height: 220px;
-    background: #fcfcfc;
+    background: #FFFFFF !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -113,6 +113,13 @@
     .search-card-container { margin-top: 15px; }
   }
 </style>
+
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: var(--hasta-darker); padding: 12px 16px;">
+  <a href="{{ route('home') }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back to Home
+  </a>
+</div>
 
 {{-- FLOATING SEARCH CARD --}}
 <div class="search-card-container">

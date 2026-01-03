@@ -128,6 +128,13 @@
 @endpush
 
 @section('content')
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: #c82333; padding: 12px 16px;">
+  <a href="{{ route('customer.bookings.show', $booking->booking_id) }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back to Booking
+  </a>
+</div>
+
 {{-- Hero Section --}}
 <div class="cancel-hero">
   <div class="container text-center text-white">

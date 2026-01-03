@@ -232,10 +232,17 @@
   }
 @endphp
 
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: var(--hasta-darker); padding: 12px 16px; margin-bottom: 0;">
+  <a href="{{ route('customer.bookings') }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back to My Bookings
+  </a>
+</div>
+
 <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
   {{-- Header --}}
   <div class="mb-4">
-    <a href="{{ route('customer.bookings') }}" class="text-decoration-none small">&larr; Back to My Bookings</a>
+    <a href="{{ route('customer.bookings') }}" class="text-decoration-none small d-none d-md-inline">&larr; Back to My Bookings</a>
     <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Booking #{{ $booking->booking_id }}</h1>
     <p class="text-muted mb-0">{{ $booking->car->brand ?? '' }} {{ $booking->car->model ?? '' }} | {{ $booking->start_datetime?->format('d M Y') }} - {{ $booking->end_datetime?->format('d M Y') }}</p>
   </div>

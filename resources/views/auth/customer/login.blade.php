@@ -42,6 +42,7 @@
             <input class="form-check-input" type="checkbox" id="remember" disabled>
             <label class="form-check-label small" for="remember">Remember me (coming soon)</label>
           </div>
+          <a href="{{ route('password.forgot') }}" class="small text-hasta text-decoration-none">Forgot password?</a>
         </div>
 
         <button type="submit" class="btn btn-hasta w-100 py-2 fw-semibold">Login</button>

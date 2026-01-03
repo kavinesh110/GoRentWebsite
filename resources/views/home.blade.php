@@ -112,7 +112,7 @@
     border-radius: 24px;
     overflow: hidden;
     transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-    background: #fff;
+    background: #FFFFFF !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     height: 100%;
     display: flex;
@@ -124,7 +124,7 @@
   }
   .car-img-container {
     height: 220px;
-    background: #fcfcfc;
+    background: #FFFFFF !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,9 +171,160 @@
     .search-card { padding: 20px; }
     .search-card-container { margin-top: -50px; }
   }
+
+  /* ===== MOBILE HERO CAROUSEL (independent section) ===== */
+  .mobile-hero-section {
+    display: none;
+  }
+  
+  @media (max-width: 767px) {
+    /* Hide desktop hero on mobile */
+    .hero-section {
+      display: none !important;
+    }
+    
+    /* Show mobile hero section */
+    .mobile-hero-section {
+      display: block;
+      padding: 20px 16px 0 16px;
+      background: var(--bg);
+    }
+    
+    .mobile-hero-carousel {
+      width: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      background: #1e272e;
+    }
+    
+    .mobile-hero-carousel .carousel-item {
+      height: 200px;
+      position: relative;
+    }
+    
+    .mobile-hero-carousel .carousel-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .mobile-hero-carousel .carousel-item .mobile-hero-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: linear-gradient(135deg, var(--hasta) 0%, var(--hasta-dark) 100%);
+      color: #fff;
+    }
+    
+    .mobile-hero-fallback h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    
+    .mobile-hero-fallback p {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-bottom: 0;
+      line-height: 1.4;
+    }
+    
+    .mobile-hero-carousel .carousel-control-prev,
+    .mobile-hero-carousel .carousel-control-next {
+      width: 40px;
+      height: 40px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.4);
+      border-radius: 50%;
+      opacity: 1;
+    }
+    
+    .mobile-hero-carousel .carousel-control-prev {
+      left: 10px;
+    }
+    
+    .mobile-hero-carousel .carousel-control-next {
+      right: 10px;
+    }
+    
+    .mobile-hero-carousel .carousel-control-prev-icon,
+    .mobile-hero-carousel .carousel-control-next-icon {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .mobile-hero-carousel .carousel-indicators {
+      margin-bottom: 10px;
+    }
+    
+    .mobile-hero-carousel .carousel-indicators button {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin: 0 4px;
+    }
+    
+    /* Adjust search card for mobile - no negative margin */
+    .search-card-container {
+      margin-top: 20px;
+      padding: 0 16px;
+    }
+  }
 </style>
 
-{{-- HERO SECTION WITH ACTIVITY SLIDER --}}
+{{-- ===== MOBILE HERO CAROUSEL (separate from floating filter) ===== --}}
+<div class="mobile-hero-section">
+  @if(isset($activities) && $activities->count() > 0)
+    <div id="mobileHeroCarousel" class="carousel slide mobile-hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">
+      <div class="carousel-inner">
+        @foreach($activities as $index => $activity)
+          <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+            @if($activity->image_url)
+              <img src="{{ $activity->image_url }}" alt="{{ $activity->title }}">
+            @else
+              <div class="mobile-hero-fallback">
+                <h2>{{ $activity->title }}</h2>
+                <p>{{ Str::limit($activity->description, 80) }}</p>
+              </div>
+            @endif
+          </div>
+        @endforeach
+      </div>
+      @if($activities->count() > 1)
+        <div class="carousel-indicators">
+          @foreach($activities as $index => $activity)
+            <button type="button" data-bs-target="#mobileHeroCarousel" data-bs-slide-to="{{ $index }}" class="{{ $index === 0 ? 'active' : '' }}"></button>
+          @endforeach
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#mobileHeroCarousel" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#mobileHeroCarousel" data-bs-slide="next">
+          <span class="carousel-control-next-icon"></span>
+        </button>
+      @endif
+    </div>
+  @else
+    <div class="mobile-hero-carousel">
+      <div class="carousel-item active" style="height: 200px;">
+        <div class="mobile-hero-fallback">
+          <h2>Your Premium UTM Ride. Simplified.</h2>
+          <p>Affordable, reliable, and verified vehicles for UTM students and staff.</p>
+        </div>
+      </div>
+    </div>
+  @endif
+</div>
+
+{{-- ===== DESKTOP HERO SECTION WITH ACTIVITY SLIDER ===== --}}
 <div class="hero-section">
   @if(isset($activities) && $activities->count() > 0)
     <div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4000">

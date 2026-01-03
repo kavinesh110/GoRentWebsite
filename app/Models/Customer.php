@@ -28,6 +28,7 @@ class Customer extends Model
         'license_url',
         'utm_role',
         'college_id',
+        'college_name',
         'verification_status',
         'verified_by',
         'verified_at',

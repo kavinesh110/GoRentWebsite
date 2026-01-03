@@ -56,7 +56,7 @@
             </select>
           </div>
           <div class="col-md-12">
-            <label class="form-label">Residential college (optional)</label>
+            <label class="form-label">Residential College (Kolej) <span class="text-muted small">(optional)</span></label>
             <input type="text" name="college" class="form-control" placeholder="e.g., Kolej Tun Razak" value="{{ old('college') }}">
           </div>
         </div>

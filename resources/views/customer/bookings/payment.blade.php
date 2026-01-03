@@ -98,6 +98,13 @@
   }
 </style>
 
+{{-- MOBILE BACK BUTTON --}}
+<div class="d-md-none" style="background: linear-gradient(135deg, #1e272e 0%, #000 100%); padding: 12px 16px;">
+  <a href="{{ url()->previous() }}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2" style="font-size: 14px; font-weight: 500;">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+</div>
+
 {{-- HERO SECTION --}}
 <div class="payment-hero">
   <div class="container text-center position-relative" style="z-index: 2;">
