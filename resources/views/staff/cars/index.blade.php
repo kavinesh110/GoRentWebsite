@@ -120,9 +120,24 @@
               @endif
             </div>
 
+            {{-- Reported Issues Indicator --}}
+            @php
+              $openIssuesCount = $issuesCounts[$car->id] ?? 0;
+            @endphp
+            @if($openIssuesCount > 0)
+              <a href="{{ route('staff.maintenance-issues', ['car_id' => $car->id]) }}" class="d-flex align-items-center gap-2 mb-3 p-2 rounded-3 bg-warning-subtle text-warning-emphasis text-decoration-none border border-warning-subtle">
+                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                <span class="fw-semibold small">{{ $openIssuesCount }} Reported Issue{{ $openIssuesCount > 1 ? 's' : '' }}</span>
+                <i class="bi bi-chevron-right ms-auto small"></i>
+              </a>
+            @endif
+
             <div class="d-flex gap-2">
               <a href="{{ route('staff.cars.edit', $car->id) }}" class="btn btn-outline-primary flex-fill fw-semibold btn-sm">
-                <i class="bi bi-pencil-square me-1"></i>Edit Details
+                <i class="bi bi-pencil-square me-1"></i>Edit
+              </a>
+              <a href="{{ route('staff.maintenance.index', $car->id) }}" class="btn btn-outline-info btn-sm" title="Maintenance Records">
+                <i class="bi bi-wrench"></i>
               </a>
               <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCarModal{{ $car->id }}">
                 <i class="bi bi-trash"></i>

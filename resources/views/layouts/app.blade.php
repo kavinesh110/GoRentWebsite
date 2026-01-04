@@ -98,8 +98,35 @@
         font-weight: 500;
         display: flex;
         align-items: center;
+        gap: 0; /* Changed from 6px to handle expand effect */
+        transition: all 0.3s ease;
+    }
+    /* Default state for icon-only links with expand on hover */
+    .top-navbar-nav .top-navbar-link span {
+        max-width: 0;
+        overflow: hidden;
+        opacity: 0;
+        white-space: nowrap;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-block;
+    }
+    .top-navbar-nav .top-navbar-link i, .top-navbar-nav .top-navbar-link svg {
+        margin-right: 0;
+        transition: margin 0.3s ease;
+    }
+    .top-navbar-nav .top-navbar-link:hover span {
+        max-width: 150px;
+        opacity: 1;
+        margin-left: 8px;
+    }
+    /* Keep right side links (Profile, Staff Portal) normal */
+    .top-navbar-right .top-navbar-link {
         gap: 6px;
-        transition: all 0.2s;
+    }
+    .top-navbar-right .top-navbar-link span {
+        max-width: none;
+        opacity: 1;
+        display: inline;
     }
     .top-navbar-link:hover, .top-navbar-link.active{
         color: #fff;
@@ -338,6 +365,12 @@
                 </a>
             </li>
             <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('customer.support-tickets') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.support-tickets*') ? 'active' : '' }}">
+                    <i class="bi bi-headset"></i>
+                    <span>Support Tickets</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
                 <a href="{{ route('customer.loyalty-rewards') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.loyalty-rewards') ? 'active' : '' }}">
                     <i class="bi bi-gift"></i>
                     <span>Loyalty Rewards</span>
@@ -353,26 +386,28 @@
                 <span>Home</span>
             </a>
         </li>
-        <li class="mobile-sidebar-nav-item">
-            <a href="{{ route('cars.index') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('cars.*') ? 'active' : '' }}">
-                <i class="bi bi-car-front"></i>
-                <span>Browse Cars</span>
-            </a>
-        </li>
-        <li class="mobile-sidebar-nav-item">
-            <a href="/#how-it-works" class="mobile-sidebar-nav-link">
-                <i class="bi bi-info-circle"></i>
-                <span>How It Works</span>
-            </a>
-        </li>
-        <li class="mobile-sidebar-nav-item">
-            <a href="/#support" class="mobile-sidebar-nav-link">
-                <i class="bi bi-envelope"></i>
-                <span>Support</span>
-            </a>
-        </li>
-        
-        <div class="mobile-sidebar-divider"></div>
+        @if(session('auth_role') !== 'staff')
+            <li class="mobile-sidebar-nav-item">
+                <a href="{{ route('cars.index') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('cars.*') ? 'active' : '' }}">
+                    <i class="bi bi-car-front"></i>
+                    <span>Browse Cars</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <a href="/#how-it-works" class="mobile-sidebar-nav-link">
+                    <i class="bi bi-info-circle"></i>
+                    <span>How It Works</span>
+                </a>
+            </li>
+            <li class="mobile-sidebar-nav-item">
+                <a href="/#support" class="mobile-sidebar-nav-link">
+                    <i class="bi bi-envelope"></i>
+                    <span>Support</span>
+                </a>
+            </li>
+            
+            <div class="mobile-sidebar-divider"></div>
+        @endif
         
         @if(session('auth_role') === 'staff')
             <li class="mobile-sidebar-nav-item">
@@ -426,15 +461,28 @@
         </div>
 
         <div class="top-navbar-nav">
-            <a href="{{ route('cars.index') }}" class="top-navbar-link {{ request()->routeIs('cars.index') ? 'active' : '' }}">
-                <i class="bi bi-car-front"></i> <span>Browse Cars</span>
-            </a>
-            <a href="/#how-it-works" class="top-navbar-link">
-                <i class="bi bi-info-circle"></i> <span>How It Works</span>
-            </a>
-            <a href="/#support" class="top-navbar-link">
-                <i class="bi bi-envelope"></i> <span>Support</span>
-            </a>
+            @if(session('auth_role') !== 'staff')
+                <a href="{{ route('cars.index') }}" class="top-navbar-link {{ request()->routeIs('cars.index') ? 'active' : '' }}">
+                    <i class="bi bi-car-front"></i> <span>Browse Cars</span>
+                </a>
+                <a href="/#how-it-works" class="top-navbar-link">
+                    <i class="bi bi-info-circle"></i> <span>How It Works</span>
+                </a>
+                <a href="/#support" class="top-navbar-link">
+                    <i class="bi bi-envelope"></i> <span>Support</span>
+                </a>
+            @endif
+            @if(session('auth_role') === 'customer')
+                <a href="{{ route('customer.bookings') }}" class="top-navbar-link {{ request()->routeIs('customer.bookings*') ? 'active' : '' }}">
+                    <i class="bi bi-calendar-check"></i> <span>My Bookings</span>
+                </a>
+                <a href="{{ route('customer.support-tickets') }}" class="top-navbar-link {{ request()->routeIs('customer.support-tickets*') ? 'active' : '' }}">
+                    <i class="bi bi-headset"></i> <span>Support Tickets</span>
+                </a>
+                <a href="{{ route('customer.loyalty-rewards') }}" class="top-navbar-link {{ request()->routeIs('customer.loyalty-rewards*') ? 'active' : '' }}">
+                    <i class="bi bi-gift"></i> <span>Loyalty Rewards</span>
+                </a>
+            @endif
         </div>
         
         <div class="top-navbar-right">
@@ -451,10 +499,6 @@
                 <a href="{{ route('customer.profile') }}" class="top-navbar-link">
                     <i class="bi bi-person-circle"></i>
                     <span>{{ explode(' ', session('auth_name') ?? 'User')[0] }}...</span>
-                </a>
-                <a href="{{ route('customer.bookings') }}" class="top-navbar-link">
-                    <i class="bi bi-calendar-check"></i>
-                    <span>My Bookings</span>
                 </a>
                 <button type="button" class="top-navbar-link border-0 bg-transparent" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logoutModal">
                     <i class="bi bi-box-arrow-right"></i>

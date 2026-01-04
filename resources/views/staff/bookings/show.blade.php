@@ -343,39 +343,120 @@
         </div>
       </div>
 
-      {{-- Record Inspection --}}
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-0 pt-4 px-4 d-flex align-items-center">
-          <h6 class="fw-bold mb-0">Record Inspection</h6>
+      {{-- Before-Pickup Inspection (Required for Verification) --}}
+      @php
+        $hasBeforeInspection = $booking->inspections && $booking->inspections->where('type', 'before')->whereNotNull('photos')->count() > 0;
+        $beforeInspection = $booking->inspections ? $booking->inspections->where('type', 'before')->first() : null;
+      @endphp
+      <div class="card border-0 shadow-sm mb-4 {{ $booking->status === 'created' && !$hasBeforeInspection ? 'border-start border-4 border-warning' : '' }}">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>Before-Pickup Inspection</h6>
+            @if($hasBeforeInspection)
+              <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+            @else
+              <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Required</span>
+            @endif
+          </div>
+          @if($booking->status === 'created' && !$hasBeforeInspection)
+            <p class="text-muted small mb-0 mt-2"><i class="bi bi-info-circle me-1"></i>Upload inspection photos before confirming this booking.</p>
+          @endif
         </div>
         <div class="card-body p-4 pt-2">
-          <form method="POST" action="{{ route('staff.bookings.inspections.store', $booking->booking_id) }}">
+          @if($beforeInspection && $beforeInspection->photos)
+            <div class="row g-2 mb-3">
+              @foreach($beforeInspection->photos as $photo)
+                <div class="col-4">
+                  <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
+                </div>
+              @endforeach
+            </div>
+          @endif
+          <form method="POST" action="{{ route('staff.bookings.inspections.store', $booking->booking_id) }}" enctype="multipart/form-data">
             @csrf
+            <input type="hidden" name="inspection_type" value="before">
             <div class="row g-2">
               <div class="col-6 mb-2">
-                <label class="form-label x-small">Type</label>
-                <select name="inspection_type" class="form-select form-select-sm" required>
-                  <option value="pickup">Pickup</option>
-                  <option value="return">Return</option>
-                </select>
+                <label class="form-label x-small">Fuel Level (0-8)</label>
+                <input type="number" name="fuel_level" min="0" max="8" class="form-control form-control-sm" value="{{ $beforeInspection->fuel_level ?? 8 }}" required>
               </div>
               <div class="col-6 mb-2">
-                <label class="form-label x-small">Fuel (0-8)</label>
-                <input type="number" name="fuel_level" min="0" max="8" class="form-control form-control-sm" value="8" required>
+                <label class="form-label x-small">Odometer (km)</label>
+                <input type="number" name="odometer_reading" class="form-control form-control-sm" value="{{ $beforeInspection->odometer_reading ?? '' }}" required>
               </div>
               <div class="col-12 mb-2">
-                <label class="form-label x-small">Odometer Reading (km)</label>
-                <input type="number" name="odometer_reading" class="form-control form-control-sm" required>
+                <label class="form-label x-small">Inspection Photos <span class="text-danger">*</span></label>
+                <input type="file" name="photos[]" class="form-control form-control-sm" accept="image/*" multiple {{ $hasBeforeInspection ? '' : 'required' }}>
+                <small class="text-muted">Upload car condition photos (max 10)</small>
               </div>
-              <div class="col-12 mb-3">
+              <div class="col-12 mb-2">
                 <label class="form-label x-small">Notes</label>
-                <textarea name="notes" class="form-control form-control-sm" rows="2"></textarea>
+                <textarea name="notes" class="form-control form-control-sm" rows="2">{{ $beforeInspection->notes ?? '' }}</textarea>
               </div>
             </div>
-            <button type="submit" class="btn btn-sm btn-dark w-100">Save Record</button>
+            <button type="submit" class="btn btn-sm btn-dark w-100">
+              <i class="bi bi-camera me-1"></i>{{ $hasBeforeInspection ? 'Update Inspection' : 'Save Inspection' }}
+            </button>
           </form>
         </div>
       </div>
+
+      {{-- After-Return Inspection --}}
+      @if(in_array($booking->status, ['active', 'completed']))
+        @php
+          $afterInspection = $booking->inspections ? $booking->inspections->where('type', 'after')->first() : null;
+          $hasAfterInspection = $afterInspection && $afterInspection->photos;
+        @endphp
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white border-0 pt-4 px-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>After-Return Inspection</h6>
+              @if($hasAfterInspection)
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+              @else
+                <span class="badge bg-secondary">Pending</span>
+              @endif
+            </div>
+          </div>
+          <div class="card-body p-4 pt-2">
+            @if($afterInspection && $afterInspection->photos)
+              <div class="row g-2 mb-3">
+                @foreach($afterInspection->photos as $photo)
+                  <div class="col-4">
+                    <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
+                  </div>
+                @endforeach
+              </div>
+            @endif
+            <form method="POST" action="{{ route('staff.bookings.inspections.store', $booking->booking_id) }}" enctype="multipart/form-data">
+              @csrf
+              <input type="hidden" name="inspection_type" value="after">
+              <div class="row g-2">
+                <div class="col-6 mb-2">
+                  <label class="form-label x-small">Fuel Level (0-8)</label>
+                  <input type="number" name="fuel_level" min="0" max="8" class="form-control form-control-sm" value="{{ $afterInspection->fuel_level ?? '' }}" required>
+                </div>
+                <div class="col-6 mb-2">
+                  <label class="form-label x-small">Odometer (km)</label>
+                  <input type="number" name="odometer_reading" class="form-control form-control-sm" value="{{ $afterInspection->odometer_reading ?? '' }}" required>
+                </div>
+                <div class="col-12 mb-2">
+                  <label class="form-label x-small">Inspection Photos</label>
+                  <input type="file" name="photos[]" class="form-control form-control-sm" accept="image/*" multiple>
+                  <small class="text-muted">Upload car condition photos (max 10)</small>
+                </div>
+                <div class="col-12 mb-2">
+                  <label class="form-label x-small">Notes</label>
+                  <textarea name="notes" class="form-control form-control-sm" rows="2">{{ $afterInspection->notes ?? '' }}</textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-sm btn-dark w-100">
+                <i class="bi bi-camera me-1"></i>{{ $hasAfterInspection ? 'Update Inspection' : 'Save Inspection' }}
+              </button>
+            </form>
+          </div>
+        </div>
+      @endif
 
       {{-- Add Penalty --}}
       <div class="card border-0 shadow-sm">

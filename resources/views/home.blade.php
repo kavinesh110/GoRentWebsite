@@ -489,8 +489,143 @@
   </div>
 </section>
 
+{{-- SUPPORT SECTION --}}
+<section id="support" class="py-5" style="background: #fff; border-top: 1px solid #eee;">
+  <div class="container py-5">
+    <div class="text-center mb-5">
+      <h6 class="text-uppercase fw-bold text-primary small mb-2" style="letter-spacing: 2px;">Report Car Issues</h6>
+      <h2 class="fw-bold mb-3">Contact Our Support Team</h2>
+      <p class="text-muted">Experiencing issues with your rental car? Report it here and we'll help you resolve it.</p>
+    </div>
+    
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4 p-md-5">
+            @if(session('success'))
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            @endif
+
+            @if(session('error'))
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            @endif
+
+            @if($errors->any())
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                  @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                  @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            @endif
+
+            @if(!session('auth_role') || session('auth_role') !== 'customer')
+              <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Please login</strong> to report car issues. Support is available for customers who have completed at least one booking.
+              </div>
+            @else
+              @if(!isset($hasCompletedBooking) || !$hasCompletedBooking)
+                <div class="alert alert-warning mb-4">
+                  <i class="bi bi-exclamation-triangle me-2"></i>
+                  <strong>Support access:</strong> Car issue reports can only be submitted after you have completed at least one booking with us.
+                </div>
+              @else
+                <form method="POST" action="{{ route('support.submit') }}">
+                  @csrf
+                  
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                      <input type="text" name="name" class="form-control" value="{{ session('auth_name') ?? old('name') }}" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
+                      <input type="email" name="email" class="form-control" value="{{ $customerEmail ?? old('email') }}" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold">Phone Number</label>
+                      <input type="tel" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="Optional">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold">Car Issues <span class="text-danger">*</span></label>
+                      <select name="category" class="form-select" required>
+                        <option value="">Select car issue</option>
+                        <option value="cleanliness" {{ old('category') === 'cleanliness' ? 'selected' : '' }}>Cleanliness</option>
+                        <option value="lacking_facility" {{ old('category') === 'lacking_facility' ? 'selected' : '' }}>Lacking Facility</option>
+                        <option value="bluetooth" {{ old('category') === 'bluetooth' ? 'selected' : '' }}>Bluetooth</option>
+                        <option value="engine" {{ old('category') === 'engine' ? 'selected' : '' }}>Engine</option>
+                        <option value="others" {{ old('category') === 'others' ? 'selected' : '' }}>Others</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label fw-bold">Subject <span class="text-danger">*</span></label>
+                      <input type="text" name="subject" class="form-control" value="{{ old('subject') }}" placeholder="Brief summary of your issue" required>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label fw-bold">Description <span class="text-danger">*</span></label>
+                      <textarea name="description" class="form-control" rows="6" placeholder="Please provide detailed information about your issue..." required>{{ old('description') }}</textarea>
+                      <small class="text-muted">Please include as much detail as possible to help us assist you better.</small>
+                    </div>
+                  </div>
+
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-hasta btn-lg">
+                      <i class="bi bi-send me-2"></i>Submit Support Request
+                    </button>
+                  </div>
+                </form>
+              @endif
+            @endif
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 @endsection
 
 @push('scripts')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+<script>
+  // Smooth scroll to anchor on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash) {
+      const target = document.querySelector(window.location.hash);
+      if (target) {
+        setTimeout(function() {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  });
+  
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      const href = this.getAttribute('href');
+      if (href !== '#' && href.length > 1) {
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Update URL without triggering scroll
+          if (history.pushState) {
+            history.pushState(null, null, href);
+          }
+        }
+      }
+    });
+  });
+</script>
 @endpush

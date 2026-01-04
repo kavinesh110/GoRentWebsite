@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::post('/support', [App\Http\Controllers\HomeController::class, 'supportSubmit'])->name('support.submit');
 Route::get('/cars', [App\Http\Controllers\HomeController::class, 'cars'])->name('cars.index');
 
 Route::get('/cars/{id}', [App\Http\Controllers\BookingController::class, 'show'])->name('cars.show');
@@ -45,6 +46,10 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::post('/bookings/{id}/receipt', [App\Http\Controllers\CustomerController::class, 'bookingsUploadReceipt'])->name('bookings.receipt.upload');
     Route::post('/bookings/{id}/photos', [App\Http\Controllers\CustomerController::class, 'bookingsUploadPhoto'])->name('bookings.photos.upload');
     Route::post('/bookings/{id}/sign-agreement', [App\Http\Controllers\CustomerController::class, 'bookingsSignAgreement'])->name('bookings.sign-agreement');
+    
+    // Support tickets
+    Route::get('/support-tickets', [App\Http\Controllers\CustomerController::class, 'supportTickets'])->name('support-tickets');
+    Route::get('/support-tickets/{id}', [App\Http\Controllers\CustomerController::class, 'supportTicketsShow'])->name('support-tickets.show');
 });
 
 // Staff routes (protected by ensureStaff middleware in controller)
@@ -131,4 +136,20 @@ Route::prefix('staff')->name('staff.')->group(function () {
     
     // Penalties
     Route::get('/penalties', [App\Http\Controllers\StaffController::class, 'penaltiesIndex'])->name('penalties');
+    
+    // Support tickets management
+    Route::get('/support-tickets', [App\Http\Controllers\StaffController::class, 'supportTickets'])->name('support-tickets');
+    Route::get('/support-tickets/{id}', [App\Http\Controllers\StaffController::class, 'supportTicketsShow'])->name('support-tickets.show');
+    Route::patch('/support-tickets/{id}', [App\Http\Controllers\StaffController::class, 'supportTicketsUpdate'])->name('support-tickets.update');
+    
+    // Maintenance Issues (Car Issues from Support Tickets)
+    Route::get('/maintenance-issues', [App\Http\Controllers\StaffController::class, 'maintenanceIssues'])->name('maintenance-issues');
+    Route::post('/maintenance-issues/{id}/resolve', [App\Http\Controllers\StaffController::class, 'maintenanceIssuesResolve'])->name('maintenance-issues.resolve');
+    
+    // Inspections management
+    Route::get('/inspections', [App\Http\Controllers\StaffController::class, 'inspections'])->name('inspections');
+    Route::get('/inspections/{id}', [App\Http\Controllers\StaffController::class, 'inspectionsShow'])->name('inspections.show');
+    Route::post('/inspections/{id}/start', [App\Http\Controllers\StaffController::class, 'inspectionsStart'])->name('inspections.start');
+    Route::post('/inspections/{id}/complete', [App\Http\Controllers\StaffController::class, 'inspectionsComplete'])->name('inspections.complete');
+    Route::post('/inspections/{id}/photos', [App\Http\Controllers\StaffController::class, 'inspectionsUploadPhotos'])->name('inspections.photos');
 });

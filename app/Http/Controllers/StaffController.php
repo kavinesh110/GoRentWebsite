@@ -17,6 +17,8 @@ use App\Models\MaintenanceRecord;
 use App\Models\Feedback;
 use App\Models\RentalPhoto;
 use App\Models\CancellationRequest;
+use App\Models\SupportTicket;
+use App\Models\Staff;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -136,10 +138,37 @@ class StaffController extends Controller
 
         // Paginate results (12 cars per page) with booking counts for delete warnings
         $cars = $query->withCount('bookings')->orderBy('created_at', 'desc')->paginate(12);
+        
+        // Get open issue counts for each car (only flagged for maintenance)
+        $carIds = $cars->pluck('id')->toArray();
+        $issuesCounts = SupportTicket::whereIn('car_id', $carIds)
+            ->where('flagged_for_maintenance', true)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->selectRaw('car_id, COUNT(*) as count')
+            ->groupBy('car_id')
+            ->pluck('count', 'car_id')
+            ->toArray();
+        
+        // Also check for issues linked through bookings
+        $bookingCarIssues = SupportTicket::whereHas('booking', function($q) use ($carIds) {
+                $q->whereIn('car_id', $carIds);
+            })
+            ->where('flagged_for_maintenance', true)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->with('booking:booking_id,car_id')
+            ->get();
+        
+        foreach ($bookingCarIssues as $issue) {
+            if ($issue->booking && $issue->booking->car_id) {
+                $carId = $issue->booking->car_id;
+                $issuesCounts[$carId] = ($issuesCounts[$carId] ?? 0) + 1;
+            }
+        }
 
         return view('staff.cars.index', [
             'cars' => $cars,
             'filters' => $request->only(['status', 'search']),
+            'issuesCounts' => $issuesCounts,
         ]);
     }
 
@@ -244,7 +273,26 @@ class StaffController extends Controller
         $this->ensureStaff($request);
         $car = Car::findOrFail($id);
         $locations = CarLocation::all();
-        return view('staff.cars.edit', ['car' => $car, 'locations' => $locations]);
+        
+        // Get related car issues from support tickets (only flagged for maintenance)
+        $carIssues = SupportTicket::with(['customer', 'booking'])
+            ->where(function($q) use ($id) {
+                $q->where('car_id', $id)
+                  ->orWhereHas('booking', function($bq) use ($id) {
+                      $bq->where('car_id', $id);
+                  });
+            })
+            ->where('flagged_for_maintenance', true)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('staff.cars.edit', [
+            'car' => $car, 
+            'locations' => $locations,
+            'carIssues' => $carIssues,
+        ]);
     }
 
     /**
@@ -493,6 +541,18 @@ class StaffController extends Controller
         $isCompleting = ($oldStatus !== 'completed' && $data['status'] === 'completed');
         $stampsToAward = 0; // Initialize variable
 
+        // Business rule: Cannot confirm booking without inspection photos
+        if ($data['status'] === 'confirmed' && $oldStatus === 'created') {
+            $hasInspectionPhotos = Inspection::where('booking_id', $booking->booking_id)
+                ->where('type', 'before')
+                ->whereNotNull('photos')
+                ->exists();
+            
+            if (!$hasInspectionPhotos) {
+                return redirect()->back()->with('error', 'Cannot confirm booking without uploading inspection photos first. Please complete the before-pickup inspection.');
+            }
+        }
+
         // Update booking status
         $booking->update($data);
 
@@ -552,11 +612,12 @@ class StaffController extends Controller
 
     /**
      * Record an inspection for a booking
-     * Used for pickup and return inspections
-     * Tracks fuel level (0-8), odometer reading, and inspection notes
+     * Used for before-pickup and after-return inspections
+     * Tracks fuel level (0-8), odometer reading, photos, and inspection notes
      * Records which staff member performed the inspection
+     * Required before confirming a booking
      * 
-     * @param Request $request Contains inspection data (type, datetime, fuel, odometer, notes)
+     * @param Request $request Contains inspection data (type, fuel, odometer, photos, notes)
      * @param int $id Booking ID
      * @return \Illuminate\Http\RedirectResponse
      */
@@ -567,19 +628,53 @@ class StaffController extends Controller
 
         // Validate inspection data
         $data = $request->validate([
-            'inspection_type'  => 'required|in:pickup,return,other', // Type of inspection
-            'datetime'         => 'required|date', // When inspection was performed
+            'inspection_type'  => 'required|in:before,after,pickup,return,other', // Type of inspection
             'fuel_level'       => 'required|integer|min:0|max:8', // Fuel level (0=empty, 8=full)
             'odometer_reading' => 'required|integer|min:0', // Car mileage at inspection
             'notes'            => 'nullable|string', // Additional notes
+            'photos'           => 'nullable|array|max:10', // Inspection photos
+            'photos.*'         => 'image|mimes:jpeg,png,jpg,webp|max:5120', // Max 5MB per photo
         ]);
 
-        // Link inspection to booking and record inspecting staff member
-        $data['booking_id'] = $booking->booking_id;
-        $data['inspected_by'] = $request->session()->get('auth_id'); // Staff who performed inspection
+        // Map pickup/return to before/after for consistency
+        $type = $data['inspection_type'];
+        if ($type === 'pickup') $type = 'before';
+        if ($type === 'return') $type = 'after';
 
-        // Create inspection record
-        Inspection::create($data);
+        // Check if inspection already exists for this booking and type
+        $existingInspection = Inspection::where('booking_id', $booking->booking_id)
+            ->where('type', $type)
+            ->first();
+
+        // Handle photo uploads
+        $photoPaths = $existingInspection && $existingInspection->photos ? $existingInspection->photos : [];
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photo) {
+                $path = $photo->store('inspections/' . $booking->booking_id, 'public');
+                $photoPaths[] = $path;
+            }
+        }
+
+        $inspectionData = [
+            'booking_id' => $booking->booking_id,
+            'car_id' => $booking->car_id,
+            'type' => $type,
+            'status' => 'completed',
+            'fuel_level' => $data['fuel_level'],
+            'odometer_reading' => $data['odometer_reading'],
+            'mileage_reading' => $data['odometer_reading'],
+            'notes' => $data['notes'] ?? null,
+            'photos' => $photoPaths,
+            'inspected_by' => $request->session()->get('auth_id'),
+            'inspected_at' => now(),
+            'datetime' => now(),
+        ];
+
+        if ($existingInspection) {
+            $existingInspection->update($inspectionData);
+        } else {
+            Inspection::create($inspectionData);
+        }
 
         return redirect()->back()->with('success', 'Inspection recorded for this booking.');
     }
@@ -2023,5 +2118,482 @@ class StaffController extends Controller
         }
 
         return redirect()->back()->with('error', 'Invalid action.');
+    }
+
+    // ========== SUPPORT TICKET MANAGEMENT ==========
+
+    /**
+     * List all support tickets with filtering
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function supportTickets(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = SupportTicket::with(['customer', 'booking.car', 'car', 'assignedStaff']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('subject', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($customerQuery) use ($search) {
+                      $customerQuery->where('full_name', 'like', "%{$search}%")
+                                    ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $tickets = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('staff.support-tickets.index', [
+            'tickets' => $tickets,
+            'filters' => $request->only(['status', 'category', 'search']),
+        ]);
+    }
+
+    /**
+     * Display detailed view of a support ticket
+     * 
+     * @param Request $request
+     * @param int $id Ticket ID
+     * @return \Illuminate\View\View
+     */
+    public function supportTicketsShow(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+
+        $ticket = SupportTicket::with([
+            'customer',
+            'booking.car',
+            'car',
+            'maintenanceRecord',
+            'assignedStaff'
+        ])->findOrFail($id);
+
+        // Get all bookings for this customer (for linking)
+        $customerBookings = Booking::where('customer_id', $ticket->customer_id)
+            ->with('car')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get all cars (for linking)
+        $cars = Car::orderBy('brand')->orderBy('model')->get();
+
+        // Get all maintenance records (for linking)
+        $maintenanceRecords = MaintenanceRecord::with('car')
+            ->orderBy('service_date', 'desc')
+            ->get();
+
+        // Get all staff members (for assignment)
+        $staffMembers = Staff::orderBy('name')->get();
+
+        return view('staff.support-tickets.show', [
+            'ticket' => $ticket,
+            'customerBookings' => $customerBookings,
+            'cars' => $cars,
+            'maintenanceRecords' => $maintenanceRecords,
+            'staffMembers' => $staffMembers,
+        ]);
+    }
+
+    /**
+     * Update support ticket status and add response
+     * 
+     * @param Request $request
+     * @param int $id Ticket ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function supportTicketsUpdate(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $staffId = session('auth_id');
+
+        $ticket = SupportTicket::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:open,in_progress,resolved,closed',
+            'staff_response' => 'nullable|string|max:5000',
+            'assigned_to' => 'nullable|exists:staff,staff_id',
+            'booking_id' => 'nullable|exists:bookings,booking_id',
+            'car_id' => 'nullable|exists:cars,id',
+            'flagged_for_maintenance' => 'nullable|in:0,1',
+        ]);
+
+        $updateData = [
+            'status' => $validated['status'],
+            'assigned_to' => $validated['assigned_to'] ?: null,
+            'flagged_for_maintenance' => $validated['flagged_for_maintenance'] ?? false,
+        ];
+
+        // Handle staff response (only update if provided, allow clearing)
+        if (isset($validated['staff_response'])) {
+            $updateData['staff_response'] = $validated['staff_response'] ?: null;
+        }
+
+        // Link to booking if provided (auto-links car from booking)
+        if (!empty($validated['booking_id'])) {
+            $updateData['booking_id'] = $validated['booking_id'];
+            $booking = Booking::find($validated['booking_id']);
+            if ($booking) {
+                $updateData['car_id'] = $booking->car_id; // Auto-link car from booking
+            }
+        } else {
+            // If no booking link, use car_id from form (or clear if empty)
+            $updateData['booking_id'] = null;
+            $updateData['car_id'] = $validated['car_id'] ?: null;
+        }
+
+        // Set resolved_at timestamp if status is resolved
+        if ($validated['status'] === 'resolved' && !$ticket->resolved_at) {
+            $updateData['resolved_at'] = now();
+        }
+
+        // Set closed_at timestamp if status is closed
+        if ($validated['status'] === 'closed' && !$ticket->closed_at) {
+            $updateData['closed_at'] = now();
+        }
+
+        $ticket->update($updateData);
+
+        return redirect()->back()->with('success', 'Support ticket updated successfully!');
+    }
+
+    /**
+     * Display maintenance issues page - shows car issues from support tickets
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function maintenanceIssues(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        // Get all support tickets that are flagged for maintenance
+        $query = SupportTicket::with(['customer', 'car', 'booking.car', 'assignedStaff'])
+            ->where('flagged_for_maintenance', true);
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        } else {
+            // By default, show open and in_progress issues
+            $query->whereIn('status', ['open', 'in_progress']);
+        }
+
+        // Filter by category
+        if ($request->has('category') && $request->category !== '') {
+            $query->where('category', $request->category);
+        }
+
+        // Filter by car
+        if ($request->has('car_id') && $request->car_id !== '') {
+            $query->where(function($q) use ($request) {
+                $q->where('car_id', $request->car_id)
+                  ->orWhereHas('booking', function($bq) use ($request) {
+                      $bq->where('car_id', $request->car_id);
+                  });
+            });
+        }
+
+        // Search
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('subject', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('car', function($cq) use ($search) {
+                      $cq->where('brand', 'like', "%{$search}%")
+                        ->orWhere('model', 'like', "%{$search}%")
+                        ->orWhere('plate_number', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $issues = $query->orderBy('created_at', 'desc')->paginate(12);
+
+        // Get all cars for filter dropdown
+        $cars = Car::orderBy('brand')->orderBy('model')->get();
+
+        // Get issue statistics (only flagged tickets)
+        $stats = [
+            'total' => SupportTicket::where('flagged_for_maintenance', true)->count(),
+            'open' => SupportTicket::where('flagged_for_maintenance', true)->where('status', 'open')->count(),
+            'in_progress' => SupportTicket::where('flagged_for_maintenance', true)->where('status', 'in_progress')->count(),
+            'resolved' => SupportTicket::where('flagged_for_maintenance', true)->where('status', 'resolved')->count(),
+        ];
+
+        return view('staff.car-issues.index', [
+            'issues' => $issues,
+            'cars' => $cars,
+            'filters' => $request->only(['status', 'category', 'car_id', 'search']),
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Mark a car issue as resolved (quick action)
+     * 
+     * @param Request $request
+     * @param int $id Ticket ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function maintenanceIssuesResolve(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $staffId = session('auth_id');
+
+        $ticket = SupportTicket::findOrFail($id);
+        
+        $ticket->update([
+            'status' => 'resolved',
+            'resolved_at' => now(),
+            'assigned_to' => $ticket->assigned_to ?? $staffId,
+        ]);
+
+        return redirect()->back()->with('success', 'Issue marked as resolved!');
+    }
+
+    // ========== INSPECTION MANAGEMENT ==========
+
+    /**
+     * List all inspections with filtering
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function inspections(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = Inspection::with(['booking.customer', 'car', 'inspector']);
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by date
+        if ($request->filled('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('car', function($cq) use ($search) {
+                    $cq->where('brand', 'like', "%{$search}%")
+                       ->orWhere('model', 'like', "%{$search}%")
+                       ->orWhere('plate_number', 'like', "%{$search}%");
+                })
+                ->orWhereHas('booking.customer', function($cuq) use ($search) {
+                    $cuq->where('full_name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $inspections = $query->orderByRaw("FIELD(status, 'pending', 'in_progress', 'completed')")
+            ->orderBy('created_at', 'desc')
+            ->paginate(12);
+
+        // Stats
+        $stats = [
+            'total' => Inspection::count(),
+            'pending' => Inspection::where('status', 'pending')->count(),
+            'in_progress' => Inspection::where('status', 'in_progress')->count(),
+            'completed' => Inspection::where('status', 'completed')->count(),
+            'before' => Inspection::where('type', 'before')->where('status', 'pending')->count(),
+            'after' => Inspection::where('type', 'after')->where('status', 'pending')->count(),
+        ];
+
+        return view('staff.inspections.index', [
+            'inspections' => $inspections,
+            'filters' => $request->only(['status', 'type', 'date', 'search']),
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Show inspection details
+     * 
+     * @param Request $request
+     * @param int $id Inspection ID
+     * @return \Illuminate\View\View
+     */
+    public function inspectionsShow(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+
+        $inspection = Inspection::with(['booking.customer', 'booking.payments', 'car', 'inspector'])
+            ->findOrFail($id);
+
+        return view('staff.inspections.show', [
+            'inspection' => $inspection,
+        ]);
+    }
+
+    /**
+     * Start an inspection (change status to in_progress)
+     * 
+     * @param Request $request
+     * @param int $id Inspection ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function inspectionsStart(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $staffId = session('auth_id');
+
+        $inspection = Inspection::findOrFail($id);
+        
+        $inspection->update([
+            'status' => 'in_progress',
+            'inspected_by' => $staffId,
+        ]);
+
+        return redirect()->route('staff.inspections.show', $id)
+            ->with('success', 'Inspection started. Please complete the inspection form.');
+    }
+
+    /**
+     * Complete an inspection with details and photos
+     * 
+     * @param Request $request
+     * @param int $id Inspection ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function inspectionsComplete(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $staffId = session('auth_id');
+
+        $inspection = Inspection::with('booking')->findOrFail($id);
+
+        $validated = $request->validate([
+            'exterior_condition' => 'required|string|max:1000',
+            'interior_condition' => 'required|string|max:1000',
+            'engine_condition' => 'nullable|string|max:1000',
+            'fuel_level' => 'required|integer|min:0|max:100',
+            'mileage_reading' => 'required|integer|min:0',
+            'damages_found' => 'nullable|string|max:2000',
+            'notes' => 'nullable|string|max:2000',
+            'photos' => 'nullable|array|max:10',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        // Handle photo uploads
+        $photoPaths = $inspection->photos ?? [];
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photo) {
+                $path = $photo->store('inspections/' . $inspection->booking_id, 'public');
+                $photoPaths[] = $path;
+            }
+        }
+
+        $inspection->update([
+            'status' => 'completed',
+            'exterior_condition' => $validated['exterior_condition'],
+            'interior_condition' => $validated['interior_condition'],
+            'engine_condition' => $validated['engine_condition'] ?? null,
+            'fuel_level' => $validated['fuel_level'],
+            'mileage_reading' => $validated['mileage_reading'],
+            'damages_found' => $validated['damages_found'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'photos' => $photoPaths,
+            'inspected_by' => $staffId,
+            'inspected_at' => now(),
+        ]);
+
+        // Update car mileage if this is an after inspection
+        if ($inspection->type === 'after') {
+            $inspection->car->update([
+                'current_mileage' => $validated['mileage_reading'],
+            ]);
+        }
+
+        // If before inspection completed and booking is in verification, update booking status
+        if ($inspection->type === 'before' && $inspection->booking->status === 'verified') {
+            $inspection->booking->update(['status' => 'active']);
+        }
+
+        // If after inspection completed and booking is active, update booking status
+        if ($inspection->type === 'after' && $inspection->booking->status === 'active') {
+            $inspection->booking->update(['status' => 'completed']);
+        }
+
+        return redirect()->route('staff.inspections.show', $id)
+            ->with('success', 'Inspection completed successfully!');
+    }
+
+    /**
+     * Upload additional photos to an inspection
+     * 
+     * @param Request $request
+     * @param int $id Inspection ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function inspectionsUploadPhotos(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+
+        $inspection = Inspection::findOrFail($id);
+
+        $request->validate([
+            'photos' => 'required|array|min:1|max:10',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $photoPaths = $inspection->photos ?? [];
+        foreach ($request->file('photos') as $photo) {
+            $path = $photo->store('inspections/' . $inspection->booking_id, 'public');
+            $photoPaths[] = $path;
+        }
+
+        $inspection->update(['photos' => $photoPaths]);
+
+        return redirect()->back()->with('success', 'Photos uploaded successfully!');
+    }
+
+    /**
+     * Create inspection for a booking (called when booking status changes)
+     * This is a utility method that can be called from other methods
+     * 
+     * @param Booking $booking
+     * @param string $type 'before' or 'after'
+     * @return Inspection
+     */
+    public static function createInspectionForBooking(Booking $booking, string $type): Inspection
+    {
+        // Check if inspection already exists
+        $existing = Inspection::where('booking_id', $booking->booking_id)
+            ->where('type', $type)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return Inspection::create([
+            'booking_id' => $booking->booking_id,
+            'car_id' => $booking->car_id,
+            'type' => $type,
+            'status' => 'pending',
+        ]);
     }
 }

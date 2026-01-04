@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Car;
 use App\Models\CarLocation;
 use App\Models\RentalPhoto;
+use App\Models\SupportTicket;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -765,5 +766,55 @@ class CustomerController extends Controller
 
         return redirect()->back()
             ->with('success', 'Rental agreement signed successfully! Please proceed to upload pickup photos.');
+    }
+
+    /**
+     * List all support tickets for the authenticated customer
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function supportTickets(Request $request)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        // Get customer's support tickets
+        $query = SupportTicket::where('customer_id', $customerId);
+
+        // Filter by status if provided
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        // Paginate results (10 tickets per page)
+        $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
+
+        return view('customer.support-tickets.index', [
+            'tickets' => $tickets,
+            'filters' => $request->only(['status']),
+        ]);
+    }
+
+    /**
+     * Display detailed view of a support ticket
+     * 
+     * @param Request $request
+     * @param int $id Ticket ID
+     * @return \Illuminate\View\View
+     */
+    public function supportTicketsShow(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        // Get ticket and ensure it belongs to this customer
+        $ticket = SupportTicket::with(['booking.car', 'car', 'assignedStaff'])
+            ->where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        return view('customer.support-tickets.show', [
+            'ticket' => $ticket,
+        ]);
     }
 }

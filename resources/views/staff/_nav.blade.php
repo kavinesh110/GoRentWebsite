@@ -74,6 +74,18 @@
         <i class="bi bi-exclamation-octagon"></i>
         <span>Penalties</span>
       </a>
+      <a href="{{ route('staff.support-tickets') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.support-tickets*') ? 'active' : '' }}">
+        <i class="bi bi-headset"></i>
+        <span>Support Tickets</span>
+      </a>
+      <a href="{{ route('staff.maintenance-issues') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.maintenance-issues*') ? 'active' : '' }}">
+        <i class="bi bi-tools"></i>
+        <span>Maintenance Issues</span>
+      </a>
+      <a href="{{ route('staff.inspections') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.inspections*') ? 'active' : '' }}">
+        <i class="bi bi-clipboard-check"></i>
+        <span>Inspections</span>
+      </a>
 
       <div class="mt-4 mb-3 px-3">
         <hr class="my-2 opacity-10">

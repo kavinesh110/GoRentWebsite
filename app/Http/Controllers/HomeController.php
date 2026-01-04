@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Car;
 use App\Models\Activity;
 use App\Models\CarLocation;
+use App\Models\Booking;
+use App\Models\SupportTicket;
+use App\Models\Customer;
 
 /**
  * Handles the homepage/public facing views
@@ -47,7 +50,74 @@ class HomeController extends Controller
             $locations = CarLocation::where('name', 'Student Mall')->get();
         }
         
-        return view('home', compact('cars', 'activities', 'locations'));
+        // Check if logged-in customer has completed bookings (for support form access)
+        $hasCompletedBooking = false;
+        $customerEmail = null;
+        if (session('auth_role') === 'customer' && session('auth_id')) {
+            $customerId = session('auth_id');
+            $hasCompletedBooking = Booking::where('customer_id', $customerId)
+                ->where('status', 'completed')
+                ->exists();
+            $customer = Customer::find($customerId);
+            $customerEmail = $customer->email ?? null;
+        }
+        
+        return view('home', compact('cars', 'activities', 'locations', 'hasCompletedBooking', 'customerEmail'));
+    }
+    
+    /**
+     * Handle support ticket submission from homepage
+     * Only allows submission if customer has at least one completed booking
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function supportSubmit(Request $request)
+    {
+        // Check if user is logged in as customer
+        if (session('auth_role') !== 'customer' || !session('auth_id')) {
+            return redirect()->route('home')->with('error', 'Please login as a customer to submit a support request.');
+        }
+        
+        $customerId = session('auth_id');
+        
+        // Verify customer has at least one completed booking
+        $hasCompletedBooking = Booking::where('customer_id', $customerId)
+            ->where('status', 'completed')
+            ->exists();
+            
+        if (!$hasCompletedBooking) {
+            return redirect()->route('home')->with('error', 'Support tickets can only be submitted after you have completed at least one booking with us.');
+        }
+        
+        // Get customer data
+        $customer = Customer::findOrFail($customerId);
+        
+        // Validate form data
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:30',
+            'category' => 'required|in:cleanliness,lacking_facility,bluetooth,engine,others',
+            'subject' => 'required|string|max:255',
+            'description' => 'required|string|max:5000',
+        ]);
+        
+        // Create support ticket
+        SupportTicket::create([
+            'customer_id' => $customerId,
+            'booking_id' => null, // Can be linked later by staff if related to specific booking
+            'car_id' => null, // Can be linked later by staff if related to specific car
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? $customer->phone,
+            'category' => $validated['category'],
+            'subject' => $validated['subject'],
+            'description' => $validated['description'],
+            'status' => 'open',
+        ]);
+        
+        return redirect()->to(route('home') . '#support')->with('success', 'Your support request has been submitted successfully. We will get back to you soon!');
     }
 
     /**

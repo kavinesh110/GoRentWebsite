@@ -125,7 +125,92 @@
       </form>
     </div>
   </div>
+
+  {{-- REPORTED CAR ISSUES --}}
+  @if(isset($carIssues) && $carIssues->count() > 0)
+  <div class="card border-0 shadow-soft mt-4 border-start border-warning border-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+          Reported Issues ({{ $carIssues->count() }})
+        </h5>
+        <a href="{{ route('staff.maintenance-issues', ['car_id' => $car->id]) }}" class="btn btn-sm btn-outline-warning">
+          View All Issues
+        </a>
+      </div>
+      <p class="text-muted small mb-0 mt-1">Customer-reported issues that may need attention</p>
+    </div>
+    <div class="card-body p-4">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="font-size: 12px;">Category</th>
+              <th style="font-size: 12px;">Subject</th>
+              <th style="font-size: 12px;">Reported By</th>
+              <th style="font-size: 12px;">Status</th>
+              <th style="font-size: 12px;">Date</th>
+              <th style="font-size: 12px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($carIssues as $issue)
+              @php
+                $categoryColors = [
+                  'cleanliness' => 'bg-info text-white',
+                  'lacking_facility' => 'bg-warning text-dark',
+                  'bluetooth' => 'bg-purple text-white',
+                  'engine' => 'bg-danger text-white',
+                  'others' => 'bg-secondary text-white'
+                ];
+                $statusColors = [
+                  'open' => 'bg-danger text-white',
+                  'in_progress' => 'bg-primary text-white',
+                  'resolved' => 'bg-success text-white',
+                  'closed' => 'bg-secondary text-white'
+                ];
+              @endphp
+              <tr>
+                <td>
+                  <span class="badge {{ $categoryColors[$issue->category] ?? 'bg-secondary' }}" style="font-size: 11px;">
+                    {{ ucfirst(str_replace('_', ' ', $issue->category)) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-semibold" style="font-size: 13px;">{{ \Illuminate\Support\Str::limit($issue->subject, 30) }}</div>
+                  <div class="small text-muted">{{ \Illuminate\Support\Str::limit($issue->description, 50) }}</div>
+                </td>
+                <td>
+                  <div style="font-size: 13px;">{{ $issue->name }}</div>
+                </td>
+                <td>
+                  <span class="badge {{ $statusColors[$issue->status] ?? 'bg-secondary' }}" style="font-size: 10px;">
+                    {{ ucfirst(str_replace('_', ' ', $issue->status)) }}
+                  </span>
+                </td>
+                <td>
+                  <div style="font-size: 12px;">{{ $issue->created_at->format('d M Y') }}</div>
+                </td>
+                <td>
+                  <a href="{{ route('staff.support-tickets.show', $issue->ticket_id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  @endif
+
   </div>
 </div>
 </div>
+
+<style>
+  .bg-purple { background-color: #7b1fa2 !important; }
+</style>
 @endsection
