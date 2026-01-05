@@ -182,8 +182,8 @@ class Booking extends Model
             return 3;
         }
 
-        // Phase 2: Confirmed - waiting for pickup / agreement signing
-        if ($this->status === 'confirmed') {
+        // Phase 2: Verified or Confirmed - booking verified/confirmed, waiting for pickup / agreement signing
+        if (in_array($this->status, ['verified', 'confirmed'])) {
             return 2;
         }
 
@@ -225,8 +225,8 @@ class Booking extends Model
      */
     public function isPhase2Complete(): bool
     {
-        // Phase 2 is complete when booking is confirmed or beyond
-        return in_array($this->status, ['confirmed', 'active', 'completed']);
+        // Phase 2 is complete when booking is verified, confirmed, or beyond
+        return in_array($this->status, ['verified', 'confirmed', 'active', 'completed']);
     }
 
     /**
@@ -236,12 +236,13 @@ class Booking extends Model
     public function isPhase3Complete(): bool
     {
         // Phase 3 is complete when agreement is signed AND pickup photos exist
+        // Status check removed - Phase 3 completion is based on actions, not status
         $hasAgreement = $this->agreement_signed_at !== null;
         $hasPickupPhotos = $this->rentalPhotos()
             ->whereIn('photo_type', ['before', 'pickup', 'agreement'])
             ->exists();
         
-        return $hasAgreement && $hasPickupPhotos && in_array($this->status, ['active', 'completed']);
+        return $hasAgreement && $hasPickupPhotos;
     }
 
     /**

@@ -23,6 +23,7 @@ class Car extends Model
         'year',
         'base_rate_per_hour',
         'status',
+        'initial_mileage',
         'current_mileage',
         'service_mileage_limit',
         'last_service_date',
@@ -36,6 +37,7 @@ class Car extends Model
     protected $casts = [
         'year' => 'integer',
         'base_rate_per_hour' => 'decimal:2', // Pricing per hour in RM
+        'initial_mileage' => 'integer',
         'current_mileage' => 'integer',
         'service_mileage_limit' => 'integer',
         'last_service_date' => 'date',

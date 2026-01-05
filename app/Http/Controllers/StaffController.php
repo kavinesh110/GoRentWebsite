@@ -205,8 +205,9 @@ class StaffController extends Controller
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
             'status' => 'required|in:available,in_use,maintenance',
+            'initial_mileage' => 'required|integer|min:0',
             'current_mileage' => 'nullable|integer|min:0',
-            'service_mileage_limit' => 'required|integer|min:0',
+            'service_mileage_limit' => 'required|in:2000,5000,10000',
             'last_service_date' => 'nullable|date',
             'car_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'gps_enabled' => 'boolean',
@@ -214,6 +215,10 @@ class StaffController extends Controller
 
         // Process checkbox and default values
         $data['gps_enabled'] = $request->has('gps_enabled');
+        
+        // Convert initial_mileage and service_mileage_limit to integers
+        $data['initial_mileage'] = (int) $data['initial_mileage'];
+        $data['service_mileage_limit'] = (int) $data['service_mileage_limit'];
         
         // Handle nullable current_mileage: Convert empty/null to 0 for new cars (default value)
         // HTML forms may send empty strings, which we've already converted to null before validation
@@ -322,8 +327,9 @@ class StaffController extends Controller
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
             'status' => 'required|in:available,in_use,maintenance',
+            'initial_mileage' => 'required|integer|min:0',
             'current_mileage' => 'nullable|integer|min:0',
-            'service_mileage_limit' => 'required|integer|min:0',
+            'service_mileage_limit' => 'required|in:2000,5000,10000',
             'last_service_date' => 'nullable|date',
             'car_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'gps_enabled' => 'boolean',
@@ -331,6 +337,10 @@ class StaffController extends Controller
 
         // Process checkbox
         $data['gps_enabled'] = $request->has('gps_enabled');
+
+        // Convert initial_mileage and service_mileage_limit to integers
+        $data['initial_mileage'] = (int) $data['initial_mileage'];
+        $data['service_mileage_limit'] = (int) $data['service_mileage_limit'];
 
         // Handle nullable current_mileage: If null (field was left blank), preserve existing value
         // We've already converted empty strings to null before validation
@@ -521,8 +531,13 @@ class StaffController extends Controller
 
         // Validate status value
         $data = $request->validate([
-            'status' => 'required|in:created,confirmed,active,completed,cancelled',
+            'status' => 'required|in:created,verified,confirmed,active,completed,deposit_returned,cancelled',
         ]);
+
+        // Business rule: 'active' status cannot be set manually - only through automatic inspection completion
+        if ($data['status'] === 'active' && $booking->status !== 'active') {
+            return redirect()->back()->with('error', 'Active status cannot be set manually. It is automatically set when the before-pickup inspection is completed on a verified booking.');
+        }
 
         // Business rule: booking cannot be confirmed/activated until deposit payment is verified
         if (in_array($data['status'], ['confirmed', 'active'])) {
@@ -542,7 +557,8 @@ class StaffController extends Controller
         $stampsToAward = 0; // Initialize variable
 
         // Business rule: Cannot confirm booking without inspection photos
-        if ($data['status'] === 'confirmed' && $oldStatus === 'created') {
+        // Allow transition from 'created' or 'verified' to 'confirmed'
+        if ($data['status'] === 'confirmed' && in_array($oldStatus, ['created', 'verified'])) {
             $hasInspectionPhotos = Inspection::where('booking_id', $booking->booking_id)
                 ->where('type', 'before')
                 ->whereNotNull('photos')
@@ -550,6 +566,17 @@ class StaffController extends Controller
             
             if (!$hasInspectionPhotos) {
                 return redirect()->back()->with('error', 'Cannot confirm booking without uploading inspection photos first. Please complete the before-pickup inspection.');
+            }
+        }
+
+        // Business rule: Cannot manually set status to 'completed' unless Phase 4 is complete
+        if ($data['status'] === 'completed' && $oldStatus !== 'completed') {
+            $hasReturnPhotos = $booking->rentalPhotos()
+                ->whereIn('photo_type', ['after', 'key', 'parking'])
+                ->exists();
+            
+            if (!$hasReturnPhotos) {
+                return redirect()->back()->with('error', 'Cannot complete booking until Phase 4 is finished. Customer must upload return photos first.');
             }
         }
 
@@ -674,6 +701,11 @@ class StaffController extends Controller
             $existingInspection->update($inspectionData);
         } else {
             Inspection::create($inspectionData);
+        }
+
+        // If before inspection completed and booking is in verification, update booking status to active
+        if ($type === 'before' && $booking->status === 'verified') {
+            $booking->update(['status' => 'active']);
         }
 
         return redirect()->back()->with('success', 'Inspection recorded for this booking.');
@@ -2532,10 +2564,8 @@ class StaffController extends Controller
             $inspection->booking->update(['status' => 'active']);
         }
 
-        // If after inspection completed and booking is active, update booking status
-        if ($inspection->type === 'after' && $inspection->booking->status === 'active') {
-            $inspection->booking->update(['status' => 'completed']);
-        }
+        // Note: Status will automatically change to 'completed' when Phase 4 is complete (return photos uploaded)
+        // Do not automatically change status here - let it happen when customer uploads return photos
 
         return redirect()->route('staff.inspections.show', $id)
             ->with('success', 'Inspection completed successfully!');

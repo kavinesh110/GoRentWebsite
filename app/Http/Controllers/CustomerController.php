@@ -695,10 +695,10 @@ class CustomerController extends Controller
         $booking = Booking::where('customer_id', $customerId)
             ->findOrFail($id);
 
-        // Allow photo uploads for confirmed, active, or completed bookings (for phases 3 and 4)
-        if (!in_array($booking->status, ['confirmed', 'active', 'completed'])) {
+        // Allow photo uploads for verified, confirmed, active, or completed bookings (for phases 3 and 4)
+        if (!in_array($booking->status, ['verified', 'confirmed', 'active', 'completed'])) {
             return redirect()->back()
-                ->with('error', 'Photos can only be uploaded for confirmed, active, or completed bookings.');
+                ->with('error', 'Photos can only be uploaded for verified, confirmed, active, or completed bookings.');
         }
 
         $validated = $request->validate([
@@ -728,6 +728,32 @@ class CustomerController extends Controller
             $booking->save();
         }
 
+        // Auto-complete booking when Phase 4 is complete (return photos uploaded)
+        // Check if this is a return photo and if Phase 4 requirements are met
+        if (in_array($validated['photo_type'], ['after', 'key', 'parking']) && $booking->status === 'active') {
+            // Check if Phase 4 is complete (has return photos)
+            $hasReturnPhotos = $booking->rentalPhotos()
+                ->whereIn('photo_type', ['after', 'key', 'parking'])
+                ->exists();
+            
+            if ($hasReturnPhotos) {
+                // Phase 4 is complete - automatically change status to completed
+                $booking->status = 'completed';
+                $booking->save();
+                
+                // Auto-award loyalty stamps
+                $customer = $booking->customer;
+                $rentalHours = $booking->rental_hours ?? 0;
+                $stampsToAward = floor($rentalHours / 9); // 1 stamp per 9 hours
+                
+                if ($stampsToAward > 0) {
+                    $customer->total_stamps = ($customer->total_stamps ?? 0) + $stampsToAward;
+                    $customer->total_rental_hours = ($customer->total_rental_hours ?? 0) + $rentalHours;
+                    $customer->save();
+                }
+            }
+        }
+
         return redirect()->back()
             ->with('success', 'Photo uploaded successfully!');
     }
@@ -748,10 +774,10 @@ class CustomerController extends Controller
         $booking = Booking::where('customer_id', $customerId)
             ->findOrFail($id);
 
-        // Only allow signing for confirmed or active bookings
-        if (!in_array($booking->status, ['confirmed', 'active'])) {
+        // Only allow signing for verified, confirmed, or active bookings
+        if (!in_array($booking->status, ['verified', 'confirmed', 'active'])) {
             return redirect()->back()
-                ->with('error', 'Agreement can only be signed for confirmed or active bookings.');
+                ->with('error', 'Agreement can only be signed for verified, confirmed, or active bookings.');
         }
 
         // Check if already signed

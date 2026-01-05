@@ -79,13 +79,24 @@
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">
+            <label class="form-label">Initial Mileage (km) <span class="text-danger">*</span></label>
+            <input type="number" name="initial_mileage" class="form-control @error('initial_mileage') is-invalid @enderror" value="{{ old('initial_mileage', 0) }}" min="0" required>
+            @error('initial_mileage')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <small class="text-muted">Mileage when car was first registered with Hasta</small>
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Current Mileage (km)</label>
             <input type="number" name="current_mileage" class="form-control @error('current_mileage') is-invalid @enderror" value="{{ old('current_mileage', 0) }}" min="0">
             @error('current_mileage')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">
             <label class="form-label">Service Mileage Limit (km) <span class="text-danger">*</span></label>
-            <input type="number" name="service_mileage_limit" class="form-control @error('service_mileage_limit') is-invalid @enderror" value="{{ old('service_mileage_limit') }}" min="0" required>
+            <select name="service_mileage_limit" class="form-select @error('service_mileage_limit') is-invalid @enderror" required>
+              <option value="">Select...</option>
+              <option value="2000" {{ old('service_mileage_limit') == '2000' ? 'selected' : '' }}>2,000 km</option>
+              <option value="5000" {{ old('service_mileage_limit') == '5000' ? 'selected' : '' }}>5,000 km</option>
+              <option value="10000" {{ old('service_mileage_limit') == '10000' ? 'selected' : '' }}>10,000 km</option>
+            </select>
             @error('service_mileage_limit')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">

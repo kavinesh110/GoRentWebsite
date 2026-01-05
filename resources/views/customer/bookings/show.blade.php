@@ -312,8 +312,8 @@
         <div class="phase-line {{ $phase3Complete ? 'completed' : '' }}"></div>
         
         {{-- Phase 4: Return --}}
-        {{-- Phase 4 is active when Phase 3 is complete but Phase 4 is not yet complete --}}
-        <div class="phase-step {{ $phase4Complete ? 'completed' : ($phase3Complete ? 'active' : '') }}">
+        {{-- Phase 4 is active when booking status is active and Phase 3 is complete --}}
+        <div class="phase-step {{ $phase4Complete ? 'completed' : ($phase3Complete && $booking->status === 'active' ? 'active' : '') }}">
           <div class="phase-circle">
             @if($phase4Complete)
               <i class="bi bi-check-lg"></i>
@@ -545,14 +545,18 @@
           <h5><i class="bi bi-pen me-2"></i> Phase 3: Pickup & Agreement</h5>
           @if($phase3Complete)
             <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Complete</span>
-          @elseif($phase2Complete && $booking->status === 'active')
-            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Action Required</span>
+          @elseif($phase2Complete && in_array($booking->status, ['verified', 'confirmed', 'active']))
+            @if($booking->status === 'active')
+              <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Action Required</span>
+            @else
+              <span class="badge bg-info"><i class="bi bi-unlock me-1"></i> Ready</span>
+            @endif
           @else
             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> Locked</span>
           @endif
         </div>
         <div class="phase-card-body">
-          @if($phase2Complete && in_array($booking->status, ['confirmed', 'active']))
+          @if($phase2Complete && in_array($booking->status, ['verified', 'confirmed', 'active']))
             @if($booking->agreement_signed_at)
               <div class="status-info-box success mb-3">
                 <div class="d-flex align-items-center">
@@ -673,62 +677,73 @@
           @endif
         </div>
         <div class="phase-card-body">
-          @if(in_array($booking->status, ['active', 'completed']))
-            @if($booking->status === 'completed')
-              <div class="status-info-box success mb-3">
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-trophy-fill text-success me-3" style="font-size: 24px;"></i>
-                  <div>
-                    <strong>Rental Complete!</strong>
-                    <p class="mb-0 small text-muted">Thank you for using Hasta GoRent. We hope you had a great experience!</p>
-                  </div>
+          @if($booking->status === 'active')
+            <div class="status-info-box info mb-3">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle-fill text-info me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Return Instructions</strong>
+                  <p class="mb-0 small">When returning the car, take photos of: 1) Keys in the car, 2) Where you parked the car</p>
                 </div>
               </div>
-            @else
-              <div class="status-info-box info mb-3">
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-info-circle-fill text-info me-3" style="font-size: 24px;"></i>
-                  <div>
-                    <strong>Return Instructions</strong>
-                    <p class="mb-0 small">When returning the car, take photos of: 1) Keys in the car, 2) Where you parked the car</p>
-                  </div>
-                </div>
-              </div>
-            @endif
+            </div>
 
             {{-- Return Photo Upload --}}
-            @if($booking->status === 'active')
-              <h6 class="fw-bold mb-3">Upload Return Photos</h6>
-              <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" class="mb-4">
-                @csrf
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <label class="form-label">Photo Type <span class="text-danger">*</span></label>
-                    <select name="photo_type" class="form-select" required>
-                      <option value="key">Keys in Car</option>
-                      <option value="parking">Parking Location</option>
-                      <option value="after">Car Condition (After)</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Date <span class="text-danger">*</span></label>
-                    <input type="date" name="taken_at" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Photo <span class="text-danger">*</span></label>
-                    <input type="file" name="photo" class="form-control" accept="image/*" required>
-                  </div>
-                  <div class="col-12">
-                    <button type="submit" class="btn btn-hasta btn-sm"><i class="bi bi-camera me-2"></i> Upload Photo</button>
-                  </div>
+            <h6 class="fw-bold mb-3">Upload Return Photos</h6>
+            <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" class="mb-4">
+              @csrf
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Photo Type <span class="text-danger">*</span></label>
+                  <select name="photo_type" class="form-select" required>
+                    <option value="key">Keys in Car</option>
+                    <option value="parking">Parking Location</option>
+                    <option value="after">Car Condition (After)</option>
+                  </select>
                 </div>
-              </form>
-            @endif
+                <div class="col-md-4">
+                  <label class="form-label">Date <span class="text-danger">*</span></label>
+                  <input type="date" name="taken_at" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Photo <span class="text-danger">*</span></label>
+                  <input type="file" name="photo" class="form-control" accept="image/*" required>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-hasta btn-sm"><i class="bi bi-camera me-2"></i> Upload Photo</button>
+                </div>
+              </div>
+            </form>
 
             {{-- Return Photos Gallery --}}
             @php $returnPhotos = $booking->getReturnPhotos(); @endphp
             @if($returnPhotos->count() > 0)
               <h6 class="fw-bold mb-3">Uploaded Return Photos</h6>
+              <div class="photo-gallery">
+                @foreach($returnPhotos as $photo)
+                  <div class="photo-item">
+                    <img src="{{ $photo->photo_url }}" alt="{{ $photo->photo_type }}" onclick="window.open('{{ $photo->photo_url }}', '_blank')" style="cursor: pointer;">
+                    <span class="photo-badge badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
+                  </div>
+                @endforeach
+              </div>
+            @endif
+          @elseif($booking->status === 'completed')if($booking->status === 'completed')
+            {{-- Show completion message when status is completed --}}
+            <div class="status-info-box success mb-3">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-trophy-fill text-success me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Rental Complete!</strong>
+                  <p class="mb-0 small text-muted">Thank you for using Hasta GoRent. We hope you had a great experience!</p>
+                </div>
+              </div>
+            </div>
+            
+            {{-- Return Photos Gallery (if any) --}}
+            @php $returnPhotos = $booking->getReturnPhotos(); @endphp
+            @if($returnPhotos->count() > 0)
+              <h6 class="fw-bold mb-3">Return Photos</h6>
               <div class="photo-gallery">
                 @foreach($returnPhotos as $photo)
                   <div class="photo-item">
