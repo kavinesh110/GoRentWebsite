@@ -365,12 +365,6 @@
                 </a>
             </li>
             <li class="mobile-sidebar-nav-item">
-                <a href="{{ route('customer.support-tickets') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.support-tickets*') ? 'active' : '' }}">
-                    <i class="bi bi-headset"></i>
-                    <span>Support Tickets</span>
-                </a>
-            </li>
-            <li class="mobile-sidebar-nav-item">
                 <a href="{{ route('customer.loyalty-rewards') }}" class="mobile-sidebar-nav-link {{ request()->routeIs('customer.loyalty-rewards') ? 'active' : '' }}">
                     <i class="bi bi-gift"></i>
                     <span>Loyalty Rewards</span>
@@ -475,9 +469,6 @@
             @if(session('auth_role') === 'customer')
                 <a href="{{ route('customer.bookings') }}" class="top-navbar-link {{ request()->routeIs('customer.bookings*') ? 'active' : '' }}">
                     <i class="bi bi-calendar-check"></i> <span>My Bookings</span>
-                </a>
-                <a href="{{ route('customer.support-tickets') }}" class="top-navbar-link {{ request()->routeIs('customer.support-tickets*') ? 'active' : '' }}">
-                    <i class="bi bi-headset"></i> <span>Support Tickets</span>
                 </a>
                 <a href="{{ route('customer.loyalty-rewards') }}" class="top-navbar-link {{ request()->routeIs('customer.loyalty-rewards*') ? 'active' : '' }}">
                     <i class="bi bi-gift"></i> <span>Loyalty Rewards</span>

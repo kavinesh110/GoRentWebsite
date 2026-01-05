@@ -89,8 +89,8 @@ class CustomerController extends Controller
         $this->ensureCustomer($request);
         $customerId = $this->getCustomerId($request);
 
-        // Start query with customer's bookings and eager load car relationship
-        $query = Booking::where('customer_id', $customerId)->with('car');
+        // Start query with customer's bookings and eager load car relationship and penalties
+        $query = Booking::where('customer_id', $customerId)->with(['car', 'penalties']);
 
         // Apply status filter if provided
         if ($request->has('status') && $request->status !== '') {
@@ -122,7 +122,7 @@ class CustomerController extends Controller
 
         // Load booking with all related data
         // Note: 'feedback' is excluded from eager loading as the table may not exist
-        $withRelations = ['car', 'penalties', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments', 'rentalPhotos'];
+        $withRelations = ['car', 'penalties.payments', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments', 'rentalPhotos'];
         
         // Only eager load feedback if the table exists
         $feedbackTableExists = DB::getSchemaBuilder()->hasTable('feedback');
@@ -701,8 +701,228 @@ class CustomerController extends Controller
                 ->with('error', 'Photos can only be uploaded for verified, confirmed, active, or completed bookings.');
         }
 
+        // Check if this is a combined return photos upload (both keys in car and parking location)
+        if ($request->hasFile('keys_in_car_photo') || $request->hasFile('parking_location_photo')) {
+            // Combined upload for return photos
+            $validated = $request->validate([
+                'keys_in_car_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'parking_location_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'taken_at' => 'required|date',
+            ]);
+
+            $photosUploaded = 0;
+            $messages = [];
+
+            // Handle keys in car photo upload
+            if ($request->hasFile('keys_in_car_photo')) {
+                $photo = $request->file('keys_in_car_photo');
+                $photoName = time() . '_keys_car_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'key')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'key',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Keys in car photo uploaded';
+            }
+
+            // Handle parking location photo upload
+            if ($request->hasFile('parking_location_photo')) {
+                $photo = $request->file('parking_location_photo');
+                $photoName = time() . '_parking_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'parking')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'parking',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Parking location photo uploaded';
+            }
+
+            // Reload booking with relationships
+            $booking->load('rentalPhotos');
+
+            $message = implode(' and ', $messages) . ' successfully!';
+            
+            // Check if phase 4 is now complete (both return photos uploaded)
+            $keysInCarPhoto = $booking->rentalPhotos->where('photo_type', 'key')->first();
+            $parkingPhoto = $booking->rentalPhotos->where('photo_type', 'parking')->first();
+            
+            if ($keysInCarPhoto && $parkingPhoto) {
+                // Both return photos uploaded - mark booking as completed
+                if ($booking->status !== 'completed') {
+                    $booking->status = 'completed';
+                    $booking->save();
+                    $message .= ' Booking return process is complete! Thank you for using Hasta GoRent.';
+                } else {
+                    $message .= ' Both return photos are uploaded.';
+                }
+            } elseif ($photosUploaded > 0) {
+                if (!$keysInCarPhoto) {
+                    $message .= ' Please also upload the keys in car photo.';
+                } elseif (!$parkingPhoto) {
+                    $message .= ' Please also upload the parking location photo.';
+                }
+            }
+
+            return redirect()->route('customer.bookings.show', $booking->booking_id)
+                ->with('success', $message);
+        }
+
+        // Check if this is a combined pickup photos upload (both agreement and keys)
+        if ($request->hasFile('agreement_photo') || $request->hasFile('keys_photo')) {
+            // Combined upload for pickup photos
+            $validated = $request->validate([
+                'agreement_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'keys_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'taken_at' => 'required|date',
+            ]);
+
+            $photosUploaded = 0;
+            $messages = [];
+
+            // Handle agreement photo upload
+            if ($request->hasFile('agreement_photo')) {
+                $photo = $request->file('agreement_photo');
+                $photoName = time() . '_agreement_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'agreement')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'agreement',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Signed agreement photo uploaded';
+            }
+
+            // Handle keys photo upload
+            if ($request->hasFile('keys_photo')) {
+                $photo = $request->file('keys_photo');
+                $photoName = time() . '_keys_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'pickup')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'pickup',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Receiving keys photo uploaded';
+            }
+
+            // Mark agreement as signed if agreement photo was uploaded
+            if ($request->hasFile('agreement_photo') && !$booking->agreement_signed_at) {
+                $booking->agreement_signed_at = now();
+                $booking->save();
+            }
+
+            // Reload booking with relationships
+            $booking->load('rentalPhotos');
+
+            $message = implode(' and ', $messages) . ' successfully!';
+            
+            // Check if phase 3 is now complete
+            if ($booking->isPhase3Complete()) {
+                $message .= ' Phase 3 is now complete. You can proceed to Phase 4.';
+            } elseif ($photosUploaded > 0) {
+                $agreementPhoto = $booking->rentalPhotos->where('photo_type', 'agreement')->first();
+                $keysPhoto = $booking->rentalPhotos->where('photo_type', 'pickup')->first();
+                
+                if (!$agreementPhoto) {
+                    $message .= ' Please also upload the signed agreement photo.';
+                } elseif (!$keysPhoto) {
+                    $message .= ' Please also upload the receiving keys photo.';
+                }
+            }
+
+            return redirect()->route('customer.bookings.show', $booking->booking_id)
+                ->with('success', $message);
+        }
+
+        // Original single photo upload logic (for return photos, etc.)
         $validated = $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
             'photo_type' => 'required|in:before,after,key,damage,other,agreement,pickup,parking',
             'taken_at' => 'required|date',
         ]);
@@ -712,15 +932,35 @@ class CustomerController extends Controller
         $photoName = time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
         $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
 
-        // Create rental photo record
-        RentalPhoto::create([
-            'booking_id' => $booking->booking_id,
-            'uploaded_by_user_id' => $customerId,
-            'uploaded_by_role' => 'customer',
-            'photo_type' => $validated['photo_type'],
-            'photo_url' => $photoPath,
-            'taken_at' => $validated['taken_at'],
-        ]);
+        // Check if a photo of this type already exists and update it, or create new
+        $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+            ->where('photo_type', $validated['photo_type'])
+            ->first();
+
+        if ($existingPhoto) {
+            // Delete old photo file
+            if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                Storage::disk('public')->delete($existingPhoto->photo_url);
+            }
+            
+            // Update existing photo record
+            $existingPhoto->update([
+                'photo_url' => $photoPath,
+                'taken_at' => $validated['taken_at'],
+                'uploaded_by_user_id' => $customerId,
+                'uploaded_by_role' => 'customer',
+            ]);
+        } else {
+            // Create new rental photo record
+            RentalPhoto::create([
+                'booking_id' => $booking->booking_id,
+                'uploaded_by_user_id' => $customerId,
+                'uploaded_by_role' => 'customer',
+                'photo_type' => $validated['photo_type'],
+                'photo_url' => $photoPath,
+                'taken_at' => $validated['taken_at'],
+            ]);
+        }
 
         // If uploading an agreement photo, also mark the agreement as signed
         if ($validated['photo_type'] === 'agreement' && !$booking->agreement_signed_at) {
@@ -754,44 +994,143 @@ class CustomerController extends Controller
             }
         }
 
-        return redirect()->back()
-            ->with('success', 'Photo uploaded successfully!');
+        // Reload booking with relationships to ensure photos are available in the view
+        $booking->load('rentalPhotos');
+
+        $message = 'Photo uploaded successfully!';
+        
+        // Check if phase 3 is now complete
+        if ($booking->isPhase3Complete()) {
+            $message .= ' Phase 3 is now complete. You can proceed to Phase 4.';
+        }
+
+        return redirect()->route('customer.bookings.show', $booking->booking_id)
+            ->with('success', $message);
     }
 
     /**
-     * Sign the digital rental agreement
-     * Updates the agreement_signed_at timestamp on the booking
+     * Download the rental agreement PDF
+     * Generates and downloads the agreement.pdf file
      * 
      * @param Request $request
      * @param int $id Booking ID
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\Response
      */
-    public function bookingsSignAgreement(Request $request, $id)
+    public function bookingsDownloadAgreement(Request $request, $id)
     {
         $this->ensureCustomer($request);
         $customerId = $this->getCustomerId($request);
 
-        $booking = Booking::where('customer_id', $customerId)
+        $booking = Booking::with(['customer', 'car', 'pickupLocation', 'dropoffLocation'])->where('customer_id', $customerId)
             ->findOrFail($id);
 
-        // Only allow signing for verified, confirmed, or active bookings
+        // Only allow download for verified, confirmed, or active bookings
         if (!in_array($booking->status, ['verified', 'confirmed', 'active'])) {
             return redirect()->back()
-                ->with('error', 'Agreement can only be signed for verified, confirmed, or active bookings.');
+                ->with('error', 'Agreement can only be downloaded for verified, confirmed, or active bookings.');
         }
 
-        // Check if already signed
-        if ($booking->agreement_signed_at) {
-            return redirect()->back()
-                ->with('error', 'Agreement has already been signed.');
-        }
+        // Generate HTML content for the agreement
+        $htmlContent = $this->generateAgreementPDF($booking);
 
-        // Sign the agreement
-        $booking->agreement_signed_at = now();
-        $booking->save();
+        // For now, return HTML that browsers can print/save as PDF
+        // In production, use a library like dompdf or tcpdf for proper PDF generation
+        // For simplicity, we'll return HTML with instructions to save as PDF
+        return response($htmlContent)
+            ->header('Content-Type', 'text/html')
+            ->header('Content-Disposition', 'attachment; filename="rental-agreement-' . $booking->booking_id . '.html"');
+    }
 
-        return redirect()->back()
-            ->with('success', 'Rental agreement signed successfully! Please proceed to upload pickup photos.');
+    /**
+     * Generate agreement PDF content
+     * Creates a simple PDF with booking details and terms
+     * 
+     * @param Booking $booking
+     * @return string PDF content
+     */
+    private function generateAgreementPDF($booking)
+    {
+        // Generate HTML content for the agreement
+        $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rental Agreement</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
+        h1 { color: #cb3737; text-align: center; border-bottom: 3px solid #cb3737; padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .info-section { margin: 20px 0; }
+        .info-row { margin: 10px 0; }
+        .label { font-weight: bold; display: inline-block; width: 200px; }
+        .terms { margin: 20px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #cb3737; }
+        .signature { margin-top: 50px; }
+        .signature-line { border-top: 1px solid #333; width: 300px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <h1>RENTAL AGREEMENT</h1>
+    
+    <div class="info-section">
+        <div class="info-row"><span class="label">Booking ID:</span> ' . $booking->booking_id . '</div>
+        <div class="info-row"><span class="label">Date:</span> ' . now()->format('d M Y') . '</div>
+    </div>
+    
+    <h2>CUSTOMER INFORMATION</h2>
+    <div class="info-section">
+        <div class="info-row"><span class="label">Name:</span> ' . htmlspecialchars($booking->customer->full_name) . '</div>
+        <div class="info-row"><span class="label">Email:</span> ' . htmlspecialchars($booking->customer->email) . '</div>
+        <div class="info-row"><span class="label">Phone:</span> ' . htmlspecialchars($booking->customer->phone_number ?? 'N/A') . '</div>
+    </div>
+    
+    <h2>VEHICLE INFORMATION</h2>
+    <div class="info-section">
+        <div class="info-row"><span class="label">Vehicle:</span> ' . htmlspecialchars($booking->car->brand . ' ' . $booking->car->model) . '</div>
+        <div class="info-row"><span class="label">Plate Number:</span> ' . htmlspecialchars($booking->car->plate_number) . '</div>
+    </div>
+    
+    <h2>RENTAL PERIOD</h2>
+    <div class="info-section">
+        <div class="info-row"><span class="label">Pickup:</span> ' . $booking->start_datetime->format('d M Y, H:i') . ' at ' . htmlspecialchars($booking->pickupLocation->name ?? 'N/A') . '</div>
+        <div class="info-row"><span class="label">Return:</span> ' . $booking->end_datetime->format('d M Y, H:i') . ' at ' . htmlspecialchars($booking->dropoffLocation->name ?? 'N/A') . '</div>
+        <div class="info-row"><span class="label">Duration:</span> ' . $booking->rental_hours . ' hours</div>
+    </div>
+    
+    <h2>FINANCIAL DETAILS</h2>
+    <div class="info-section">
+        <div class="info-row"><span class="label">Base Price:</span> RM ' . number_format($booking->base_price, 2) . '</div>
+        <div class="info-row"><span class="label">Deposit:</span> RM ' . number_format($booking->deposit_amount, 2) . '</div>
+        <div class="info-row"><span class="label">Final Amount:</span> RM ' . number_format($booking->final_amount, 2) . '</div>
+    </div>
+    
+    <h2>TERMS AND CONDITIONS</h2>
+    <div class="terms">
+        <ol>
+            <li>The renter agrees to return the vehicle in the same condition as received.</li>
+            <li>The renter is responsible for any damage, traffic violations, or fines during the rental period.</li>
+            <li>The vehicle must be returned with the same fuel level as pickup.</li>
+            <li>Late returns will incur additional charges as per the hourly rate (RM30/hour).</li>
+            <li>The deposit will be refunded after vehicle inspection upon return.</li>
+            <li>Smoking and pets are not allowed in the vehicle.</li>
+            <li>The renter must have a valid driving license at all times.</li>
+        </ol>
+    </div>
+    
+    <div class="signature">
+        <p>By signing this agreement, the customer acknowledges that they have read, understood, and agree to all terms and conditions stated above.</p>
+        <div class="signature-line"></div>
+        <p><strong>Customer Signature:</strong></p>
+        <p><strong>Date:</strong> ' . now()->format('d M Y') . '</p>
+    </div>
+</body>
+</html>';
+
+        // For now, return HTML that can be converted to PDF by browser
+        // In production, use a library like dompdf or tcpdf
+        // For simplicity, we'll return HTML and let the browser handle it
+        // Or use a service to convert HTML to PDF
+        
+        return $html;
     }
 
     /**
@@ -842,5 +1181,81 @@ class CustomerController extends Controller
         return view('customer.support-tickets.show', [
             'ticket' => $ticket,
         ]);
+    }
+
+    /**
+     * Handle penalty payment submission from customer
+     * Allows customers to pay penalties with receipt upload
+     * 
+     * @param Request $request
+     * @param int $id Booking ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function bookingsPenaltyPay(Request $request, $id)
+    {
+        $this->ensureCustomer($request);
+        $customerId = $this->getCustomerId($request);
+
+        // Get booking and ensure it belongs to this customer
+        $booking = Booking::with(['penalties.payments'])
+            ->where('customer_id', $customerId)
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'penalty_id' => 'required|exists:penalties,penalty_id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_date' => 'required|date',
+            'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
+        ]);
+
+        // Verify penalty belongs to this booking
+        $penalty = $booking->penalties->find($validated['penalty_id']);
+        if (!$penalty) {
+            return redirect()->back()->with('error', 'Invalid penalty selected.');
+        }
+
+        // Check if penalty is already settled
+        if ($penalty->status === 'settled') {
+            return redirect()->back()->with('error', 'This penalty has already been settled.');
+        }
+
+        // Calculate remaining amount
+        $paidAmount = $penalty->payments ? $penalty->payments->where('status', 'verified')->sum('amount') : 0;
+        $remainingAmount = max(0, $penalty->amount - $paidAmount);
+
+        // Validate payment amount doesn't exceed remaining
+        if ($validated['amount'] > $remainingAmount) {
+            return redirect()->back()->with('error', 'Payment amount cannot exceed the remaining penalty amount of RM ' . number_format($remainingAmount, 2));
+        }
+
+        // Handle receipt upload
+        $receipt = $request->file('receipt');
+        $receiptName = time() . '_penalty_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+        $receiptPath = $receipt->storeAs('images/payments', $receiptName, 'public');
+
+        // Create payment record
+        Payment::create([
+            'booking_id' => $booking->booking_id,
+            'penalty_id' => $penalty->penalty_id,
+            'amount' => $validated['amount'],
+            'payment_type' => 'penalty',
+            'payment_method' => $validated['payment_method'],
+            'receipt_url' => $receiptPath,
+            'payment_date' => $validated['payment_date'],
+            'status' => 'pending', // Staff will verify
+        ]);
+
+        // Update penalty status based on payment
+        $newPaidAmount = $paidAmount + $validated['amount'];
+        if ($newPaidAmount >= $penalty->amount) {
+            $penalty->status = 'settled';
+        } elseif ($newPaidAmount > 0) {
+            $penalty->status = 'partially_paid';
+        }
+        $penalty->save();
+
+        return redirect()->route('customer.bookings.show', $booking->booking_id)
+            ->with('success', 'Penalty payment submitted successfully! Your payment receipt has been uploaded and is pending staff verification.');
     }
 }

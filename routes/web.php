@@ -45,11 +45,13 @@ Route::prefix('customer')->name('customer.')->group(function () {
     Route::post('/bookings/{id}/feedback', [App\Http\Controllers\CustomerController::class, 'bookingsSubmitFeedback'])->name('bookings.feedback.store');
     Route::post('/bookings/{id}/receipt', [App\Http\Controllers\CustomerController::class, 'bookingsUploadReceipt'])->name('bookings.receipt.upload');
     Route::post('/bookings/{id}/photos', [App\Http\Controllers\CustomerController::class, 'bookingsUploadPhoto'])->name('bookings.photos.upload');
+    Route::get('/bookings/{id}/download-agreement', [App\Http\Controllers\CustomerController::class, 'bookingsDownloadAgreement'])->name('bookings.download-agreement');
     Route::post('/bookings/{id}/sign-agreement', [App\Http\Controllers\CustomerController::class, 'bookingsSignAgreement'])->name('bookings.sign-agreement');
+    Route::post('/bookings/{id}/penalty/pay', [App\Http\Controllers\CustomerController::class, 'bookingsPenaltyPay'])->name('bookings.penalty.pay');
     
-    // Support tickets
-    Route::get('/support-tickets', [App\Http\Controllers\CustomerController::class, 'supportTickets'])->name('support-tickets');
-    Route::get('/support-tickets/{id}', [App\Http\Controllers\CustomerController::class, 'supportTicketsShow'])->name('support-tickets.show');
+    // Support tickets - Removed: Customers can only submit support requests via the home page form
+    // Route::get('/support-tickets', [App\Http\Controllers\CustomerController::class, 'supportTickets'])->name('support-tickets');
+    // Route::get('/support-tickets/{id}', [App\Http\Controllers\CustomerController::class, 'supportTicketsShow'])->name('support-tickets.show');
 });
 
 // Staff routes (protected by ensureStaff middleware in controller)
@@ -125,9 +127,6 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::get('/bookings/export', [App\Http\Controllers\StaffController::class, 'bookingsExport'])->name('bookings.export');
     Route::get('/customers/export', [App\Http\Controllers\StaffController::class, 'customersExport'])->name('customers.export');
     
-    // Calendar
-    Route::get('/calendar', [App\Http\Controllers\StaffController::class, 'calendar'])->name('calendar');
-    
     // Reports
     Route::get('/reports', [App\Http\Controllers\StaffController::class, 'reports'])->name('reports');
     
@@ -145,11 +144,4 @@ Route::prefix('staff')->name('staff.')->group(function () {
     // Maintenance Issues (Car Issues from Support Tickets)
     Route::get('/maintenance-issues', [App\Http\Controllers\StaffController::class, 'maintenanceIssues'])->name('maintenance-issues');
     Route::post('/maintenance-issues/{id}/resolve', [App\Http\Controllers\StaffController::class, 'maintenanceIssuesResolve'])->name('maintenance-issues.resolve');
-    
-    // Inspections management
-    Route::get('/inspections', [App\Http\Controllers\StaffController::class, 'inspections'])->name('inspections');
-    Route::get('/inspections/{id}', [App\Http\Controllers\StaffController::class, 'inspectionsShow'])->name('inspections.show');
-    Route::post('/inspections/{id}/start', [App\Http\Controllers\StaffController::class, 'inspectionsStart'])->name('inspections.start');
-    Route::post('/inspections/{id}/complete', [App\Http\Controllers\StaffController::class, 'inspectionsComplete'])->name('inspections.complete');
-    Route::post('/inspections/{id}/photos', [App\Http\Controllers\StaffController::class, 'inspectionsUploadPhotos'])->name('inspections.photos');
 });

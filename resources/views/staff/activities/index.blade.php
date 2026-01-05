@@ -1,141 +1,184 @@
 @extends('layouts.app')
-@section('title', 'Activities & Promotions - Staff Dashboard')
+@section('title', 'Promotions Calendar - Staff Dashboard')
+
+@push('styles')
+<style>
+  .text-slate-800 { color: #1e293b; }
+  .text-slate-700 { color: #334155; }
+  .x-small { font-size: 11px; }
+  .calendar-day { transition: background 0.2s ease; background: #fff; }
+  .calendar-day:hover { background: #fcfcfd; }
+  
+  .today-circle {
+    width: 28px;
+    height: 28px;
+    background-color: var(--bs-primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+
+  .today-highlight {
+    background: #fdfcfe !important;
+  }
+
+  .activity-chip {
+    transition: all 0.2s;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid rgba(79, 70, 229, 0.1);
+  }
+  .activity-chip:hover {
+    background: #e0e7ff !important;
+    transform: translateY(-1px);
+    z-index: 10;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .btn-white {
+    background: #fff;
+    color: #1e293b;
+    border-color: #e2e8f0;
+  }
+  .btn-white:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  /* Popover Styles */
+  .popover {
+    border: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    max-width: 280px;
+    border-radius: 12px;
+  }
+  .popover-header {
+    background-color: #fff;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 12px 16px;
+  }
+  .popover-body {
+    color: #64748b;
+    font-size: 12px;
+    padding: 12px 16px;
+  }
+
+  @media (max-width: 768px) {
+    .calendar-grid { grid-template-columns: repeat(1, 1fr) !important; }
+    .calendar-grid-header { display: none !important; }
+    .calendar-day { min-height: auto !important; border-right: none !important; }
+  }
+</style>
+@endpush
 
 @section('content')
-<div class="d-flex" style="min-height: calc(100vh - 60px);">
+<div class="d-flex" style="min-height: calc(100vh - 70px);">
   @include('staff._nav')
-  <div class="flex-fill" style="background: #f8fafc;">
-    <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-        <div>
-          <h1 class="h3 fw-bold mb-1" style="color:#1a202c;">Marketing & Promotions</h1>
-          <p class="text-muted mb-0" style="font-size: 14.5px;">Manage company activities, banners, and promotional campaigns.</p>
-        </div>
-        <a href="{{ route('staff.activities.create') }}" class="btn btn-hasta shadow-sm px-4">
-          <i class="bi bi-plus-lg me-2"></i>New Activity
-        </a>
-      </div>
-
-      @if(session('success'))
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-2 mb-4">
-          <i class="bi bi-check-circle-fill"></i>
-          <div>{{ session('success') }}</div>
-          <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-      @endif
-
-      {{-- FILTERS --}}
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-3">
-          <form method="GET" action="{{ route('staff.activities') }}" class="row g-3 align-items-end">
-            <div class="col-md-3">
-              <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 10px;">Filter Status</label>
-              <select name="status" class="form-select form-select-sm">
-                <option value="">All activities</option>
-                <option value="active" {{ ($filters['status'] ?? '') === 'active' ? 'selected' : '' }}>Active Only</option>
-                <option value="expired" {{ ($filters['status'] ?? '') === 'expired' ? 'selected' : '' }}>Expired</option>
-              </select>
-            </div>
-            <div class="col-md-5">
-              <label class="form-label small fw-bold text-muted text-uppercase" style="font-size: 10px;">Search Campaigns</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Title or description..." value="{{ $filters['search'] ?? '' }}">
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-dark px-4 flex-fill">Apply Filters</button>
-                <a href="{{ route('staff.activities') }}" class="btn btn-sm btn-light border px-4">Reset</a>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {{-- ACTIVITIES TABLE --}}
-      <div class="card border-0 shadow-sm overflow-hidden">
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead class="bg-light">
-                <tr>
-                  <th class="ps-4 py-3 text-uppercase text-muted fw-bold" style="font-size: 11px;">Promotion Title</th>
-                  <th class="py-3 text-uppercase text-muted fw-bold" style="font-size: 11px;">Campaign Duration</th>
-                  <th class="py-3 text-uppercase text-muted fw-bold" style="font-size: 11px;">Status</th>
-                  <th class="py-3 text-uppercase text-muted fw-bold" style="font-size: 11px;">Admin</th>
-                  <th class="pe-4 py-3 text-uppercase text-muted fw-bold text-end" style="font-size: 11px;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @forelse($activities as $activity)
-                  <tr class="transition-all hover-bg-light">
-                    <td class="ps-4">
-                      <div class="fw-bold text-dark">{{ $activity->title }}</div>
-                      <div class="small text-muted text-truncate" style="max-width: 350px;">
-                        {{ Str::limit($activity->description ?? 'No description', 80) }}
-                      </div>
-                    </td>
-                    <td>
-                      <div class="small fw-semibold text-dark"><i class="bi bi-calendar-check me-2 text-muted"></i>{{ $activity->start_date->format('d M Y') }}</div>
-                      <div class="small text-muted"><i class="bi bi-calendar-x me-2 text-muted"></i>{{ $activity->end_date->format('d M Y') }}</div>
-                    </td>
-                    <td>
-                      @if($activity->end_date >= now())
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">Active</span>
-                      @else
-                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 py-2">Expired</span>
-                      @endif
-                    </td>
-                    <td>
-                      <div class="small fw-medium text-dark">{{ $activity->staff->name ?? 'System' }}</div>
-                    </td>
-                    <td class="pe-4 text-end">
-                      <div class="d-flex gap-2 justify-content-end">
-                        <a href="{{ route('staff.activities.edit', $activity->activity_id) }}" class="btn btn-sm btn-white border shadow-sm px-3 fw-semibold">Edit</a>
-                        <form method="POST" action="{{ route('staff.activities.destroy', $activity->activity_id) }}" class="d-inline" onsubmit="return confirm('Delete this campaign?');">
-                          @csrf
-                          @method('DELETE')
-                          <button type="submit" class="btn btn-sm btn-outline-danger shadow-sm px-2">
-                            <i class="bi bi-trash"></i>
-                          </button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                @empty
-                  <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
-                      <i class="bi bi-megaphone display-4 d-block mb-3 opacity-25"></i>
-                      No promotional activities found.
-                    </td>
-                  </tr>
-                @endforelse
-              </tbody>
-            </table>
+  <div class="flex-fill" style="background: #f8fafc;"> {{-- Light Background --}}
+    <div class="container-fluid px-4 py-4">
+      
+      {{-- Calendar Header --}}
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div class="d-flex align-items-center gap-4">
+          <h1 class="h4 fw-bold mb-0 text-slate-800" style="letter-spacing: -0.5px;">{{ $startDate->format('F Y') }}</h1>
+          <div class="btn-group shadow-sm bg-white rounded-3">
+            <a href="{{ route('staff.activities', ['month' => $startDate->copy()->subMonth()->month, 'year' => $startDate->copy()->subMonth()->year]) }}" class="btn btn-white border-light-subtle">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+            <a href="{{ route('staff.activities', ['month' => now()->month, 'year' => now()->year]) }}" class="btn btn-white border-light-subtle px-3 small fw-bold">Today</a>
+            <a href="{{ route('staff.activities', ['month' => $startDate->copy()->addMonth()->month, 'year' => $startDate->copy()->addMonth()->year]) }}" class="btn btn-white border-light-subtle">
+              <i class="bi bi-chevron-right"></i>
+            </a>
           </div>
         </div>
+        <div class="d-flex gap-2">
+          <a href="{{ route('staff.activities.create') }}" class="btn btn-primary shadow-sm px-4 rounded-3 fw-bold">
+            <i class="bi bi-plus-lg me-2"></i>Schedule Activity
+          </a>
+        </div>
       </div>
 
-      {{-- PAGINATION --}}
-      <div class="mt-4 d-flex justify-content-center">
-        {{ $activities->links() }}
+      {{-- CALENDAR GRID --}}
+      <div class="calendar-wrapper border border-light-subtle rounded-4 overflow-hidden shadow-sm bg-white">
+        <div class="calendar-grid-header d-grid text-center border-bottom border-light-subtle py-3 text-muted x-small fw-bold text-uppercase" style="grid-template-columns: repeat(7, 1fr); letter-spacing: 1px; background: #fcfcfd;">
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+          <div>Sat</div>
+          <div>Sun</div>
+        </div>
+        
+        <div class="calendar-grid d-grid" style="grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(120px, auto);">
+          @php
+            $currentDay = $calendarStart->copy();
+          @endphp
+          @while($currentDay <= $calendarEnd)
+            @php
+              $isCurrentMonth = $currentDay->month == $month;
+              $isToday = $currentDay->isToday();
+              $dayActivities = $activities->filter(function($activity) use ($currentDay) {
+                  return $currentDay->between($activity->start_date->startOfDay(), $activity->end_date->endOfDay());
+              });
+            @endphp
+            <div class="calendar-day p-2 border-end border-bottom border-light-subtle {{ !$isCurrentMonth ? 'bg-light text-muted opacity-50' : 'text-slate-700' }} {{ $isToday ? 'today-highlight' : '' }}" style="min-height: 140px;">
+              <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                <span class="fw-bold {{ $isToday ? 'today-circle' : '' }}">
+                  {{ $currentDay->day }}
+                </span>
+              </div>
+              
+              <div class="day-activities d-flex flex-column gap-1">
+                @foreach($dayActivities as $activity)
+                  @php
+                    $isStart = $currentDay->isSameDay($activity->start_date);
+                    $isEnd = $currentDay->isSameDay($activity->end_date);
+                  @endphp
+                  <div class="activity-chip px-2 py-1 rounded-1 x-small fw-bold text-truncate position-relative shadow-sm" 
+                       style="background: #eef2ff; border-left: 3px solid #4f46e5; color: #4338ca; cursor: pointer; border-radius: 4px;"
+                       data-bs-toggle="popover" 
+                       data-bs-trigger="hover focus"
+                       data-bs-html="true"
+                       title="{{ $activity->title }}"
+                       data-bs-content="<div class='p-1'><p class='small mb-2 text-muted'>{{ $activity->start_date->format('d M') }} - {{ $activity->end_date->format('d M') }}</p><p class='small mb-0 text-dark'>{{ $activity->description ?: 'No description provided.' }}</p><hr class='my-2 opacity-10'><div class='d-flex gap-2'><a href='{{ route('staff.activities.edit', $activity->activity_id) }}' class='btn btn-xs btn-primary py-0 px-2' style='font-size: 10px;'>Edit</a></div></div>">
+                    {{ $activity->title }}
+                  </div>
+                @endforeach
+              </div>
+            </div>
+            @php $currentDay->addDay(); @endphp
+          @endwhile
+        </div>
       </div>
+
+      {{-- Floating Add Button --}}
+      <a href="{{ route('staff.activities.create') }}" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center position-fixed" 
+         style="width: 56px; height: 56px; bottom: 30px; right: 30px; z-index: 1050; font-size: 24px;">
+        <i class="bi bi-plus-lg"></i>
+      </a>
+
     </div>
   </div>
 </div>
 
-<style>
-  .hover-bg-light:hover { background-color: #f8fafc !important; }
-  .btn-white { background: #fff; color: #1a202c; }
-  .btn-white:hover { background: #f8fafc; color: var(--hasta); }
-</style>
-
-      {{-- PAGINATION --}}
-      <div class="mt-4">
-        {{ $activities->links() }}
-      </div>
-    </div>
-  </div>
-</div>
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+      return new bootstrap.Popover(popoverTriggerEl)
+    })
+  });
+</script>
+@endpush
 @endsection

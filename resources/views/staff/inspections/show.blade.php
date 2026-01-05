@@ -241,7 +241,7 @@
                   <div class="row g-3">
                     @foreach($inspection->photos as $photo)
                       <div class="col-6 col-md-3">
-                        <img src="{{ asset('storage/' . $photo) }}" alt="Inspection photo" class="photo-thumbnail" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
+                        <img src="{{ asset('storage/' . $photo) }}" alt="Inspection photo" class="photo-thumbnail clickable-photo" data-url="{{ asset('storage/' . $photo) }}">
                       </div>
                     @endforeach
                   </div>
@@ -326,4 +326,13 @@
   .btn-hasta { background-color: var(--hasta); color: #fff; border: none; }
   .btn-hasta:hover { background-color: var(--hasta-darker); color: #fff; }
 </style>
+@push('scripts')
+<script>
+document.querySelectorAll('.clickable-photo').forEach(photo => {
+  photo.addEventListener('click', function() {
+    window.open(this.dataset.url, '_blank');
+  });
+});
+</script>
+@endpush
 @endsection

@@ -312,8 +312,8 @@
         <div class="phase-line {{ $phase3Complete ? 'completed' : '' }}"></div>
         
         {{-- Phase 4: Return --}}
-        {{-- Phase 4 is active when booking status is active and Phase 3 is complete --}}
-        <div class="phase-step {{ $phase4Complete ? 'completed' : ($phase3Complete && $booking->status === 'active' ? 'active' : '') }}">
+        {{-- Phase 4 is active when Phase 3 is complete but Phase 4 is not yet complete --}}
+        <div class="phase-step {{ $phase4Complete ? 'completed' : ($phase3Complete ? 'active' : '') }}">
           <div class="phase-circle">
             @if($phase4Complete)
               <i class="bi bi-check-lg"></i>
@@ -543,21 +543,56 @@
       <div class="card phase-card">
         <div class="phase-card-header d-flex justify-content-between align-items-center">
           <h5><i class="bi bi-pen me-2"></i> Phase 3: Pickup & Agreement</h5>
-          @if($phase3Complete)
+          @if($phase3Complete || $phase4Complete)
             <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Complete</span>
-          @elseif($phase2Complete && in_array($booking->status, ['verified', 'confirmed', 'active']))
-            @if($booking->status === 'active')
-              <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Action Required</span>
-            @else
-              <span class="badge bg-info"><i class="bi bi-unlock me-1"></i> Ready</span>
-            @endif
+          @elseif($phase2Complete && in_array($booking->status, ['confirmed', 'active', 'completed']))
+            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Action Required</span>
           @else
             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> Locked</span>
           @endif
         </div>
         <div class="phase-card-body">
-          @if($phase2Complete && in_array($booking->status, ['verified', 'confirmed', 'active']))
-            @if($booking->agreement_signed_at)
+          @if($phase3Complete || $phase4Complete || ($phase2Complete && in_array($booking->status, ['confirmed', 'active', 'completed'])))
+            @if($phase3Complete || $phase4Complete)
+              {{-- Show completion message if Phase 3 or 4 is complete --}}
+              <div class="status-info-box success mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 24px;"></i>
+                  <div>
+                    <strong>Phase 3 Complete</strong>
+                    <p class="mb-0 small text-muted">You have successfully completed the pickup process.</p>
+                  </div>
+                </div>
+              </div>
+              
+              {{-- Show uploaded photos --}}
+              @php
+                $agreementPhoto = $booking->rentalPhotos->where('photo_type', 'agreement')->first();
+                $keysPhoto = $booking->rentalPhotos->where('photo_type', 'pickup')->first();
+              @endphp
+              @if($agreementPhoto || $keysPhoto)
+                <div class="row g-3 mb-3">
+                  @if($agreementPhoto)
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-file-image me-2"></i>Signed Agreement Photo</label>
+                      <div>
+                        <img src="{{ asset('storage/' . $agreementPhoto->photo_url) }}" alt="Signed Agreement" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $agreementPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $agreementPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                    </div>
+                  @endif
+                  @if($keysPhoto)
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-key me-2"></i>Receiving Car Keys Photo</label>
+                      <div>
+                        <img src="{{ asset('storage/' . $keysPhoto->photo_url) }}" alt="Receiving Keys" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $keysPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                    </div>
+                  @endif
+                </div>
+              @endif
+            @elseif($booking->agreement_signed_at)
               <div class="status-info-box success mb-3">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-file-earmark-check-fill text-success me-3" style="font-size: 24px;"></i>
@@ -567,7 +602,7 @@
                   </div>
                 </div>
               </div>
-            @else
+            @elseif(!$phase3Complete && !$phase4Complete)
               <div class="status-info-box pending mb-3">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-pen-fill text-warning me-3" style="font-size: 24px;"></i>
@@ -579,8 +614,7 @@
               </div>
               
               {{-- Sign Agreement Button --}}
-              <form method="POST" action="{{ route('customer.bookings.sign-agreement', $booking->booking_id) }}" class="mb-4" onsubmit="return confirm('By clicking Sign Agreement, you confirm that you have read and agree to the rental terms and conditions. Continue?');">
-                @csrf
+              <div class="mb-4">
                 <div class="p-4 bg-light rounded border">
                   <h6 class="fw-bold mb-3"><i class="bi bi-file-text me-2"></i> Rental Agreement</h6>
                   <div class="small mb-3" style="max-height: 200px; overflow-y: auto;">
@@ -596,60 +630,100 @@
                     </ol>
                   </div>
                   <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                    <input class="form-check-input" type="checkbox" id="agreeTerms">
                     <label class="form-check-label" for="agreeTerms">
                       I have read and agree to the rental terms and conditions
                     </label>
                   </div>
-                  <button type="submit" class="btn btn-hasta">
-                    <i class="bi bi-pen me-2"></i> Sign Agreement Digitally
-                  </button>
+                  <a href="{{ route('customer.bookings.download-agreement', $booking->booking_id) }}" class="btn btn-hasta" id="downloadAgreementBtn" onclick="return checkAgreementTerms()">
+                    <i class="bi bi-download me-2"></i> Sign Agreement Digitally
+                  </a>
                 </div>
-              </form>
+              </div>
             @endif
 
-            {{-- Pickup Photo Upload --}}
+            {{-- Pickup Photo Upload -- Combined --}}
             <h6 class="fw-bold mb-3">Upload Pickup Photos</h6>
-            <p class="small text-muted mb-3">Take photos of: 1) The signed agreement, 2) You receiving the car keys, 3) The car condition at pickup</p>
+            <p class="small text-muted mb-3">Upload both photos: 1) The signed agreement, 2) You receiving the car keys</p>
             
-            <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" class="mb-4">
-              @csrf
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">Photo Type <span class="text-danger">*</span></label>
-                  <select name="photo_type" class="form-select" required>
-                    <option value="agreement">Signed Agreement</option>
-                    <option value="pickup">Receiving Keys</option>
-                    <option value="before">Car Condition</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Date <span class="text-danger">*</span></label>
-                  <input type="date" name="taken_at" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Photo <span class="text-danger">*</span></label>
-                  <input type="file" name="photo" class="form-control" accept="image/*" required>
-                </div>
-                <div class="col-12">
-                  <button type="submit" class="btn btn-hasta btn-sm"><i class="bi bi-camera me-2"></i> Upload Photo</button>
-                </div>
-              </div>
-            </form>
-
-            {{-- Pickup Photos Gallery --}}
-            @php $pickupPhotos = $booking->getPickupPhotos(); @endphp
-            @if($pickupPhotos->count() > 0)
-              <h6 class="fw-bold mb-3">Uploaded Pickup Photos</h6>
-              <div class="photo-gallery">
-                @foreach($pickupPhotos as $photo)
-                  <div class="photo-item">
-                    <img src="{{ $photo->photo_url }}" alt="{{ $photo->photo_type }}" onclick="window.open('{{ $photo->photo_url }}', '_blank')" style="cursor: pointer;">
-                    <span class="photo-badge badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
+            @php
+              $agreementPhoto = $booking->rentalPhotos->where('photo_type', 'agreement')->first();
+              $keysPhoto = $booking->rentalPhotos->where('photo_type', 'pickup')->first();
+              $bothPhotosUploaded = $agreementPhoto && $keysPhoto;
+            @endphp
+            
+            <div class="card border mb-4">
+              <div class="card-body">
+                @if($bothPhotosUploaded)
+                  <div class="alert alert-success mb-3">
+                    <i class="bi bi-check-circle me-2"></i><strong>Both photos uploaded!</strong> Phase 3 is complete. You can proceed to Phase 4.
                   </div>
-                @endforeach
+                @else
+                  <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete Phase 3 and proceed to Phase 4.
+                  </div>
+                @endif
+                
+                <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="pickupPhotosForm">
+                  @csrf
+                  <input type="hidden" name="taken_at" value="{{ now()->format('Y-m-d') }}">
+                  
+                  <div class="row g-3">
+                    {{-- Signed Agreement Photo --}}
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-file-earmark-check me-2"></i>Signed Agreement Photo <span class="text-danger">*</span></label>
+                      @if($agreementPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $agreementPhoto->photo_url) }}" alt="Signed Agreement" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $agreementPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $agreementPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="agreement_photo" id="agreementPhoto" class="form-control" accept="image/*" {{ $bothPhotosUploaded ? '' : 'required' }}>
+                      <small class="text-muted">Upload photo of the signed agreement</small>
+                    </div>
+
+                    {{-- Receiving Keys Photo --}}
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-key me-2"></i>Receiving Car Keys Photo <span class="text-danger">*</span></label>
+                      @if($keysPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $keysPhoto->photo_url) }}" alt="Receiving Keys" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $keysPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="keys_photo" id="keysPhoto" class="form-control" accept="image/*" {{ $bothPhotosUploaded ? '' : 'required' }}>
+                      <small class="text-muted">Upload photo of you receiving the car keys</small>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-3">
+                    <button type="submit" class="btn btn-hasta w-100">
+                      <i class="bi bi-upload me-2"></i>
+                      @if($bothPhotosUploaded)
+                        Update Photos
+                      @else
+                        Upload Both Photos
+                      @endif
+                    </button>
+                  </div>
+                  
+                  @if(!$bothPhotosUploaded)
+                    <div class="mt-2 text-center">
+                      <small class="text-muted">
+                        @if($agreementPhoto && !$keysPhoto)
+                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Receiving Keys photo
+                        @elseif(!$agreementPhoto && $keysPhoto)
+                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Signed Agreement photo
+                        @else
+                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Both photos required to proceed
+                        @endif
+                      </small>
+                    </div>
+                  @endif
+                </form>
               </div>
-            @endif
+            </div>
+
           @else
             <div class="status-info-box">
               <div class="d-flex align-items-center">
@@ -670,96 +744,127 @@
           <h5><i class="bi bi-car-front me-2"></i> Phase 4: Return</h5>
           @if($phase4Complete)
             <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Complete</span>
-          @elseif($booking->status === 'active')
+          @elseif($phase3Complete || $booking->status === 'active')
             <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Pending Return</span>
           @else
             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> Locked</span>
           @endif
         </div>
         <div class="phase-card-body">
-          @if($booking->status === 'active')
-            <div class="status-info-box info mb-3">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-info-circle-fill text-info me-3" style="font-size: 24px;"></i>
-                <div>
-                  <strong>Return Instructions</strong>
-                  <p class="mb-0 small">When returning the car, take photos of: 1) Keys in the car, 2) Where you parked the car</p>
-                </div>
-              </div>
-            </div>
-
-            {{-- Return Photo Upload --}}
-            <h6 class="fw-bold mb-3">Upload Return Photos</h6>
-            <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" class="mb-4">
-              @csrf
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">Photo Type <span class="text-danger">*</span></label>
-                  <select name="photo_type" class="form-select" required>
-                    <option value="key">Keys in Car</option>
-                    <option value="parking">Parking Location</option>
-                    <option value="after">Car Condition (After)</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Date <span class="text-danger">*</span></label>
-                  <input type="date" name="taken_at" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Photo <span class="text-danger">*</span></label>
-                  <input type="file" name="photo" class="form-control" accept="image/*" required>
-                </div>
-                <div class="col-12">
-                  <button type="submit" class="btn btn-hasta btn-sm"><i class="bi bi-camera me-2"></i> Upload Photo</button>
-                </div>
-              </div>
-            </form>
-
-            {{-- Return Photos Gallery --}}
-            @php $returnPhotos = $booking->getReturnPhotos(); @endphp
-            @if($returnPhotos->count() > 0)
-              <h6 class="fw-bold mb-3">Uploaded Return Photos</h6>
-              <div class="photo-gallery">
-                @foreach($returnPhotos as $photo)
-                  <div class="photo-item">
-                    <img src="{{ $photo->photo_url }}" alt="{{ $photo->photo_type }}" onclick="window.open('{{ $photo->photo_url }}', '_blank')" style="cursor: pointer;">
-                    <span class="photo-badge badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
+          @if($phase3Complete || in_array($booking->status, ['active', 'completed']))
+            @if($booking->status === 'completed')
+              <div class="status-info-box success mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-trophy-fill text-success me-3" style="font-size: 24px;"></i>
+                  <div>
+                    <strong>Rental Complete!</strong>
+                    <p class="mb-0 small text-muted">Thank you for using Hasta GoRent. We hope you had a great experience!</p>
                   </div>
-                @endforeach
+                </div>
+              </div>
+            @else
+              <div class="status-info-box info mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-info-circle-fill text-info me-3" style="font-size: 24px;"></i>
+                  <div>
+                    <strong>Return Instructions</strong>
+                    <p class="mb-0 small">When returning the car, take photos of: 1) Keys in the car, 2) Where you parked the car</p>
+                  </div>
+                </div>
               </div>
             @endif
-          @elseif($booking->status === 'completed')if($booking->status === 'completed')
-            {{-- Show completion message when status is completed --}}
-            <div class="status-info-box success mb-3">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-trophy-fill text-success me-3" style="font-size: 24px;"></i>
-                <div>
-                  <strong>Rental Complete!</strong>
-                  <p class="mb-0 small text-muted">Thank you for using Hasta GoRent. We hope you had a great experience!</p>
+
+            {{-- Return Photo Upload -- Combined --}}
+            @if($phase3Complete || $booking->status === 'active')
+              <h6 class="fw-bold mb-3">Upload Return Photos</h6>
+              <p class="small text-muted mb-3">Upload both photos: 1) Keys in the car, 2) Where you parked the car</p>
+              
+              @php
+                $keysInCarPhoto = $booking->rentalPhotos->where('photo_type', 'key')->first();
+                $parkingPhoto = $booking->rentalPhotos->where('photo_type', 'parking')->first();
+                $bothReturnPhotosUploaded = $keysInCarPhoto && $parkingPhoto;
+              @endphp
+              
+              <div class="card border mb-4">
+                <div class="card-body">
+                  @if($bothReturnPhotosUploaded)
+                    <div class="alert alert-success mb-3">
+                      <i class="bi bi-check-circle me-2"></i><strong>Both photos uploaded!</strong> Your booking return process is complete.
+                    </div>
+                  @else
+                    <div class="alert alert-info mb-3">
+                      <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete the return process.
+                    </div>
+                  @endif
+                  
+                  <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="returnPhotosForm">
+                    @csrf
+                    <input type="hidden" name="taken_at" value="{{ now()->format('Y-m-d') }}">
+                    
+                    <div class="row g-3">
+                      {{-- Keys in Car Photo --}}
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-key me-2"></i>Keys in Car Photo <span class="text-danger">*</span></label>
+                        @if($keysInCarPhoto)
+                          <div class="mb-2">
+                        <img src="{{ asset('storage/' . $keysInCarPhoto->photo_url) }}" alt="Keys in Car" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $keysInCarPhoto->photo_url) }}">
+                            <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysInCarPhoto->taken_at->format('d/m/Y') }}</p>
+                          </div>
+                        @endif
+                        <input type="file" name="keys_in_car_photo" id="keysInCarPhoto" class="form-control" accept="image/*" {{ $bothReturnPhotosUploaded ? '' : 'required' }}>
+                        <small class="text-muted">Upload photo of keys left in the car</small>
+                      </div>
+
+                      {{-- Parking Location Photo --}}
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-geo-alt me-2"></i>Parking Location Photo <span class="text-danger">*</span></label>
+                        @if($parkingPhoto)
+                          <div class="mb-2">
+                        <img src="{{ asset('storage/' . $parkingPhoto->photo_url) }}" alt="Parking Location" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $parkingPhoto->photo_url) }}">
+                            <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $parkingPhoto->taken_at->format('d/m/Y') }}</p>
+                          </div>
+                        @endif
+                        <input type="file" name="parking_location_photo" id="parkingLocationPhoto" class="form-control" accept="image/*" {{ $bothReturnPhotosUploaded ? '' : 'required' }}>
+                        <small class="text-muted">Upload photo of where you parked the car</small>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <button type="submit" class="btn btn-hasta w-100">
+                        <i class="bi bi-upload me-2"></i>
+                        @if($bothReturnPhotosUploaded)
+                          Update Photos
+                        @else
+                          Upload Both Photos
+                        @endif
+                      </button>
+                    </div>
+                    
+                    @if(!$bothReturnPhotosUploaded)
+                      <div class="mt-2 text-center">
+                        <small class="text-muted">
+                          @if($keysInCarPhoto && !$parkingPhoto)
+                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Parking Location photo
+                          @elseif(!$keysInCarPhoto && $parkingPhoto)
+                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Keys in Car photo
+                          @else
+                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Both photos required to complete return
+                          @endif
+                        </small>
+                      </div>
+                    @endif
+                  </form>
                 </div>
               </div>
-            </div>
-            
-            {{-- Return Photos Gallery (if any) --}}
-            @php $returnPhotos = $booking->getReturnPhotos(); @endphp
-            @if($returnPhotos->count() > 0)
-              <h6 class="fw-bold mb-3">Return Photos</h6>
-              <div class="photo-gallery">
-                @foreach($returnPhotos as $photo)
-                  <div class="photo-item">
-                    <img src="{{ $photo->photo_url }}" alt="{{ $photo->photo_type }}" onclick="window.open('{{ $photo->photo_url }}', '_blank')" style="cursor: pointer;">
-                    <span class="photo-badge badge bg-dark">{{ ucfirst($photo->photo_type) }}</span>
-                  </div>
-                @endforeach
-              </div>
             @endif
+
           @else
             <div class="status-info-box">
               <div class="d-flex align-items-center">
                 <i class="bi bi-lock-fill text-secondary me-3" style="font-size: 24px;"></i>
                 <div>
                   <strong>Complete Previous Phases First</strong>
-                  <p class="mb-0 small text-muted">This phase will unlock when your rental is active.</p>
+                  <p class="mb-0 small text-muted">This phase will unlock after you complete Phase 3 (upload pickup photos).</p>
                 </div>
               </div>
             </div>
@@ -774,7 +879,24 @@
           <h5><i class="bi bi-exclamation-triangle me-2"></i> Penalties</h5>
         </div>
         <div class="phase-card-body">
-          <div class="table-responsive">
+          @php
+            $unpaidPenalties = $booking->penalties->where('status', '!=', 'settled');
+            $totalUnpaid = $unpaidPenalties->sum('amount');
+          @endphp
+          
+          @if($unpaidPenalties->count() > 0)
+            <div class="alert alert-danger mb-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Outstanding Penalties</strong>
+                  <p class="mb-0">You have <strong>{{ $unpaidPenalties->count() }}</strong> unpaid penalty(ies) totaling <strong>RM {{ number_format($totalUnpaid, 2) }}</strong>. Please settle these penalties below.</p>
+                </div>
+              </div>
+            </div>
+          @endif
+          
+          <div class="table-responsive mb-4">
             <table class="table table-sm align-middle mb-0">
               <thead class="table-light">
                 <tr>
@@ -782,20 +904,107 @@
                   <th>Amount</th>
                   <th>Status</th>
                   <th>Description</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 @foreach($booking->penalties as $penalty)
+                  @php
+                    $paidAmount = $penalty->payments ? $penalty->payments->where('status', 'verified')->sum('amount') : 0;
+                    $remainingAmount = max(0, $penalty->amount - $paidAmount);
+                    $isSettled = $penalty->status === 'settled' || $remainingAmount <= 0;
+                  @endphp
                   <tr>
                     <td>{{ ucfirst($penalty->penalty_type) }}</td>
-                    <td><strong class="text-danger">RM {{ number_format($penalty->amount, 2) }}</strong></td>
                     <td>
-                      <span class="badge {{ $penalty->status === 'settled' ? 'bg-success' : 'bg-danger' }}">
-                        {{ ucfirst(str_replace('_', ' ', $penalty->status)) }}
+                      <strong class="text-danger">RM {{ number_format($penalty->amount, 2) }}</strong>
+                      @if($penalty->is_installment && !$isSettled)
+                        <br><small class="text-muted">Installment plan available</small>
+                      @endif
+                    </td>
+                    <td>
+                      <span class="badge {{ $isSettled ? 'bg-success' : 'bg-danger' }}">
+                        {{ $isSettled ? 'Settled' : ucfirst(str_replace('_', ' ', $penalty->status)) }}
                       </span>
+                      @if(!$isSettled && $paidAmount > 0)
+                        <br><small class="text-muted">Paid: RM {{ number_format($paidAmount, 2) }}</small>
+                      @endif
                     </td>
                     <td>{{ $penalty->description ?? '-' }}</td>
+                    <td>
+                      @if(!$isSettled)
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#penaltyPaymentModal{{ $penalty->penalty_id }}">
+                          <i class="bi bi-credit-card me-1"></i>Pay Now
+                        </button>
+                      @else
+                        <span class="text-success"><i class="bi bi-check-circle me-1"></i>Paid</span>
+                      @endif
+                    </td>
                   </tr>
+                  
+                  {{-- Penalty Payment Modal --}}
+                  @if(!$isSettled)
+                  <div class="modal fade" id="penaltyPaymentModal{{ $penalty->penalty_id }}" tabindex="-1" aria-labelledby="penaltyPaymentModalLabel{{ $penalty->penalty_id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                      <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                          <h5 class="modal-title" id="penaltyPaymentModalLabel{{ $penalty->penalty_id }}">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Pay Penalty
+                          </h5>
+                          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" action="{{ route('customer.bookings.penalty.pay', $booking->booking_id) }}" enctype="multipart/form-data">
+                          @csrf
+                          <input type="hidden" name="penalty_id" value="{{ $penalty->penalty_id }}">
+                          <div class="modal-body">
+                            <div class="alert alert-info">
+                              <strong>Penalty Details:</strong><br>
+                              Type: {{ ucfirst($penalty->penalty_type) }}<br>
+                              Total Amount: <strong>RM {{ number_format($penalty->amount, 2) }}</strong><br>
+                              @if($paidAmount > 0)
+                                Already Paid: RM {{ number_format($paidAmount, 2) }}<br>
+                              @endif
+                              <strong class="text-danger">Remaining: RM {{ number_format($remainingAmount, 2) }}</strong>
+                            </div>
+                            
+                            <div class="mb-3">
+                              <label class="form-label">Payment Amount (RM) <span class="text-danger">*</span></label>
+                              <input type="number" name="amount" class="form-control" step="0.01" min="0.01" max="{{ $remainingAmount }}" value="{{ $remainingAmount }}" required>
+                              <small class="text-muted">You can pay the full amount or a partial payment (minimum RM 0.01)</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                              <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                              <select name="payment_method" class="form-select" required>
+                                <option value="">Select payment method...</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="cash">Cash</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                              <label class="form-label">Payment Date <span class="text-danger">*</span></label>
+                              <input type="date" name="payment_date" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                              <label class="form-label">Payment Receipt <span class="text-danger">*</span></label>
+                              <input type="file" name="receipt" class="form-control" accept="image/*,application/pdf" required>
+                              <small class="text-muted">Upload proof of payment (image or PDF, max 5MB)</small>
+                            </div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">
+                              <i class="bi bi-credit-card me-2"></i>Submit Payment
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                  @endif
                 @endforeach
               </tbody>
             </table>
@@ -1006,6 +1215,62 @@
 
 @push('scripts')
 <script>
+// Check agreement terms before download
+function checkAgreementTerms() {
+  const checkbox = document.getElementById('agreeTerms');
+  if (!checkbox.checked) {
+    alert('Please check the agreement checkbox before downloading the agreement.');
+    return false;
+  }
+  return true;
+}
+
+// Handle combined pickup photos form submission
+const pickupPhotosForm = document.getElementById('pickupPhotosForm');
+if (pickupPhotosForm) {
+  pickupPhotosForm.addEventListener('submit', function(e) {
+    const agreementPhoto = document.getElementById('agreementPhoto');
+    const keysPhoto = document.getElementById('keysPhoto');
+    
+    // Check if at least one photo is selected
+    if ((!agreementPhoto.files || !agreementPhoto.files[0]) && (!keysPhoto.files || !keysPhoto.files[0])) {
+      e.preventDefault();
+      alert('Please select at least one photo to upload.');
+      return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
+    }
+  });
+}
+
+// Handle combined return photos form submission
+const returnPhotosForm = document.getElementById('returnPhotosForm');
+if (returnPhotosForm) {
+  returnPhotosForm.addEventListener('submit', function(e) {
+    const keysInCarPhoto = document.getElementById('keysInCarPhoto');
+    const parkingLocationPhoto = document.getElementById('parkingLocationPhoto');
+    
+    // Check if at least one photo is selected
+    if ((!keysInCarPhoto.files || !keysInCarPhoto.files[0]) && (!parkingLocationPhoto.files || !parkingLocationPhoto.files[0])) {
+      e.preventDefault();
+      alert('Please select at least one photo to upload.');
+      return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
+    }
+  });
+}
+
 // Star rating interaction
 document.querySelectorAll('.rating-star').forEach(star => {
   star.addEventListener('click', function() {
@@ -1036,6 +1301,13 @@ document.querySelectorAll('.rating-star').forEach(star => {
         s.style.color = '#ddd';
       }
     });
+  });
+});
+
+// Photo click handler to replace inline onclick
+document.querySelectorAll('.clickable-photo').forEach(photo => {
+  photo.addEventListener('click', function() {
+    window.open(this.dataset.url, '_blank');
   });
 });
 </script>

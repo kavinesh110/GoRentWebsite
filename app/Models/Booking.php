@@ -251,16 +251,19 @@ class Booking extends Model
      */
     public function isPhase4Complete(): bool
     {
-        // Phase 4 is complete when booking is completed with return photos
-        if ($this->status !== 'completed') {
-            return false;
-        }
-
-        $hasReturnPhotos = $this->rentalPhotos()
-            ->whereIn('photo_type', ['after', 'key', 'parking'])
+        // Phase 4 is complete when both required return photos exist
+        // Check for both required photos: keys in car and parking location
+        $hasKeysPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'key')
             ->exists();
         
-        return $hasReturnPhotos;
+        $hasParkingPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'parking')
+            ->exists();
+        
+        // Phase 4 requires: keys in car photo AND parking location photo
+        // When both are uploaded, booking should be marked as completed
+        return $hasKeysPhoto && $hasParkingPhoto;
     }
 
     /**
