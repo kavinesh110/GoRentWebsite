@@ -132,39 +132,9 @@ class HomeController extends Controller
         // Start with available cars only
         $query = Car::where('status', 'available');
 
-        // Filter by car type (based on model name patterns)
-        // Since there's no explicit type field, we filter by common model patterns
+        // Filter by car type
         if ($request->has('type') && $request->type !== '') {
-            $type = strtolower($request->type);
-            $query->where(function($q) use ($type) {
-                switch ($type) {
-                    case 'hatchback':
-                        $q->where('model', 'like', '%myvi%')
-                          ->orWhere('model', 'like', '%axia%')
-                          ->orWhere('model', 'like', '%bezza%')
-                          ->orWhere('model', 'like', '%picanto%');
-                        break;
-                    case 'sedan':
-                        $q->where('model', 'like', '%vios%')
-                          ->orWhere('model', 'like', '%city%')
-                          ->orWhere('model', 'like', '%almera%')
-                          ->orWhere('model', 'like', '%accord%');
-                        break;
-                    case 'suv':
-                        $q->where('model', 'like', '%x70%')
-                          ->orWhere('model', 'like', '%aruz%')
-                          ->orWhere('model', 'like', '%hr-v%')
-                          ->orWhere('model', 'like', '%cr-v%')
-                          ->orWhere('model', 'like', '%rush%');
-                        break;
-                    case 'van':
-                        $q->where('model', 'like', '%vellfire%')
-                          ->orWhere('model', 'like', '%alphard%')
-                          ->orWhere('model', 'like', '%starex%')
-                          ->orWhere('model', 'like', '%hiace%');
-                        break;
-                }
-            });
+            $query->where('car_type', strtolower($request->type));
         }
 
         // Order and paginate results (12 cars per page)

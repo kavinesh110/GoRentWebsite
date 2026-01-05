@@ -170,6 +170,11 @@ class StaffController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter by car type
+        if ($request->has('car_type') && $request->car_type !== '') {
+            $query->where('car_type', $request->car_type);
+        }
+
         // Search functionality: search in brand, model, or plate number
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
@@ -182,6 +187,24 @@ class StaffController extends Controller
 
         // Paginate results (12 cars per page) with booking counts for delete warnings
         $cars = $query->withCount('bookings')->orderBy('created_at', 'desc')->paginate(12);
+
+        // Get available car types from filtered results (for dynamic filter dropdown)
+        $availableCarTypes = Car::query()
+            ->when($request->has('status') && $request->status !== '', function($q) use ($request) {
+                $q->where('status', $request->status);
+            })
+            ->when($request->has('search') && $request->search !== '', function($q) use ($request) {
+                $search = $request->search;
+                $q->where(function($query) use ($search) {
+                    $query->where('brand', 'like', "%{$search}%")
+                          ->orWhere('model', 'like', "%{$search}%")
+                          ->orWhere('plate_number', 'like', "%{$search}%");
+                });
+            })
+            ->whereNotNull('car_type')
+            ->distinct()
+            ->pluck('car_type')
+            ->toArray();
 
         // Get open issue counts for each car (only flagged for maintenance)
         $carIds = $cars->pluck('id')->toArray();
@@ -211,7 +234,8 @@ class StaffController extends Controller
 
         return view('staff.cars.index', [
             'cars' => $cars,
-            'filters' => $request->only(['status', 'search']),
+            'filters' => $request->only(['status', 'search', 'car_type']),
+            'availableCarTypes' => $availableCarTypes,
             'issuesCounts' => $issuesCounts,
         ]);
     }
@@ -245,6 +269,7 @@ class StaffController extends Controller
             'plate_number' => 'required|string|max:20|unique:cars,plate_number',
             'brand' => 'required|string|max:50',
             'model' => 'required|string|max:50',
+            'car_type' => 'required|in:hatchback,sedan,suv,van',
             'fuel_type' => 'required|in:petrol,diesel,hybrid,ev,other',
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
@@ -270,6 +295,22 @@ class StaffController extends Controller
             $data['current_mileage'] = 0; // New cars default to 0 mileage
         } else {
             $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
+        }
+
+        // Business rule: Auto-set status to maintenance if car has reached a service interval
+        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
+        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && isset($data['initial_mileage'])) {
+            $distanceTraveled = $data['current_mileage'] - $data['initial_mileage'];
+            $serviceMileageLimit = $data['service_mileage_limit'];
+            
+            // Check if we've reached or passed a service interval point
+            if ($serviceMileageLimit > 0 && $distanceTraveled >= $serviceMileageLimit) {
+                $intervalsPassed = floor($distanceTraveled / $serviceMileageLimit);
+                // If we've passed at least one interval, service is due
+                if ($intervalsPassed > 0) {
+                    $data['status'] = 'maintenance';
+                }
+            }
         }
 
         // Handle car image upload
@@ -367,6 +408,7 @@ class StaffController extends Controller
             'plate_number' => 'required|string|max:20|unique:cars,plate_number,' . $id,
             'brand' => 'required|string|max:50',
             'model' => 'required|string|max:50',
+            'car_type' => 'required|in:hatchback,sedan,suv,van',
             'fuel_type' => 'required|in:petrol,diesel,hybrid,ev,other',
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
@@ -395,10 +437,23 @@ class StaffController extends Controller
             $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
         }
 
-        // Business rule: Auto-set status to maintenance if mileage exceeds service limit
+        // Business rule: Auto-set status to maintenance if car has reached a service interval
+        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
         // This ensures cars requiring service are automatically flagged
-        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && $data['current_mileage'] >= $data['service_mileage_limit']) {
-            $data['status'] = 'maintenance';
+        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && isset($data['initial_mileage'])) {
+            $distanceTraveled = $data['current_mileage'] - $data['initial_mileage'];
+            $serviceMileageLimit = $data['service_mileage_limit'];
+            
+            // Check if we've reached or passed a service interval point
+            // Service is due when distance traveled is at or past a multiple of service_mileage_limit
+            if ($serviceMileageLimit > 0 && $distanceTraveled >= $serviceMileageLimit) {
+                // Calculate how many complete service intervals have been traveled
+                $intervalsPassed = floor($distanceTraveled / $serviceMileageLimit);
+                // If we've passed at least one interval, service is due
+                if ($intervalsPassed > 0) {
+                    $data['status'] = 'maintenance';
+                }
+            }
         }
 
         // Handle car image upload/update
@@ -1401,9 +1456,19 @@ class StaffController extends Controller
             $car->last_service_date = $data['service_date'];
         }
         
-        // If mileage was updated and exceeds service limit, set status to maintenance
-        if ($request->has('update_car_mileage') && $car->current_mileage >= $car->service_mileage_limit) {
-            $car->status = 'maintenance';
+        // If mileage was updated and car has reached a service interval, set status to maintenance
+        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
+        if ($request->has('update_car_mileage') && $car->service_mileage_limit > 0) {
+            $distanceTraveled = $car->current_mileage - ($car->initial_mileage ?? 0);
+            
+            // Check if we've reached or passed a service interval point
+            if ($distanceTraveled >= $car->service_mileage_limit) {
+                $intervalsPassed = floor($distanceTraveled / $car->service_mileage_limit);
+                // If we've passed at least one interval, service is due
+                if ($intervalsPassed > 0) {
+                    $car->status = 'maintenance';
+                }
+            }
         }
         
         $car->save();

@@ -60,6 +60,17 @@
             @error('model')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="col-md-6">
+            <label class="form-label">Car Type <span class="text-danger">*</span></label>
+            <select name="car_type" class="form-select @error('car_type') is-invalid @enderror" required>
+              <option value="">Select...</option>
+              <option value="hatchback" {{ old('car_type', $car->car_type) === 'hatchback' ? 'selected' : '' }}>Hatchback (Budget)</option>
+              <option value="sedan" {{ old('car_type', $car->car_type) === 'sedan' ? 'selected' : '' }}>Sedan (Comfort)</option>
+              <option value="suv" {{ old('car_type', $car->car_type) === 'suv' ? 'selected' : '' }}>SUV (Family)</option>
+              <option value="van" {{ old('car_type', $car->car_type) === 'van' ? 'selected' : '' }}>Van (Group)</option>
+            </select>
+            @error('car_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Year <span class="text-danger">*</span></label>
             <input type="number" name="year" class="form-control @error('year') is-invalid @enderror" value="{{ old('year', $car->year) }}" min="1900" max="{{ date('Y') + 1 }}" required>
             @error('year')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -88,8 +99,18 @@
             <label class="form-label">Current Mileage (km)</label>
             <input type="number" name="current_mileage" class="form-control @error('current_mileage') is-invalid @enderror" value="{{ old('current_mileage', $car->current_mileage ?? '') }}" min="0">
             @error('current_mileage')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            @if(isset($car->current_mileage) && isset($car->service_mileage_limit) && $car->current_mileage >= $car->service_mileage_limit)
-              <small class="text-warning">⚠ Mileage exceeds service limit. Status will be set to Maintenance.</small>
+            @php
+              $isServiceDue = false;
+              if (isset($car->current_mileage) && isset($car->service_mileage_limit) && isset($car->initial_mileage) && $car->service_mileage_limit > 0) {
+                $distanceTraveled = $car->current_mileage - $car->initial_mileage;
+                if ($distanceTraveled >= $car->service_mileage_limit) {
+                  $intervalsPassed = floor($distanceTraveled / $car->service_mileage_limit);
+                  $isServiceDue = $intervalsPassed > 0;
+                }
+              }
+            @endphp
+            @if($isServiceDue)
+              <small class="text-warning">⚠ Car has reached a service interval. Status will be set to Maintenance.</small>
             @endif
             <small class="text-muted">Leave empty to set to 0</small>
           </div>
