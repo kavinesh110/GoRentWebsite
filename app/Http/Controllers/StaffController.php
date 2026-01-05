@@ -590,23 +590,26 @@ class StaffController extends Controller
         $query = Booking::with(['car', 'customer']);
 
         // Filter by booking status (created, confirmed, active, completed, cancelled)
-        if ($request->has('status') && $request->status !== '') {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
         // Search functionality: search in customer name/email or car plate number
-        if ($request->has('search') && $request->search !== '') {
+        // Wrapped in a where() to ensure it works correctly with status filter
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('customer', function($q) use ($search) {
-                $q->where('full_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            })->orWhereHas('car', function($q) use ($search) {
-                $q->where('plate_number', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->whereHas('customer', function($subQ) use ($search) {
+                    $subQ->where('full_name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%");
+                })->orWhereHas('car', function($subQ) use ($search) {
+                    $subQ->where('plate_number', 'like', "%{$search}%");
+                });
             });
         }
 
-        // Paginate results (15 bookings per page)
-        $bookings = $query->orderBy('created_at', 'desc')->paginate(15);
+        // Paginate results (15 bookings per page) and preserve query string
+        $bookings = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
         return view('staff.bookings.index', [
             'bookings' => $bookings,
@@ -1224,10 +1227,10 @@ class StaffController extends Controller
         $booking = Booking::findOrFail($id);
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit,rental,penalty,refund,installment',
+            'payment_type' => 'required|in:deposit,rental,penalty,refund,installment,full_payment',
             'penalty_id' => 'nullable|exists:penalties,penalty_id',
             'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_method' => 'required|in:bank_transfer,cash,other,e-wallet',
             'payment_date' => 'required|date',
             'receipt' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
@@ -1808,11 +1811,11 @@ class StaffController extends Controller
         $query = Booking::with(['car', 'customer']);
 
         // Apply same filters as index page
-        if ($request->has('status') && $request->status !== '') {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('search') && $request->search !== '') {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->whereHas('customer', function($customerQuery) use ($search) {
@@ -2039,14 +2042,22 @@ class StaffController extends Controller
                 ->where('payment_type', 'rental')
                 ->whereBetween('payment_date', [$currentDate, $weekEnd])
                 ->sum('amount');
+            
+            // Determine which month the week belongs to (use the week's start date)
+            $weekMonthKey = $currentDate->format('Y-m');
+            
             $weeklyRevenueData[] = [
                 'label' => 'Week ' . $currentDate->weekOfYear . ' (' . $currentDate->format('M d') . ')',
-                'value' => (float) $revenue
+                'value' => (float) $revenue,
+                'monthKey' => $weekMonthKey,
+                'weekStart' => $currentDate->format('Y-m-d'),
+                'weekEnd' => $weekEnd->format('Y-m-d')
             ];
             $currentDate->addWeek();
         }
 
-        // Monthly revenue data
+        // Monthly revenue data - generate all 12 months of current year
+        $currentYear = now()->year;
         $monthlyRevenueData = [];
         $monthlyRevenue = Payment::where('status', 'verified')
             ->where('payment_type', 'rental')
@@ -2054,33 +2065,30 @@ class StaffController extends Controller
             ->selectRaw('DATE_FORMAT(payment_date, "%Y-%m") as month, SUM(amount) as total')
             ->groupBy('month')
             ->orderBy('month')
-            ->get();
+            ->pluck('total', 'month')
+            ->toArray();
         
-        foreach ($monthlyRevenue as $item) {
+        // Generate all 12 months
+        for ($month = 1; $month <= 12; $month++) {
+            $monthKey = sprintf('%04d-%02d', $currentYear, $month);
+            $date = \Carbon\Carbon::create($currentYear, $month, 1);
             $monthlyRevenueData[] = [
-                'label' => \Carbon\Carbon::parse($item->month . '-01')->format('M Y'),
-                'value' => (float) $item->total
+                'label' => $date->format('M Y'),
+                'value' => (float) ($monthlyRevenue[$monthKey] ?? 0),
+                'monthKey' => $monthKey
             ];
         }
 
-        // Extract unique months from daily revenue data for month selector
+        // Generate all months from Jan to Dec of the current year
+        $currentYear = now()->year;
         $availableMonths = [];
-        $seenMonths = [];
-        foreach ($dailyRevenueData as $dayData) {
-            $monthKey = $dayData['monthKey'];
-            if (!in_array($monthKey, $seenMonths)) {
-                $seenMonths[] = $monthKey;
-                $date = \Carbon\Carbon::parse($monthKey . '-01');
-                $availableMonths[] = [
-                    'monthKey' => $monthKey,
-                    'label' => $date->format('M Y')
-                ];
-            }
+        for ($month = 1; $month <= 12; $month++) {
+            $date = \Carbon\Carbon::create($currentYear, $month, 1);
+            $availableMonths[] = [
+                'monthKey' => $date->format('Y-m'),
+                'label' => $date->format('M Y')
+            ];
         }
-        // Sort by monthKey (chronological order)
-        usort($availableMonths, function($a, $b) {
-            return strcmp($a['monthKey'], $b['monthKey']);
-        });
 
         // Revenue by Car (Top 10)
         $revenueByCar = Car::select('cars.*')
@@ -2448,17 +2456,22 @@ class StaffController extends Controller
         $query = Penalty::with(['booking.car', 'booking.customer', 'payments']);
 
         // Filter by status
-        if ($request->has('status') && $request->status !== '') {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by type
-        if ($request->has('type') && $request->type !== '') {
-            $query->where('penalty_type', $request->type);
+        // Filter by type (map frontend values to database values)
+        if ($request->filled('type')) {
+            $typeMap = [
+                'late_return' => 'late',
+                'fuel_issue' => 'fuel',
+            ];
+            $type = $typeMap[$request->type] ?? $request->type;
+            $query->where('penalty_type', $type);
         }
 
         // Search
-        if ($request->has('search') && $request->search !== '') {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->whereHas('booking.customer', function($customerQuery) use ($search) {
@@ -2471,15 +2484,15 @@ class StaffController extends Controller
             });
         }
 
-        $penalties = $query->orderBy('created_at', 'desc')->paginate(20);
+        $penalties = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
         // Calculate statistics
         $stats = [
             'total' => Penalty::count(),
             'pending' => Penalty::where('status', 'pending')->count(),
-            'paid' => Penalty::where('status', 'paid')->count(),
+            'paid' => Penalty::where('status', 'settled')->count(),
             'total_amount' => Penalty::sum('amount'),
-            'paid_amount' => Penalty::where('status', 'paid')->sum('amount'),
+            'paid_amount' => Penalty::where('status', 'settled')->sum('amount'),
             'pending_amount' => Penalty::where('status', 'pending')->sum('amount'),
         ];
 
@@ -2796,12 +2809,12 @@ class StaffController extends Controller
         }
 
         // Filter by category
-        if ($request->has('category') && $request->category !== '') {
+        if ($request->filled('category')) {
             $query->where('category', $request->category);
         }
 
         // Filter by car
-        if ($request->has('car_id') && $request->car_id !== '') {
+        if ($request->filled('car_id')) {
             $query->where(function($q) use ($request) {
                 $q->where('car_id', $request->car_id)
                   ->orWhereHas('booking', function($bq) use ($request) {
@@ -2811,7 +2824,7 @@ class StaffController extends Controller
         }
 
         // Search
-        if ($request->has('search') && $request->search !== '') {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('subject', 'like', "%{$search}%")
@@ -2824,7 +2837,7 @@ class StaffController extends Controller
             });
         }
 
-        $issues = $query->orderBy('created_at', 'desc')->paginate(12);
+        $issues = $query->orderBy('created_at', 'desc')->paginate(12)->withQueryString();
 
         // Get all cars for filter dropdown
         $cars = Car::orderBy('brand')->orderBy('model')->get();

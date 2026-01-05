@@ -159,6 +159,16 @@
       <div class="payment-card">
         <h5 class="fw-800 mb-4">Upload Payment Receipt</h5>
         
+        @if($errors->any())
+          <div class="alert alert-danger border-0 shadow-sm mb-4 small">
+            <ul class="mb-0">
+              @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+        
         <form method="POST" action="{{ route('customer.bookings.payment.submit') }}" enctype="multipart/form-data">
           @csrf
           <div class="row g-3">
@@ -170,7 +180,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Amount (RM)</label>
-              <input type="number" name="amount" step="0.01" value="{{ $totalToPay }}" class="form-control" required>
+              <input type="number" name="amount" step="0.01" value="{{ number_format($totalToPay, 2, '.', '') }}" class="form-control" required>
             </div>
             <div class="col-md-6">
               <label class="form-label">Method</label>

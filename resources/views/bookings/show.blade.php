@@ -459,7 +459,7 @@
       const total = subtotal - voucherDiscount;
       
       if (subtotalDisplay) subtotalDisplay.textContent = 'RM ' + subtotal.toFixed(2);
-      if (totalDisplay) totalDisplay.textContent = 'RM ' + Math.round(total);
+      if (totalDisplay) totalDisplay.textContent = 'RM ' + total.toFixed(2);
       
       const discRow = document.getElementById('voucher-discount-row');
       if (voucherDiscount > 0) {

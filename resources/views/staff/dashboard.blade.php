@@ -61,7 +61,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 24px;
-    margin-bottom: 24px;
+    margin-bottom: 0;
   }
 
   .chart-title {
@@ -253,39 +253,40 @@
         </div>
       </div>
 
-      {{-- Charts Row --}}
+      {{-- Charts Row 1: Booking Status Distribution and Fleet Utilization --}}
+      <div class="row g-4 mb-0">
+        {{-- Booking Status Distribution --}}
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-title">Booking Status Distribution</div>
+            <canvas id="statusChart" height="25"></canvas>
+          </div>
+        </div>
+
+        {{-- Fleet Utilization --}}
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-title">Fleet Utilization</div>
+            <canvas id="fleetChart" height="25"></canvas>
+          </div>
+        </div>
+      </div>
+
+      {{-- Charts Row 2: Revenue Trend and Daily Bookings --}}
       <div class="row g-4 mb-4">
         {{-- Revenue Trend --}}
-        <div class="col-lg-8">
+        <div class="col-lg-6">
           <div class="chart-card">
             <div class="chart-title">Revenue Trend (Last 6 Months)</div>
             <canvas id="revenueChart" height="80"></canvas>
           </div>
         </div>
 
-        {{-- Booking Status Distribution --}}
-        <div class="col-lg-4">
-          <div class="chart-card">
-            <div class="chart-title">Booking Status Distribution</div>
-            <canvas id="statusChart" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="row g-4 mb-4">
         {{-- Daily Bookings --}}
-        <div class="col-lg-8">
+        <div class="col-lg-6">
           <div class="chart-card">
             <div class="chart-title">Daily Bookings (Last 30 Days)</div>
             <canvas id="dailyBookingsChart" height="80"></canvas>
-          </div>
-        </div>
-
-        {{-- Fleet Utilization --}}
-        <div class="col-lg-4">
-          <div class="chart-card">
-            <div class="chart-title">Fleet Utilization</div>
-            <canvas id="fleetChart" height="200"></canvas>
           </div>
         </div>
       </div>

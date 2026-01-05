@@ -60,7 +60,7 @@
               <select name="status" class="form-select form-select-sm">
                 <option value="">All statuses</option>
                 <option value="pending" {{ ($filters['status'] ?? '') === 'pending' ? 'selected' : '' }}>Pending</option>
-                <option value="paid" {{ ($filters['status'] ?? '') === 'paid' ? 'selected' : '' }}>Paid</option>
+                <option value="settled" {{ ($filters['status'] ?? '') === 'settled' ? 'selected' : '' }}>Paid</option>
               </select>
             </div>
             <div class="col-md-3">
@@ -119,8 +119,20 @@
                     <td><span class="badge bg-secondary">{{ ucfirst(str_replace('_', ' ', $penalty->penalty_type)) }}</span></td>
                     <td><strong>RM {{ number_format($penalty->amount, 2) }}</strong></td>
                     <td>
-                      <span class="badge {{ $penalty->status === 'paid' ? 'bg-success' : 'bg-warning' }}">
-                        {{ ucfirst($penalty->status) }}
+                      @php
+                        $statusClass = match($penalty->status) {
+                          'settled' => 'bg-success',
+                          'partially_paid' => 'bg-info',
+                          default => 'bg-warning'
+                        };
+                        $statusLabel = match($penalty->status) {
+                          'settled' => 'Paid',
+                          'partially_paid' => 'Partially Paid',
+                          default => 'Pending'
+                        };
+                      @endphp
+                      <span class="badge {{ $statusClass }}">
+                        {{ $statusLabel }}
                       </span>
                     </td>
                     <td>

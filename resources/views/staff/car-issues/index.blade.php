@@ -118,10 +118,10 @@
       </div>
 
       {{-- FILTERS --}}
-      <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+      <div class="card border-0 shadow-sm mb-4 rounded-4">
         <div class="card-body p-3 bg-white">
           <form method="GET" action="{{ route('staff.maintenance-issues') }}" class="row g-2 align-items-center">
-            <div class="col-lg-3">
+            <div class="col-md-6 col-lg-3">
               <select name="status" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
                 <option value="">Status: Open & Active</option>
                 <option value="open" {{ ($filters['status'] ?? '') === 'open' ? 'selected' : '' }}>Open Only</option>
@@ -130,7 +130,7 @@
                 <option value="closed" {{ ($filters['status'] ?? '') === 'closed' ? 'selected' : '' }}>Closed</option>
               </select>
             </div>
-            <div class="col-lg-3">
+            <div class="col-md-6 col-lg-2">
               <select name="category" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
                 <option value="">All Categories</option>
                 <option value="cleanliness" {{ ($filters['category'] ?? '') === 'cleanliness' ? 'selected' : '' }}>Cleanliness</option>
@@ -140,14 +140,14 @@
                 <option value="others" {{ ($filters['category'] ?? '') === 'others' ? 'selected' : '' }}>Others</option>
               </select>
             </div>
-            <div class="col-lg-4">
+            <div class="col-md-12 col-lg-4">
               <div class="input-group input-group-sm border rounded-3 overflow-hidden bg-light-subtle">
                 <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-muted"></i></span>
                 <input type="text" name="search" class="form-control border-0 bg-transparent py-2 px-2" placeholder="Search description, car..." value="{{ $filters['search'] ?? '' }}">
               </div>
             </div>
-            <div class="col-lg-2 d-flex gap-2">
-              <button type="submit" class="btn btn-sm btn-dark px-4 flex-fill rounded-3 py-2 fw-bold">Filter</button>
+            <div class="col-md-12 col-lg-3 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-dark px-3 rounded-3 py-2 fw-bold">Filter</button>
               <a href="{{ route('staff.maintenance-issues') }}" class="btn btn-sm btn-light border px-2 rounded-3 py-2 text-muted"><i class="bi bi-arrow-clockwise"></i></a>
             </div>
           </form>
@@ -255,7 +255,7 @@
       {{-- PAGINATION --}}
       @if($issues->hasPages())
         <div class="mt-5 d-flex justify-content-center">
-          {{ $issues->appends($filters)->links() }}
+          {{ $issues->links() }}
         </div>
       @endif
 

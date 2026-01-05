@@ -157,7 +157,7 @@ class CustomerController extends Controller
         $pickupFormatted = $pickup->format('d M Y, H:i');
         $dropoffFormatted = $dropoff->format('d M Y, H:i');
         $durationHours = $pending['hours'];
-        $totalToPay = ($pending['deposit_amount'] ?? 0) + ($pending['total_rental_amount'] ?? 0);
+        $totalToPay = round(($pending['deposit_amount'] ?? 0) + ($pending['total_rental_amount'] ?? 0), 2);
 
         return view('customer.bookings.payment', [
             'car' => $car,
@@ -185,9 +185,9 @@ class CustomerController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit', // booking is created only with deposit payment
+            'payment_type' => 'required|in:deposit,full_payment', // booking is created with deposit or full payment
             'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_method' => 'required|in:bank_transfer,cash,other,e-wallet',
             'payment_date' => 'required|date',
             'bank_name' => 'required|string|max:100',
             'account_holder_name' => 'required|string|max:100',
@@ -643,9 +643,9 @@ class CustomerController extends Controller
             ->findOrFail($id);
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit,rental',
+            'payment_type' => 'required|in:deposit,rental,full_payment',
             'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_method' => 'required|in:bank_transfer,cash,other,e-wallet',
             'payment_date' => 'required|date',
             'bank_name' => 'required|string|max:100',
             'account_holder_name' => 'required|string|max:100',

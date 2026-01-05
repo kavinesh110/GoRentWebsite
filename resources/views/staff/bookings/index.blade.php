@@ -29,16 +29,16 @@
       @endif
 
       {{-- SEARCH & FILTERS --}}
-      <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+      <div class="card border-0 shadow-sm mb-4 rounded-4">
         <div class="card-body p-3 bg-white">
           <form method="GET" action="{{ route('staff.bookings') }}" class="row g-2 align-items-center">
-            <div class="col-lg-5">
+            <div class="col-md-6 col-lg-5">
               <div class="input-group input-group-sm border rounded-3 overflow-hidden bg-light-subtle">
                 <span class="input-group-text bg-transparent border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
                 <input type="text" name="search" class="form-control border-0 bg-transparent py-2 px-2" placeholder="Customer name, email, or plate number..." value="{{ $filters['search'] ?? '' }}">
               </div>
             </div>
-            <div class="col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <select name="status" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
                 <option value="">All Booking Statuses</option>
                 <option value="created" {{ ($filters['status'] ?? '') === 'created' ? 'selected' : '' }}>Created / Pending</option>
@@ -48,8 +48,8 @@
                 <option value="cancelled" {{ ($filters['status'] ?? '') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
               </select>
             </div>
-            <div class="col-lg-4 d-flex gap-2">
-              <button type="submit" class="btn btn-sm btn-dark px-4 flex-fill rounded-3 py-2 fw-bold">Filter Records</button>
+            <div class="col-md-12 col-lg-3 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-dark px-3 rounded-3 py-2 fw-bold">Filter</button>
               <a href="{{ route('staff.bookings') }}" class="btn btn-sm btn-light border px-3 rounded-3 py-2 fw-semibold text-muted">Reset</a>
             </div>
           </form>
@@ -91,8 +91,8 @@
                       </div>
                     </td>
                     <td>
-                      <div class="fw-bold text-slate-700 small mb-0">{{ $booking->car->brand ?? 'N/A' }} {{ $booking->car->model ?? '' }}</div>
-                      <span class="badge bg-light text-slate-600 border border-slate-200 x-small px-2">{{ $booking->car->plate_number ?? '' }}</span>
+                      <div class="fw-bold text-slate-700 small mb-1">{{ $booking->car->brand ?? 'N/A' }} {{ $booking->car->model ?? '' }}</div>
+                      <span class="badge bg-light text-slate-700 border border-slate-200 fw-bold px-2 py-1" style="font-size: 11px; display: inline-block; white-space: nowrap;">{{ strtoupper($booking->car->plate_number ?? 'N/A') }}</span>
                     </td>
                     <td>
                       <div class="small text-slate-700 fw-medium">

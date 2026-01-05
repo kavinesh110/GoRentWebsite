@@ -476,7 +476,7 @@
             <div class="card-header-custom d-flex justify-content-between align-items-center flex-wrap gap-2">
               <span>Revenue Trend</span>
               <div class="d-flex align-items-center gap-2">
-                <select id="monthSelector" class="month-selector" style="display: none;">
+                <select id="monthSelector" class="month-selector">
                   <option value="">All Months</option>
                   @foreach($availableMonths as $month)
                     <option value="{{ $month['monthKey'] }}">{{ $month['label'] }}</option>
@@ -1015,14 +1015,95 @@ let revenueFilterChart = new Chart(revenueFilterCtx, {
   }
 });
 
-// Function to filter daily data by month
-function filterDailyDataByMonth(monthKey) {
-  if (!monthKey || monthKey === '') {
-    return revenueDataSets.daily;
+// Function to generate all days in a month
+function generateAllDaysInMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate(); // Get number of days in month
+  const result = [];
+  
+  // Get existing data for this month
+  const existingData = revenueDataSets.daily.filter(d => d.monthKey === monthKey);
+  const dataMap = {};
+  existingData.forEach(d => {
+    const day = parseInt(d.date.split('-')[2]);
+    dataMap[day] = d.value;
+  });
+  
+  // Generate all days (1 to daysInMonth)
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    result.push({
+      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: dataMap[day] || 0,
+      monthKey: monthKey,
+      date: dateStr
+    });
   }
   
-  // Filter by monthKey (e.g., "2025-01")
-  return revenueDataSets.daily.filter(d => d.monthKey === monthKey);
+  return result;
+}
+
+// Function to get all weeks in a month
+function getAllWeeksInMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0); // Last day of the month
+  
+  // Find all weeks that overlap with this month
+  const result = [];
+  let currentDate = new Date(firstDay);
+  
+  // Go to the start of the week containing the first day
+  const dayOfWeek = currentDate.getDay();
+  currentDate.setDate(currentDate.getDate() - dayOfWeek);
+  
+  // Iterate through weeks until we pass the last day of the month
+  while (currentDate <= lastDay || (currentDate.getMonth() === month - 1 && currentDate.getFullYear() === year)) {
+    const weekEnd = new Date(currentDate);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    // Check if this week overlaps with the selected month
+    if (weekEnd >= firstDay && currentDate <= lastDay) {
+      const weekStartStr = currentDate.toISOString().split('T')[0];
+      const weekEndDate = weekEnd > lastDay ? lastDay : weekEnd;
+      const weekEndStr = weekEndDate.toISOString().split('T')[0];
+      
+      // Try to find existing data for this week
+      const existingWeek = revenueDataSets.weekly.find(w => {
+        const wStart = new Date(w.weekStart);
+        const wEnd = new Date(w.weekEnd);
+        // Check if weeks overlap
+        return (wStart <= weekEndDate && wEnd >= currentDate);
+      });
+      
+      const weekLabel = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      result.push({
+        label: `Week ${getWeekNumber(currentDate)} (${weekLabel})`,
+        value: existingWeek ? existingWeek.value : 0,
+        monthKey: monthKey,
+        weekStart: weekStartStr,
+        weekEnd: weekEndStr
+      });
+    }
+    
+    // Move to next week
+    currentDate.setDate(currentDate.getDate() + 7);
+    
+    // Stop if we've passed the month
+    if (currentDate > lastDay && currentDate.getMonth() !== month - 1) break;
+  }
+  
+  return result;
+}
+
+// Helper to get week number
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 // Function to update chart with data
@@ -1032,19 +1113,65 @@ function updateRevenueChart(data) {
   revenueFilterChart.update('active');
 }
 
+// Get current period and month selection
+function getCurrentPeriod() {
+  const activeBtn = document.querySelector('.revenue-filter-btn.active');
+  return activeBtn ? activeBtn.dataset.period : 'daily';
+}
+
+function getCurrentMonth() {
+  return monthSelector.value || '';
+}
+
+// Function to apply current filters
+function applyFilters() {
+  const period = getCurrentPeriod();
+  const selectedMonth = getCurrentMonth();
+  
+  let data;
+  
+  if (period === 'monthly') {
+    // Monthly view always shows all 12 months (Jan to Dec comparison)
+    data = revenueDataSets.monthly;
+    // If monthly data doesn't have all 12 months, generate them
+    if (data.length < 12) {
+      const currentYear = new Date().getFullYear();
+      const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const completeData = [];
+      for (let m = 1; m <= 12; m++) {
+        const monthKey = `${currentYear}-${String(m).padStart(2, '0')}`;
+        const existing = data.find(d => d.monthKey === monthKey);
+        completeData.push({
+          label: `${monthLabels[m - 1]} ${currentYear}`,
+          value: existing ? existing.value : 0,
+          monthKey: monthKey
+        });
+      }
+      data = completeData;
+    }
+  } else if (period === 'daily') {
+    // Daily view: Show all days in selected month
+    if (selectedMonth) {
+      data = generateAllDaysInMonth(selectedMonth);
+    } else {
+      data = revenueDataSets.daily;
+    }
+  } else if (period === 'weekly') {
+    // Weekly view: Show all weeks in selected month
+    if (selectedMonth) {
+      data = getAllWeeksInMonth(selectedMonth);
+    } else {
+      data = revenueDataSets.weekly;
+    }
+  }
+  
+  updateRevenueChart(data);
+}
+
 // Month selector handler
 const monthSelector = document.getElementById('monthSelector');
 monthSelector.addEventListener('change', function() {
-  const selectedMonth = this.value;
-  
-  // If "All Months" is selected, show monthly aggregated data
-  // Otherwise, show daily data for the selected month
-  if (!selectedMonth || selectedMonth === '') {
-    updateRevenueChart(revenueDataSets.monthly);
-  } else {
-    const filteredData = filterDailyDataByMonth(selectedMonth);
-    updateRevenueChart(filteredData);
-  }
+  applyFilters();
 });
 
 // Revenue filter button handlers
@@ -1059,17 +1186,23 @@ document.querySelectorAll('.revenue-filter-btn').forEach(btn => {
     
     // Show/hide month selector
     if (period === 'monthly') {
-      monthSelector.style.display = 'block';
-      // Reset to "All Months" and show monthly aggregated data
-      monthSelector.value = '';
-      updateRevenueChart(revenueDataSets.monthly);
-    } else {
+      // For monthly, hide selector since we always show all months
       monthSelector.style.display = 'none';
-      // Use the period's data directly
-      const data = revenueDataSets[period];
-      updateRevenueChart(data);
+      monthSelector.value = ''; // Reset selection
+    } else {
+      // Show for daily/weekly
+      monthSelector.style.display = 'block';
     }
+    
+    // Apply filters with new period
+    applyFilters();
   });
+});
+
+// Initialize chart on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Set initial state - daily view with all data
+  applyFilters();
 });
 
 // Revenue Trend Chart (smaller one)
