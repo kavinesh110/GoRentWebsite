@@ -10,6 +10,9 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    build: {
+    outDir: 'public/build', // Set the output directory to public/build
+  },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
