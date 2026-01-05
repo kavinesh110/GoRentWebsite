@@ -400,7 +400,7 @@
             <option value="hatchback">Hatchback (Budget)</option>
             <option value="sedan">Sedan (Comfort)</option>
             <option value="suv">SUV (Family)</option>
-            <option value="van">Van (Group)</option>
+            <option value="mpv">MPV (Group)</option>
           </select>
         </div>
       </div>
@@ -475,8 +475,8 @@
         <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
           <i class="bi bi-credit-card h3 mb-0 text-primary"></i>
         </div>
-        <h5 class="fw-bold">2. Pay Deposit</h5>
-        <p class="text-muted small px-lg-4">Secure your booking with a simple RM 50 deposit and receipt upload.</p>
+        <h5 class="fw-bold">2. Pay & Confirm</h5>
+        <p class="text-muted small px-lg-4">Pay the full rental amount plus deposit upfront and upload your receipt.</p>
       </div>
       <div class="col-md-4 text-center">
         <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">

@@ -232,11 +232,28 @@ class StaffController extends Controller
             }
         }
 
+        // Get last service mileage for each car (for calculating service due)
+        $lastServiceMileages = MaintenanceRecord::whereIn('car_id', $carIds)
+            ->selectRaw('car_id, MAX(mileage_at_service) as last_service_mileage')
+            ->groupBy('car_id')
+            ->pluck('last_service_mileage', 'car_id')
+            ->toArray();
+
+        // Fleet overview stats (total counts regardless of filters)
+        $fleetStats = [
+            'available' => Car::where('status', 'available')->count(),
+            'in_use' => Car::where('status', 'in_use')->count(),
+            'maintenance' => Car::where('status', 'maintenance')->count(),
+            'total' => Car::count(),
+        ];
+
         return view('staff.cars.index', [
             'cars' => $cars,
             'filters' => $request->only(['status', 'search', 'car_type']),
             'availableCarTypes' => $availableCarTypes,
             'issuesCounts' => $issuesCounts,
+            'lastServiceMileages' => $lastServiceMileages,
+            'fleetStats' => $fleetStats,
         ]);
     }
 
@@ -269,7 +286,7 @@ class StaffController extends Controller
             'plate_number' => 'required|string|max:20|unique:cars,plate_number',
             'brand' => 'required|string|max:50',
             'model' => 'required|string|max:50',
-            'car_type' => 'required|in:hatchback,sedan,suv,van',
+            'car_type' => 'required|in:hatchback,sedan,suv,mpv',
             'fuel_type' => 'required|in:petrol,diesel,hybrid,ev,other',
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
@@ -297,19 +314,19 @@ class StaffController extends Controller
             $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
         }
 
-        // Business rule: Auto-set status to maintenance if car has reached a service interval
-        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
-        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && isset($data['initial_mileage'])) {
-            $distanceTraveled = $data['current_mileage'] - $data['initial_mileage'];
-            $serviceMileageLimit = $data['service_mileage_limit'];
+        // Business rule: Auto-set status to maintenance if car needs service
+        // For new cars, service is due if current_mileage >= service_mileage_limit (no previous service)
+        // This only applies if status is not explicitly set to something else
+        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && $data['status'] !== 'maintenance') {
+            $serviceMileageLimit = (int) $data['service_mileage_limit'];
+            $currentMileage = (int) $data['current_mileage'];
+            $initialMileage = (int) ($data['initial_mileage'] ?? 0);
             
-            // Check if we've reached or passed a service interval point
-            if ($serviceMileageLimit > 0 && $distanceTraveled >= $serviceMileageLimit) {
-                $intervalsPassed = floor($distanceTraveled / $serviceMileageLimit);
-                // If we've passed at least one interval, service is due
-                if ($intervalsPassed > 0) {
-                    $data['status'] = 'maintenance';
-                }
+            // Distance since initial registration (for new cars with no service history)
+            $distanceSinceStart = $currentMileage - $initialMileage;
+            
+            if ($serviceMileageLimit > 0 && $distanceSinceStart >= $serviceMileageLimit) {
+                $data['status'] = 'maintenance';
             }
         }
 
@@ -378,10 +395,17 @@ class StaffController extends Controller
             ->limit(5)
             ->get();
         
+        // Get last service mileage for this car (for calculating service due)
+        $lastServiceRecord = MaintenanceRecord::where('car_id', $id)
+            ->orderBy('mileage_at_service', 'desc')
+            ->first();
+        $lastServiceMileage = $lastServiceRecord ? $lastServiceRecord->mileage_at_service : null;
+        
         return view('staff.cars.edit', [
             'car' => $car, 
             'locations' => $locations,
             'carIssues' => $carIssues,
+            'lastServiceMileage' => $lastServiceMileage,
         ]);
     }
 
@@ -408,7 +432,7 @@ class StaffController extends Controller
             'plate_number' => 'required|string|max:20|unique:cars,plate_number,' . $id,
             'brand' => 'required|string|max:50',
             'model' => 'required|string|max:50',
-            'car_type' => 'required|in:hatchback,sedan,suv,van',
+            'car_type' => 'required|in:hatchback,sedan,suv,mpv',
             'fuel_type' => 'required|in:petrol,diesel,hybrid,ev,other',
             'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
             'base_rate_per_hour' => 'required|numeric|min:0',
@@ -437,22 +461,28 @@ class StaffController extends Controller
             $data['current_mileage'] = (int) $data['current_mileage']; // Ensure it's an integer
         }
 
-        // Business rule: Auto-set status to maintenance if car has reached a service interval
-        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
-        // This ensures cars requiring service are automatically flagged
-        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && isset($data['initial_mileage'])) {
-            $distanceTraveled = $data['current_mileage'] - $data['initial_mileage'];
-            $serviceMileageLimit = $data['service_mileage_limit'];
+        // Business rule: Auto-set status to maintenance if car needs service
+        // Check distance since last maintenance service (or initial mileage if no service done)
+        // Only auto-set if user hasn't explicitly chosen 'available' status
+        if (isset($data['current_mileage']) && isset($data['service_mileage_limit']) && $data['status'] !== 'maintenance') {
+            $serviceMileageLimit = (int) $data['service_mileage_limit'];
+            $currentMileage = (int) $data['current_mileage'];
             
-            // Check if we've reached or passed a service interval point
-            // Service is due when distance traveled is at or past a multiple of service_mileage_limit
-            if ($serviceMileageLimit > 0 && $distanceTraveled >= $serviceMileageLimit) {
-                // Calculate how many complete service intervals have been traveled
-                $intervalsPassed = floor($distanceTraveled / $serviceMileageLimit);
-                // If we've passed at least one interval, service is due
-                if ($intervalsPassed > 0) {
-                    $data['status'] = 'maintenance';
-                }
+            // Get the last maintenance record's mileage, or use initial mileage if no service done
+            $lastServiceRecord = MaintenanceRecord::where('car_id', $id)
+                ->orderBy('mileage_at_service', 'desc')
+                ->first();
+            
+            $lastServiceMileage = $lastServiceRecord 
+                ? $lastServiceRecord->mileage_at_service 
+                : ($car->initial_mileage ?? 0);
+            
+            // Calculate distance since last service
+            $distanceSinceService = $currentMileage - $lastServiceMileage;
+            
+            // If distance since last service >= service limit, flag for maintenance
+            if ($serviceMileageLimit > 0 && $distanceSinceService >= $serviceMileageLimit) {
+                $data['status'] = 'maintenance';
             }
         }
 
@@ -683,17 +713,23 @@ class StaffController extends Controller
         $booking->update($data);
 
         // Auto-award loyalty stamps when booking is completed
-        // Business rule: 1 stamp per 9 rental hours (as per schema comment)
+        // Business rule: 1 stamp per 9 total rental hours (cumulative)
         if ($isCompleting) {
             $customer = $booking->customer;
-            $rentalHours = $booking->rental_hours ?? 0;
-            $stampsToAward = floor($rentalHours / 9); // 1 stamp per 9 hours
+            $rentalHours = (int)($booking->rental_hours ?? 0);
             
+            $oldTotalHours = (int)($customer->total_rental_hours ?? 0);
+            $newTotalHours = $oldTotalHours + $rentalHours;
+            
+            $oldLifetimeStamps = floor($oldTotalHours / 9);
+            $newLifetimeStamps = floor($newTotalHours / 9);
+            $stampsToAward = $newLifetimeStamps - $oldLifetimeStamps;
+            
+            $customer->total_rental_hours = $newTotalHours;
             if ($stampsToAward > 0) {
                 $customer->total_stamps = ($customer->total_stamps ?? 0) + $stampsToAward;
-                $customer->total_rental_hours = ($customer->total_rental_hours ?? 0) + $rentalHours;
-                $customer->save();
             }
+            $customer->save();
         }
 
         $successMessage = 'Booking status updated!';
@@ -1441,6 +1477,7 @@ class StaffController extends Controller
             'cost' => 'nullable|numeric|min:0',
             'update_car_mileage' => 'boolean',
             'update_last_service_date' => 'boolean',
+            'mark_complete' => 'boolean',
         ]);
 
         $data['car_id'] = $id;
@@ -1456,24 +1493,14 @@ class StaffController extends Controller
             $car->last_service_date = $data['service_date'];
         }
         
-        // If mileage was updated and car has reached a service interval, set status to maintenance
-        // Service intervals: every X km after initial mileage (e.g., every 10,000 km)
-        if ($request->has('update_car_mileage') && $car->service_mileage_limit > 0) {
-            $distanceTraveled = $car->current_mileage - ($car->initial_mileage ?? 0);
-            
-            // Check if we've reached or passed a service interval point
-            if ($distanceTraveled >= $car->service_mileage_limit) {
-                $intervalsPassed = floor($distanceTraveled / $car->service_mileage_limit);
-                // If we've passed at least one interval, service is due
-                if ($intervalsPassed > 0) {
-                    $car->status = 'maintenance';
-                }
-            }
+        // If "mark as complete" is checked, set car status back to available
+        if ($request->has('mark_complete')) {
+            $car->status = 'available';
         }
         
         $car->save();
 
-        return redirect()->route('staff.maintenance.index', $id)->with('success', 'Maintenance record created successfully!');
+        return redirect()->route('staff.maintenance.index', $id)->with('success', 'Maintenance record created successfully!' . ($request->has('mark_complete') ? ' Car is now available.' : ''));
     }
 
     /**
@@ -1532,6 +1559,24 @@ class StaffController extends Controller
         $record->delete();
 
         return redirect()->route('staff.maintenance.index', $carId)->with('success', 'Maintenance record deleted successfully!');
+    }
+
+    /**
+     * Set car status to available (after maintenance is complete)
+     * 
+     * @param Request $request
+     * @param int $id Car ID
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function carsSetAvailable(Request $request, $id)
+    {
+        $this->ensureStaff($request);
+        $car = Car::findOrFail($id);
+        
+        $car->status = 'available';
+        $car->save();
+        
+        return redirect()->back()->with('success', 'Car "' . $car->brand . ' ' . $car->model . '" is now available for rental.');
     }
 
     // ========== FEEDBACK MANAGEMENT ==========
@@ -1927,7 +1972,7 @@ class StaffController extends Controller
 
         $start = \Carbon\Carbon::parse($startDate)->startOfDay();
         $end = \Carbon\Carbon::parse($endDate)->endOfDay();
-        $daysDiff = $start->diffInDays($end);
+        $daysDiff = (int) round($start->diffInDays($end));
 
         // Calculate previous period for comparison
         $prevStart = $start->copy()->subDays($daysDiff + 1);

@@ -66,7 +66,7 @@
               <option value="hatchback" {{ old('car_type', $car->car_type) === 'hatchback' ? 'selected' : '' }}>Hatchback (Budget)</option>
               <option value="sedan" {{ old('car_type', $car->car_type) === 'sedan' ? 'selected' : '' }}>Sedan (Comfort)</option>
               <option value="suv" {{ old('car_type', $car->car_type) === 'suv' ? 'selected' : '' }}>SUV (Family)</option>
-              <option value="van" {{ old('car_type', $car->car_type) === 'van' ? 'selected' : '' }}>Van (Group)</option>
+              <option value="mpv" {{ old('car_type', $car->car_type) === 'mpv' ? 'selected' : '' }}>MPV (Group)</option>
             </select>
             @error('car_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
@@ -101,16 +101,15 @@
             @error('current_mileage')<div class="invalid-feedback">{{ $message }}</div>@enderror
             @php
               $isServiceDue = false;
-              if (isset($car->current_mileage) && isset($car->service_mileage_limit) && isset($car->initial_mileage) && $car->service_mileage_limit > 0) {
-                $distanceTraveled = $car->current_mileage - $car->initial_mileage;
-                if ($distanceTraveled >= $car->service_mileage_limit) {
-                  $intervalsPassed = floor($distanceTraveled / $car->service_mileage_limit);
-                  $isServiceDue = $intervalsPassed > 0;
-                }
+              if (isset($car->current_mileage) && isset($car->service_mileage_limit) && $car->service_mileage_limit > 0) {
+                // Use last service mileage if available, otherwise use initial mileage
+                $referencePoint = $lastServiceMileage ?? ($car->initial_mileage ?? 0);
+                $distanceSinceService = $car->current_mileage - $referencePoint;
+                $isServiceDue = $distanceSinceService >= $car->service_mileage_limit;
               }
             @endphp
             @if($isServiceDue)
-              <small class="text-warning">⚠ Car has reached a service interval. Status will be set to Maintenance.</small>
+              <small class="text-warning">⚠ Service due. Distance since last service exceeds limit.</small>
             @endif
             <small class="text-muted">Leave empty to set to 0</small>
           </div>

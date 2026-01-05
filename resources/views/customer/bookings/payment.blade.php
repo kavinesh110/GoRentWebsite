@@ -109,7 +109,7 @@
 <div class="payment-hero">
   <div class="container text-center position-relative" style="z-index: 2;">
     <h1 class="display-5 fw-800 text-white mb-2">Complete Your Payment</h1>
-    <p class="text-white-50">Secure your booking by paying the deposit and uploading your receipt.</p>
+    <p class="text-white-50">Secure your booking by paying the full amount (rental + deposit) and uploading your receipt.</p>
   </div>
 </div>
 
@@ -157,7 +157,7 @@
     {{-- RIGHT: FORM --}}
     <div class="col-lg-7">
       <div class="payment-card">
-        <h5 class="fw-800 mb-4">Upload Deposit Receipt</h5>
+        <h5 class="fw-800 mb-4">Upload Payment Receipt</h5>
         
         <form method="POST" action="{{ route('customer.bookings.payment.submit') }}" enctype="multipart/form-data">
           @csrf
@@ -165,7 +165,7 @@
             <div class="col-md-6">
               <label class="form-label">Payment Type</label>
               <select name="payment_type" class="form-select" readonly>
-                <option value="deposit" selected>Deposit Payment</option>
+                <option value="full_payment" selected>Full Payment (Rental + Deposit)</option>
               </select>
             </div>
             <div class="col-md-6">

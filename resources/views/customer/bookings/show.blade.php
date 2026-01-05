@@ -349,7 +349,7 @@
                 <i class="bi bi-check-circle-fill text-success me-3" style="font-size: 24px;"></i>
                 <div>
                   <strong>Payment Submitted</strong>
-                  <p class="mb-0 small text-muted">Your deposit payment receipt has been uploaded successfully.</p>
+                  <p class="mb-0 small text-muted">Your payment receipt has been uploaded successfully.</p>
                 </div>
               </div>
             </div>
@@ -360,7 +360,7 @@
                 <i class="bi bi-exclamation-circle-fill text-warning me-3" style="font-size: 24px;"></i>
                 <div>
                   <strong>Payment Required</strong>
-                  <p class="mb-0 small">Please upload your deposit payment receipt to proceed with your booking.</p>
+                  <p class="mb-0 small">Please upload your payment receipt (rental + deposit) to proceed with your booking.</p>
                 </div>
               </div>
             </div>
@@ -372,13 +372,12 @@
                 <div class="col-md-6">
                   <label class="form-label">Payment Type <span class="text-danger">*</span></label>
                   <select name="payment_type" class="form-select" required>
-                    <option value="deposit">Deposit</option>
-                    <option value="rental">Rental Payment</option>
+                    <option value="full_payment" selected>Full Payment (Rental + Deposit)</option>
                   </select>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Amount (RM) <span class="text-danger">*</span></label>
-                  <input type="number" name="amount" step="0.01" min="0" class="form-control" value="{{ $booking->deposit_amount ?? '' }}" required>
+                  <input type="number" name="amount" step="0.01" min="0" class="form-control" value="{{ ($booking->total_rental_amount ?? 0) + ($booking->deposit_amount ?? 0) }}" required>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Payment Method <span class="text-danger">*</span></label>

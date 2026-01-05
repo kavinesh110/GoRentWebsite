@@ -94,6 +94,41 @@
         </div>
       @endif
 
+      {{-- FLEET OVERVIEW --}}
+      <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="fw-bold mb-0">Fleet Overview</h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #d1fae5;">
+                <div style="font-size: 32px; font-weight: 700; color: #059669;">{{ $fleetStats['available'] }}</div>
+                <div style="font-size: 12px; color: #065f46; font-weight: 600;">Available</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #dbeafe;">
+                <div style="font-size: 32px; font-weight: 700; color: #2563eb;">{{ $fleetStats['in_use'] }}</div>
+                <div style="font-size: 12px; color: #1e40af; font-weight: 600;">In Use</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #fef3c7;">
+                <div style="font-size: 32px; font-weight: 700; color: #d97706;">{{ $fleetStats['maintenance'] }}</div>
+                <div style="font-size: 12px; color: #92400e; font-weight: 600;">Maintenance</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #e2e8f0;">
+                <div style="font-size: 32px; font-weight: 700; color: #475569;">{{ $fleetStats['total'] }}</div>
+                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Total Fleet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- SEARCH & FILTERS --}}
       <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
         <div class="card-body p-3 bg-white">
@@ -120,7 +155,7 @@
                     'hatchback' => 'Hatchback (Budget)',
                     'sedan' => 'Sedan (Comfort)',
                     'suv' => 'SUV (Family)',
-                    'van' => 'Van (Group)'
+                    'mpv' => 'MPV (Group)'
                   ];
                 @endphp
                 @foreach($availableCarTypes as $type)
@@ -184,16 +219,10 @@
 
                 {{-- Key Stats Row --}}
                 <div class="row g-2 mb-4 bg-light rounded-3 p-2">
-                  <div class="col-6">
+                  <div class="col-12">
                     <div class="p-2">
                       <div class="small text-muted mb-0" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Mileage</div>
                       <div class="fw-bold text-slate-700">{{ number_format($car->current_mileage) }} km</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-2 text-end">
-                      <div class="small text-muted mb-0" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Location</div>
-                      <div class="fw-bold text-slate-700 text-truncate">{{ $car->location->name ?? 'Student Mall' }}</div>
                     </div>
                   </div>
                 </div>
@@ -201,24 +230,24 @@
                 {{-- Maintenance Status --}}
                 @php
                   $mileageLimit = $car->service_mileage_limit ?: 5000;
-                  $initialMileage = $car->initial_mileage ?? 0;
                   
-                  // Calculate service interval progress
-                  $distanceTraveled = $car->current_mileage - $initialMileage;
-                  $intervalsPassed = ($mileageLimit > 0) ? floor($distanceTraveled / $mileageLimit) : 0;
-                  $currentIntervalStart = $initialMileage + ($intervalsPassed * $mileageLimit);
-                  $progressInCurrentInterval = ($mileageLimit > 0) ? (($car->current_mileage - $currentIntervalStart) / $mileageLimit * 100) : 0;
-                  $progress = min(100, $progressInCurrentInterval);
+                  // Get last service mileage (from maintenance records) or use initial mileage
+                  $lastServiceMileage = $lastServiceMileages[$car->id] ?? ($car->initial_mileage ?? 0);
                   
-                  // Check if service is due (at or past an interval point)
-                  $isServiceDue = $intervalsPassed > 0;
+                  // Calculate distance since last service
+                  $distanceSinceService = $car->current_mileage - $lastServiceMileage;
+                  
+                  // Calculate progress percentage (0-100%)
+                  $progress = ($mileageLimit > 0) ? min(100, ($distanceSinceService / $mileageLimit) * 100) : 0;
+                  
+                  // Check if service is due
+                  $isServiceDue = $distanceSinceService >= $mileageLimit;
                   
                   // Calculate remaining km to next service
-                  $nextServicePoint = $currentIntervalStart + $mileageLimit;
-                  $remainingKm = max(0, $nextServicePoint - $car->current_mileage);
+                  $remainingKm = max(0, $mileageLimit - $distanceSinceService);
                   
-                  // If overdue, calculate how much past the last service point
-                  $overdueKm = $isServiceDue ? ($car->current_mileage - $currentIntervalStart) : 0;
+                  // If overdue, calculate how much past the service point
+                  $overdueKm = $isServiceDue ? ($distanceSinceService - $mileageLimit) : 0;
                 @endphp
                 <div class="mb-4">
                   <div class="d-flex justify-content-between align-items-center mb-2">

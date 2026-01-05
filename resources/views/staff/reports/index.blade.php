@@ -748,43 +748,6 @@
         </div>
       </div>
 
-      {{-- Fleet Status Overview --}}
-      <div class="row g-4 mb-5">
-        <div class="col-12">
-          <div class="report-card">
-            <div class="card-header-custom">Fleet Overview</div>
-            <div class="card-body-custom">
-              <div class="row g-4">
-                <div class="col-md-3">
-                  <div class="text-center p-3 rounded" style="background: #d1fae5;">
-                    <div style="font-size: 32px; font-weight: 700; color: #059669;">{{ $availableCars }}</div>
-                    <div style="font-size: 12px; color: #065f46; font-weight: 600;">Available</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="text-center p-3 rounded" style="background: #dbeafe;">
-                    <div style="font-size: 32px; font-weight: 700; color: #2563eb;">{{ $carsInUse }}</div>
-                    <div style="font-size: 12px; color: #1e40af; font-weight: 600;">In Use</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="text-center p-3 rounded" style="background: #fef3c7;">
-                    <div style="font-size: 32px; font-weight: 700; color: #d97706;">{{ $carsInMaintenance }}</div>
-                    <div style="font-size: 12px; color: #92400e; font-weight: 600;">Maintenance</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="text-center p-3 rounded" style="background: #e2e8f0;">
-                    <div style="font-size: 32px; font-weight: 700; color: var(--slate-700);">{{ $totalCars }}</div>
-                    <div style="font-size: 12px; color: var(--slate-600); font-weight: 600;">Total Fleet</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {{-- ============================================== --}}
       {{-- CUSTOMER REPORTS --}}
       {{-- ============================================== --}}

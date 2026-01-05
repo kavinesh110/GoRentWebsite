@@ -15,6 +15,14 @@
           <p class="text-muted mb-0 small">Service logs for <strong>{{ $car->brand }} {{ $car->model }}</strong> ({{ strtoupper($car->plate_number) }})</p>
         </div>
         <div class="d-flex gap-2">
+          @if($car->status === 'maintenance')
+          <form method="POST" action="{{ route('staff.cars.setAvailable', $car->id) }}" class="d-inline">
+            @csrf
+            <button type="submit" class="btn btn-success shadow-sm px-4 rounded-3 fw-bold">
+              <i class="bi bi-check-circle me-2"></i>Mark as Available
+            </button>
+          </form>
+          @endif
           <a href="{{ route('staff.maintenance.create', $car->id) }}" class="btn btn-hasta shadow-sm px-4 rounded-3 fw-bold">
             <i class="bi bi-plus-lg me-2"></i>Add Service Record
           </a>

@@ -66,7 +66,7 @@
               <option value="hatchback" {{ old('car_type') === 'hatchback' ? 'selected' : '' }}>Hatchback (Budget)</option>
               <option value="sedan" {{ old('car_type') === 'sedan' ? 'selected' : '' }}>Sedan (Comfort)</option>
               <option value="suv" {{ old('car_type') === 'suv' ? 'selected' : '' }}>SUV (Family)</option>
-              <option value="van" {{ old('car_type') === 'van' ? 'selected' : '' }}>Van (Group)</option>
+              <option value="mpv" {{ old('car_type') === 'mpv' ? 'selected' : '' }}>MPV (Group)</option>
             </select>
             @error('car_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
