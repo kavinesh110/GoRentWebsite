@@ -22,7 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert to original ENUM values
+        // Revert to original ENUM values (without verified and deposit_returned)
+        // Note: This will fail if there are bookings with 'verified' or 'deposit_returned' status
         DB::statement("ALTER TABLE `bookings` MODIFY COLUMN `status` ENUM('created', 'confirmed', 'cancelled', 'active', 'completed') DEFAULT 'created'");
     }
 };

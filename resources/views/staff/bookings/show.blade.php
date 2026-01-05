@@ -446,20 +446,21 @@
         </div>
       </div>
 
-      {{-- DEPOSIT RETURNED SECTION --}}
+      {{-- AFTER RETURN INSPECTION SECTION --}}
       <div class="accordion-item border-0 shadow-sm mb-3">
         <h2 class="accordion-header">
-          <button class="accordion-button {{ $booking->status === 'deposit_returned' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#depositReturnedSection" aria-expanded="{{ $booking->status === 'deposit_returned' ? 'true' : 'false' }}">
+          <button class="accordion-button {{ in_array($booking->status, ['completed', 'deposit_returned']) ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#afterReturnInspectionSection" aria-expanded="{{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'true' : 'false' }}">
             <i class="bi bi-chevron-down me-2"></i>
-            <span class="fw-bold me-2"><i class="bi bi-arrow-return-left me-2 text-success"></i>Deposit Returned</span>
-            @if($booking->status === 'deposit_returned')
-              <span class="badge bg-success text-white ms-2">Current Status</span>
+            <span class="fw-bold me-2"><i class="bi bi-clipboard-check me-2 text-info"></i>After Return Inspection</span>
+            @if($hasAfterInspection)
+              <span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Completed</span>
+            @elseif(in_array($booking->status, ['completed', 'deposit_returned']))
+              <span class="badge bg-warning text-dark ms-2">Pending</span>
             @endif
           </button>
         </h2>
-        <div id="depositReturnedSection" class="accordion-collapse collapse {{ $booking->status === 'deposit_returned' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
+        <div id="afterReturnInspectionSection" class="accordion-collapse collapse {{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'show' : '' }}" data-bs-parent="#statusAccordion">
           <div class="accordion-body p-0">
-            {{-- After-Return Inspection (Same form structure) --}}
             <div class="card border-0">
               <div class="card-header bg-white border-0 pt-4 px-4">
                 <div class="d-flex align-items-center justify-content-between">
@@ -507,6 +508,38 @@
                     <i class="bi bi-camera me-1"></i>{{ $hasAfterInspection ? 'Update Inspection' : 'Save Inspection' }}
                   </button>
                 </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- DEPOSIT RETURNED SECTION --}}
+      <div class="accordion-item border-0 shadow-sm mb-3">
+        <h2 class="accordion-header">
+          <button class="accordion-button {{ $booking->status === 'deposit_returned' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#depositReturnedSection" aria-expanded="{{ $booking->status === 'deposit_returned' ? 'true' : 'false' }}">
+            <i class="bi bi-chevron-down me-2"></i>
+            <span class="fw-bold me-2"><i class="bi bi-arrow-return-left me-2 text-success"></i>Deposit Returned</span>
+            @if($booking->status === 'deposit_returned')
+              <span class="badge bg-success text-white ms-2">Current Status</span>
+            @endif
+          </button>
+        </h2>
+        <div id="depositReturnedSection" class="accordion-collapse collapse {{ $booking->status === 'deposit_returned' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
+          <div class="accordion-body p-0">
+            <div class="card border-0">
+              <div class="card-body p-4">
+                @if($booking->status === 'deposit_returned')
+                  <div class="text-center py-4">
+                    <i class="bi bi-check-circle-fill text-success display-4 mb-3"></i>
+                    <p class="text-muted mb-0">Deposit has been returned for this booking.</p>
+                  </div>
+                @else
+                  <div class="alert alert-info border-0 shadow-sm mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Deposit return</strong> will be processed after the booking is completed and after return inspection is done.
+                  </div>
+                @endif
               </div>
             </div>
           </div>

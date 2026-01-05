@@ -98,10 +98,54 @@ class StaffController extends Controller
             ->take(5)
             ->get();
 
+        // Chart Data: Monthly Revenue (Last 6 months)
+        $monthlyRevenueData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $revenue = Payment::where('status', 'verified')
+                ->where('payment_type', 'rental')
+                ->whereMonth('payment_date', $date->month)
+                ->whereYear('payment_date', $date->year)
+                ->sum('amount');
+            $monthlyRevenueData[] = [
+                'month' => $date->format('M Y'),
+                'revenue' => $revenue
+            ];
+        }
+
+        // Chart Data: Booking Status Distribution
+        $bookingStatusData = Booking::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Chart Data: Daily Bookings (Last 30 days)
+        $dailyBookingsData = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $count = Booking::whereDate('created_at', $date->format('Y-m-d'))->count();
+            $dailyBookingsData[] = [
+                'date' => $date->format('M d'),
+                'count' => $count
+            ];
+        }
+
+        // Chart Data: Fleet Utilization
+        $fleetUtilization = [
+            'available' => Car::where('status', 'available')->count(),
+            'in_use' => Car::where('status', 'in_use')->count(),
+            'maintenance' => Car::where('status', 'maintenance')->count(),
+        ];
+
         return view('staff.dashboard', [
             'stats' => $stats,
             'recentBookings' => $recentBookings,
             'pendingCustomers' => $pendingCustomers,
+            'monthlyRevenueData' => $monthlyRevenueData,
+            'bookingStatusData' => $bookingStatusData,
+            'dailyBookingsData' => $dailyBookingsData,
+            'fleetUtilization' => $fleetUtilization,
         ]);
     }
 
@@ -1856,6 +1900,60 @@ class StaffController extends Controller
             ->take(10)
             ->get();
 
+        // Daily revenue (last 30 days or date range if less than 30 days)
+        $daysDiff = $start->diffInDays($end);
+        $dailyRevenueData = [];
+        if ($daysDiff <= 90) {
+            // If range is 90 days or less, show daily data
+            $currentDate = $start->copy();
+            while ($currentDate <= $end) {
+                $revenue = Payment::where('status', 'verified')
+                    ->where('payment_type', 'rental')
+                    ->whereDate('payment_date', $currentDate->format('Y-m-d'))
+                    ->sum('amount');
+                $dailyRevenueData[] = [
+                    'date' => $currentDate->format('M d'),
+                    'revenue' => $revenue
+                ];
+                $currentDate->addDay();
+            }
+        } else {
+            // If range is more than 90 days, show weekly data
+            $currentDate = $start->copy()->startOfWeek();
+            while ($currentDate <= $end) {
+                $weekEnd = $currentDate->copy()->endOfWeek();
+                if ($weekEnd > $end) {
+                    $weekEnd = $end;
+                }
+                $revenue = Payment::where('status', 'verified')
+                    ->where('payment_type', 'rental')
+                    ->whereBetween('payment_date', [$currentDate->format('Y-m-d'), $weekEnd->format('Y-m-d')])
+                    ->sum('amount');
+                $dailyRevenueData[] = [
+                    'date' => $currentDate->format('M d') . ' - ' . $weekEnd->format('M d'),
+                    'revenue' => $revenue
+                ];
+                $currentDate->addWeek();
+            }
+        }
+
+        // Total revenue and deposits
+        $totalRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->whereBetween('payment_date', [$start, $end])
+            ->sum('amount');
+
+        $totalDeposits = Payment::where('status', 'verified')
+            ->where('payment_type', 'deposit')
+            ->whereBetween('payment_date', [$start, $end])
+            ->sum('amount');
+
+        // Total bookings count
+        $totalBookings = Booking::whereBetween('created_at', [$start, $end])->count();
+
+        // Average booking value
+        $avgBookingValue = $totalBookings > 0 ? ($totalRevenue / $totalBookings) : 0;
+
         // Penalty statistics
         $penaltyStats = Penalty::whereBetween('created_at', [$start, $end])
             ->selectRaw('
@@ -1871,10 +1969,15 @@ class StaffController extends Controller
             'startDate' => $startDate,
             'endDate' => $endDate,
             'monthlyRevenue' => $monthlyRevenue,
+            'dailyRevenueData' => $dailyRevenueData,
             'bookingsByStatus' => $bookingsByStatus,
             'topCustomers' => $topCustomers,
             'topCars' => $topCars,
             'penaltyStats' => $penaltyStats,
+            'totalRevenue' => $totalRevenue,
+            'totalDeposits' => $totalDeposits,
+            'totalBookings' => $totalBookings,
+            'avgBookingValue' => $avgBookingValue,
         ]);
     }
 
