@@ -53,16 +53,20 @@ class HomeController extends Controller
         // Check if logged-in customer has completed bookings (for support form access)
         $hasCompletedBooking = false;
         $customerEmail = null;
+        $completedBookings = collect();
         if (session('auth_role') === 'customer' && session('auth_id')) {
             $customerId = session('auth_id');
-            $hasCompletedBooking = Booking::where('customer_id', $customerId)
+            $completedBookings = Booking::with('car')
+                ->where('customer_id', $customerId)
                 ->where('status', 'completed')
-                ->exists();
+                ->orderBy('end_datetime', 'desc')
+                ->get();
+            $hasCompletedBooking = $completedBookings->isNotEmpty();
             $customer = Customer::find($customerId);
             $customerEmail = $customer->email ?? null;
         }
         
-        return view('home', compact('cars', 'activities', 'locations', 'hasCompletedBooking', 'customerEmail'));
+        return view('home', compact('cars', 'activities', 'locations', 'hasCompletedBooking', 'customerEmail', 'completedBookings'));
     }
     
     /**
@@ -98,16 +102,22 @@ class HomeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:30',
+            'booking_id' => 'required|exists:bookings,booking_id',
             'category' => 'required|in:cleanliness,lacking_facility,bluetooth,engine,others',
             'subject' => 'required|string|max:255',
             'description' => 'required|string|max:5000',
         ]);
+
+        // Verify the booking belongs to this customer
+        $booking = Booking::where('booking_id', $validated['booking_id'])
+            ->where('customer_id', $customerId)
+            ->firstOrFail();
         
         // Create support ticket
         SupportTicket::create([
             'customer_id' => $customerId,
-            'booking_id' => null, // Can be linked later by staff if related to specific booking
-            'car_id' => null, // Can be linked later by staff if related to specific car
+            'booking_id' => $booking->booking_id,
+            'car_id' => $booking->car_id,
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? $customer->phone,
