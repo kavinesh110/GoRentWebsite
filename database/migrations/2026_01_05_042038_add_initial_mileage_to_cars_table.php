@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('cars', function (Blueprint $table) {
-            $table->integer('initial_mileage')->default(0)->after('status')->comment('Mileage when car was first registered with Hasta');
+            // Only add the column if it doesn't already exist
+            if (!Schema::hasColumn('cars', 'initial_mileage')) {
+                $table->integer('initial_mileage')->default(0)->after('status')->comment('Mileage when car was first registered with Hasta');
+            }
         });
     }
 
@@ -22,7 +25,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('cars', function (Blueprint $table) {
-            $table->dropColumn('initial_mileage');
+            // Only drop the column if it exists
+            if (Schema::hasColumn('cars', 'initial_mileage')) {
+                $table->dropColumn('initial_mileage');
+            }
         });
     }
 };

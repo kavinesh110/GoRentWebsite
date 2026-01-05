@@ -89,8 +89,8 @@ class CustomerController extends Controller
         $this->ensureCustomer($request);
         $customerId = $this->getCustomerId($request);
 
-        // Start query with customer's bookings and eager load car relationship and penalties
-        $query = Booking::where('customer_id', $customerId)->with(['car', 'penalties']);
+        // Start query with customer's bookings and eager load car relationship, penalties, and feedback
+        $query = Booking::where('customer_id', $customerId)->with(['car', 'penalties', 'feedback']);
 
         // Apply status filter if provided
         if ($request->has('status') && $request->status !== '') {
@@ -121,23 +121,11 @@ class CustomerController extends Controller
         $customerId = $this->getCustomerId($request);
 
         // Load booking with all related data
-        // Note: 'feedback' is excluded from eager loading as the table may not exist
-        $withRelations = ['car', 'penalties.payments', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments', 'rentalPhotos'];
-        
-        // Only eager load feedback if the table exists
-        $feedbackTableExists = DB::getSchemaBuilder()->hasTable('feedback');
-        if ($feedbackTableExists) {
-            $withRelations[] = 'feedback';
-        }
+        $withRelations = ['car', 'penalties.payments', 'inspections', 'pickupLocation', 'dropoffLocation', 'payments', 'rentalPhotos', 'feedback'];
         
         $booking = Booking::with($withRelations)
             ->where('customer_id', $customerId) // Security: Ensure customer can only view their own bookings
             ->findOrFail($id);
-
-        // If feedback table doesn't exist, set feedback to null to prevent lazy loading errors
-        if (!$feedbackTableExists) {
-            $booking->setRelation('feedback', null);
-        }
 
         return view('customer.bookings.show', ['booking' => $booking]);
     }
@@ -201,6 +189,9 @@ class CustomerController extends Controller
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|in:bank_transfer,cash,other',
             'payment_date' => 'required|date',
+            'bank_name' => 'required|string|max:100',
+            'account_holder_name' => 'required|string|max:100',
+            'account_number' => 'required|string|max:50',
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
@@ -265,6 +256,9 @@ class CustomerController extends Controller
                 'amount' => $validated['amount'],
                 'payment_type' => $validated['payment_type'],
                 'payment_method' => $validated['payment_method'],
+                'bank_name' => $validated['bank_name'],
+                'account_holder_name' => $validated['account_holder_name'],
+                'account_number' => $validated['account_number'],
                 'receipt_url' => $receiptPath,
                 'payment_date' => $validated['payment_date'],
                 'status' => 'pending', // Staff must verify
@@ -602,9 +596,9 @@ class CustomerController extends Controller
         $this->ensureCustomer($request);
         $customerId = $this->getCustomerId($request);
 
-        // Only allow feedback on completed bookings
+        // Only allow feedback on completed or deposit_returned bookings
         $booking = Booking::where('customer_id', $customerId)
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'deposit_returned'])
             ->findOrFail($id);
 
         // Prevent duplicate feedback submissions
@@ -655,6 +649,9 @@ class CustomerController extends Controller
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|in:bank_transfer,cash,other',
             'payment_date' => 'required|date',
+            'bank_name' => 'required|string|max:100',
+            'account_holder_name' => 'required|string|max:100',
+            'account_number' => 'required|string|max:50',
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
@@ -670,6 +667,9 @@ class CustomerController extends Controller
             'amount' => $validated['amount'],
             'payment_type' => $validated['payment_type'],
             'payment_method' => $validated['payment_method'],
+            'bank_name' => $validated['bank_name'],
+            'account_holder_name' => $validated['account_holder_name'],
+            'account_number' => $validated['account_number'],
             'receipt_url' => $receiptPath,
             'payment_date' => $validated['payment_date'],
             'status' => 'pending', // Staff will verify
@@ -704,7 +704,7 @@ class CustomerController extends Controller
         // Check if this is a combined return photos upload (both keys in car and parking location)
         if ($request->hasFile('keys_in_car_photo') || $request->hasFile('parking_location_photo')) {
             // Combined upload for return photos
-            $validated = $request->validate([
+        $validated = $request->validate([
                 'keys_in_car_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'parking_location_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'taken_at' => 'required|date',
@@ -952,14 +952,14 @@ class CustomerController extends Controller
             ]);
         } else {
             // Create new rental photo record
-            RentalPhoto::create([
-                'booking_id' => $booking->booking_id,
-                'uploaded_by_user_id' => $customerId,
-                'uploaded_by_role' => 'customer',
-                'photo_type' => $validated['photo_type'],
-                'photo_url' => $photoPath,
-                'taken_at' => $validated['taken_at'],
-            ]);
+        RentalPhoto::create([
+            'booking_id' => $booking->booking_id,
+            'uploaded_by_user_id' => $customerId,
+            'uploaded_by_role' => 'customer',
+            'photo_type' => $validated['photo_type'],
+            'photo_url' => $photoPath,
+            'taken_at' => $validated['taken_at'],
+        ]);
         }
 
         // If uploading an agreement photo, also mark the agreement as signed

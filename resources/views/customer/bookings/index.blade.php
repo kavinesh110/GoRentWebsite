@@ -155,10 +155,25 @@
                   </div>
                 </div>
 
-                <div class="d-flex justify-content-end">
+                <div class="d-flex justify-content-end gap-2 flex-wrap">
                   <a href="{{ route('customer.bookings.show', $booking->booking_id) }}" class="btn btn-sm btn-outline-hasta px-4">
                     Manage Booking <i class="bi bi-arrow-right ms-1"></i>
                   </a>
+                  @if(in_array($booking->status, ['completed', 'deposit_returned']))
+                    @if(!$booking->feedback)
+                      <a href="{{ route('customer.bookings.show', $booking->booking_id) }}#feedback" class="btn btn-sm btn-warning px-4">
+                        <i class="bi bi-star me-1"></i>Rate
+                      </a>
+                    @else
+                      <div class="btn btn-sm btn-outline-secondary px-4" style="cursor: default;">
+                        <i class="bi bi-star-fill text-warning me-1"></i>
+                        @for($i = 1; $i <= 5; $i++)
+                          <i class="bi bi-star{{ $i <= $booking->feedback->rating ? '-fill' : '' }}" style="font-size: 14px; color: {{ $i <= $booking->feedback->rating ? '#FFD700' : '#ddd' }};"></i>
+                        @endfor
+                        <span class="ms-1 small">({{ $booking->feedback->rating }}/5)</span>
+                      </div>
+                    @endif
+                  @endif
                 </div>
               </div>
             </div>

@@ -184,6 +184,18 @@
               <label class="form-label">Date of Payment</label>
               <input type="date" name="payment_date" class="form-control" value="{{ now()->format('Y-m-d') }}" required>
             </div>
+            <div class="col-md-4">
+              <label class="form-label">Bank Name <span class="text-danger">*</span></label>
+              <input type="text" name="bank_name" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Account Holder Name <span class="text-danger">*</span></label>
+              <input type="text" name="account_holder_name" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Account Number <span class="text-danger">*</span></label>
+              <input type="number" name="account_number" class="form-control" required>
+            </div>
             <div class="col-12 mt-4">
               <label class="form-label d-block mb-3">Upload Receipt (Image or PDF)</label>
               <div class="bg-light p-4 rounded-4 text-center border-2 border-dashed">

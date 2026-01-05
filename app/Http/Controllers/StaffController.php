@@ -2003,15 +2003,25 @@ class StaffController extends Controller
         $data = $request->validate([
             'deposit_decision' => 'required|in:refund,carry_forward,burn',
             'deposit_refund_amount' => 'required|numeric|min:0|max:' . $booking->deposit_amount,
+            'refund_receipt' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Update booking with refund decision
+            // Handle refund receipt upload if provided
+            $refundReceiptPath = null;
+            if ($request->hasFile('refund_receipt')) {
+                $receipt = $request->file('refund_receipt');
+                $receiptName = time() . '_' . uniqid() . '.' . $receipt->getClientOriginalExtension();
+                $refundReceiptPath = $receipt->storeAs('images/refunds', $receiptName, 'public');
+            }
+
+            // Update booking with refund decision and change status to deposit_returned
             $booking->update([
                 'deposit_decision' => $data['deposit_decision'],
                 'deposit_refund_amount' => $data['deposit_refund_amount'],
+                'status' => 'deposit_returned', // Update status to deposit_returned after processing
             ]);
 
             // If refunding, update customer deposit balance
@@ -2027,7 +2037,7 @@ class StaffController extends Controller
                     'amount' => $data['deposit_refund_amount'],
                     'payment_type' => 'refund',
                     'payment_method' => 'bank_transfer', // Default for refunds
-                    'receipt_url' => '', // No receipt for refunds
+                    'receipt_url' => $refundReceiptPath ?? '', // Store refund receipt if uploaded
                     'payment_date' => now(),
                     'status' => 'verified', // Auto-verified refunds
                 ]);

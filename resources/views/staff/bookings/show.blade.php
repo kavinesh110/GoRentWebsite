@@ -29,10 +29,10 @@
         $statusLabels = [
           'created' => 'Created',
           'verified' => 'Verified',
-          'confirmed' => 'Ready to Pickup',
+          'confirmed' => 'Before Pickup Inspection',
           'active' => 'Ongoing',
           'ongoing' => 'Ongoing',
-          'completed' => 'Completed (Returned)',
+          'completed' => 'Car Returned',
           'deposit_returned' => 'Deposit Returned',
           'cancelled' => 'Cancelled'
         ];
@@ -68,7 +68,18 @@
         $hasBeforeInspection = $booking->inspections && $booking->inspections->where('type', 'before')->whereNotNull('photos')->count() > 0;
         $beforeInspection = $booking->inspections ? $booking->inspections->where('type', 'before')->first() : null;
         $afterInspection = $booking->inspections ? $booking->inspections->where('type', 'after')->first() : null;
-        $hasAfterInspection = $afterInspection && $afterInspection->photos;
+        $hasAfterInspection = $afterInspection && $afterInspection->status === 'completed' && $afterInspection->photos;
+        
+        // Check if "Before Pickup Inspection" (confirmed) stage is complete
+        // Requires: Before pickup inspection form submitted (staff)
+        $hasAgreementSigned = $booking->agreement_signed_at !== null;
+        $hasAgreementPhoto = $booking->rentalPhotos && $booking->rentalPhotos->where('photo_type', 'agreement')->count() > 0;
+        $hasPickupPhoto = $booking->rentalPhotos && $booking->rentalPhotos->where('photo_type', 'pickup')->count() > 0;
+        $isPrePickupInspectionComplete = $hasBeforeInspection;
+        
+        // Check if "Car Collected" (active) stage is complete
+        // Requires: 1) Signed Agreement Photo uploaded (customer), 2) Receiving Car Keys Photo uploaded (customer), 3) Before Pickup Inspection form submitted (staff)
+        $isCarCollectedComplete = $hasAgreementPhoto && $hasPickupPhoto && $hasBeforeInspection;
       @endphp
 
       {{-- BOOKING PROGRESS BAR --}}
@@ -78,26 +89,43 @@
         </div>
         <div class="card-body p-4">
           @php
-            $statusOrder = ['created', 'verified', 'confirmed', 'active', 'completed', 'deposit_returned'];
+            $statusOrder = ['created', 'verified', 'confirmed', 'active', 'completed', 'after_inspection', 'deposit_returned'];
             $statusIcons = [
               'created' => 'bi-file-earmark-plus',
               'verified' => 'bi-check-circle',
               'confirmed' => 'bi-box-arrow-in-right',
               'active' => 'bi-car-front',
               'completed' => 'bi-check-circle-fill',
+              'after_inspection' => 'bi-clipboard-check',
               'deposit_returned' => 'bi-wallet2',
               'cancelled' => 'bi-x-circle'
             ];
             $statusNames = [
               'created' => 'Created',
               'verified' => 'Verified',
-              'confirmed' => 'Ready to Pickup',
-              'active' => 'Ongoing',
-              'completed' => 'Completed',
+              'confirmed' => 'Before Pickup Inspection',
+              'active' => 'Car Collected',
+              'completed' => 'Car Returned',
+              'after_inspection' => 'After Return Inspection',
               'deposit_returned' => 'Deposit Returned',
               'cancelled' => 'Cancelled'
             ];
-            $currentStatusIndex = array_search($booking->status, $statusOrder);
+            
+            // Determine effective status for progress bar
+            // If after return inspection is completed and status is still 'completed',
+            // treat it as if we're at after_inspection stage
+            // But if deposit is already paid (deposit_decision is set), use actual status
+            $effectiveStatus = $booking->status;
+            if ($booking->status === 'completed' && $hasAfterInspection && !$booking->deposit_decision) {
+              $effectiveStatus = 'after_inspection';
+            }
+            // If deposit is paid, deposit_returned should be completed, not current
+            if ($booking->deposit_decision && $booking->status === 'deposit_returned') {
+              // Use a status that's beyond deposit_returned (or keep as deposit_returned but mark as completed)
+              // We'll handle this in the isCurrent check below
+            }
+            
+            $currentStatusIndex = array_search($effectiveStatus, $statusOrder);
             if ($currentStatusIndex === false) $currentStatusIndex = -1;
           @endphp
 
@@ -106,37 +134,59 @@
             <div class="progress-steps">
               @foreach($statusOrder as $index => $status)
                 @php
-                  $isCompleted = $index <= $currentStatusIndex;
-                  $isCurrent = $booking->status === $status;
+                  // Determine completion status for each step (no current stage display)
+                  if ($status === 'created') {
+                    // Created is always completed (by default, booking exists)
+                    $isCompleted = true;
+                  } elseif ($status === 'verified') {
+                    // Verified is completed when status is verified or beyond
+                    $isCompleted = in_array($effectiveStatus, ['verified', 'confirmed', 'active', 'completed', 'after_inspection', 'deposit_returned']);
+                  } elseif ($status === 'confirmed') {
+                    // "Before Pickup Inspection" is completed only when before pickup inspection form is filled
+                    $isCompleted = $isPrePickupInspectionComplete;
+                  } elseif ($status === 'active') {
+                    // "Car Collected" is completed only when:
+                    // 1) Status is active or beyond, AND
+                    // 2) Signed Agreement Photo uploaded (customer), AND
+                    // 3) Receiving Car Keys Photo uploaded (customer), AND
+                    // 4) Before Pickup Inspection form submitted (staff)
+                    $isCompleted = in_array($effectiveStatus, ['active', 'completed', 'after_inspection', 'deposit_returned']) && $isCarCollectedComplete;
+                  } elseif ($status === 'completed') {
+                    // "Car Returned" is completed when booking status is completed or beyond
+                    // This should always be true once car is returned, regardless of after inspection status
+                    // Check the actual booking status, not the effective status
+                    $isCompleted = in_array($booking->status, ['completed', 'deposit_returned']);
+                  } elseif ($status === 'after_inspection') {
+                    // "After Return Inspection" is completed only when after return inspection form is submitted
+                    $isCompleted = $hasAfterInspection;
+                  } elseif ($status === 'deposit_returned') {
+                    // For deposit_returned step, also check if deposit_decision is set
+                    if ($booking->deposit_decision !== null) {
+                      $isCompleted = true;
+                    } else {
+                      // Only completed if we've passed it
+                      $isCompleted = $index < $currentStatusIndex;
+                    }
+                  }
+                  
                   $isCancelled = $booking->status === 'cancelled';
                 @endphp
-                <div class="progress-step {{ $isCompleted ? 'completed' : '' }} {{ $isCurrent ? 'current' : '' }} {{ $isCancelled && $status !== 'cancelled' ? 'cancelled' : '' }}">
-                  <div class="step-circle {{ $isCompleted ? 'bg-success' : ($isCurrent ? 'bg-primary' : 'bg-light border') }} {{ $isCurrent ? 'pulse' : '' }}">
-                    @if($isCompleted && !$isCurrent)
+                <div class="progress-step {{ $isCompleted ? 'completed' : '' }} {{ $isCancelled && $status !== 'cancelled' ? 'cancelled' : '' }}">
+                  <div class="step-circle {{ $isCompleted ? 'bg-success' : 'bg-light border' }}">
+                    @if($isCompleted)
                       <i class="bi bi-check-lg text-white"></i>
                     @else
-                      <i class="bi {{ $statusIcons[$status] ?? 'bi-circle' }} {{ $isCurrent ? 'text-white' : 'text-muted' }}"></i>
+                      <i class="bi {{ $statusIcons[$status] ?? 'bi-circle' }} text-muted"></i>
                     @endif
                   </div>
                   <div class="step-label mt-2">
-                    <div class="fw-bold small {{ $isCurrent ? 'text-primary' : ($isCompleted ? 'text-success' : 'text-muted') }}">
+                    <div class="fw-bold small {{ $isCompleted ? 'text-success' : 'text-muted' }}">
                       {{ $statusNames[$status] }}
                     </div>
-                    @if($isCurrent)
-                      <span class="badge bg-primary-subtle text-primary small mt-1">Current</span>
-                    @endif
                   </div>
                 </div>
               @endforeach
             </div>
-          </div>
-
-          {{-- Current Status Badge --}}
-          <div class="text-center mb-0">
-            <span class="badge rounded-pill px-4 py-2 {{ $statusClass }} shadow-sm fs-6">
-              <i class="bi {{ $statusIcons[$booking->status] ?? 'bi-circle' }} me-2"></i>
-              {{ $statusLabel }}
-            </span>
           </div>
 
           @if($booking->status === 'cancelled')
@@ -153,9 +203,6 @@
         <div class="card-header bg-white border-0 pt-4 px-4">
           <div class="d-flex align-items-center justify-content-between">
             <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-plus me-2 text-warning"></i>Created</h5>
-            @if($booking->status === 'created')
-              <span class="badge bg-warning text-dark">Current Status</span>
-            @endif
           </div>
         </div>
         <div class="card-body p-0">
@@ -210,11 +257,8 @@
 
           {{-- Pricing & Payments Card --}}
           <div class="card border-0">
-            <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+            <div class="card-header bg-white border-0 pt-4 px-4">
               <h5 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2 text-success"></i>Pricing & Payments</h5>
-              <button type="button" class="btn btn-sm btn-hasta shadow-sm" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
-                <i class="bi bi-plus-lg me-1"></i>Add Payment
-              </button>
             </div>
             <div class="card-body p-4">
               <div class="row g-4 mb-4">
@@ -336,11 +380,7 @@
       <div class="accordion-item border-0 shadow-sm mb-3">
         <h2 class="accordion-header">
           <button class="accordion-button {{ $booking->status === 'verified' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#verifiedSection" aria-expanded="{{ $booking->status === 'verified' ? 'true' : 'false' }}">
-            <i class="bi bi-chevron-down me-2"></i>
             <span class="fw-bold me-2"><i class="bi bi-check-circle me-2 text-info"></i>Verified</span>
-            @if($booking->status === 'verified')
-              <span class="badge bg-info text-white ms-2">Current Status</span>
-            @endif
           </button>
         </h2>
         <div id="verifiedSection" class="accordion-collapse collapse {{ $booking->status === 'verified' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
@@ -376,15 +416,11 @@
         </div>
       </div>
 
-      {{-- READY TO PICKUP SECTION --}}
+      {{-- BEFORE PICKUP INSPECTION SECTION --}}
       <div class="accordion-item border-0 shadow-sm mb-3">
         <h2 class="accordion-header">
           <button class="accordion-button {{ $booking->status === 'confirmed' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#readyToPickupSection" aria-expanded="{{ $booking->status === 'confirmed' ? 'true' : 'false' }}">
-            <i class="bi bi-chevron-down me-2"></i>
-            <span class="fw-bold me-2"><i class="bi bi-box-arrow-in-right me-2 text-primary"></i>Ready to Pickup</span>
-            @if($booking->status === 'confirmed')
-              <span class="badge bg-primary text-white ms-2">Current Status</span>
-            @endif
+            <span class="fw-bold me-2"><i class="bi bi-box-arrow-in-right me-2 text-primary"></i>Before Pickup Inspection</span>
           </button>
         </h2>
         <div id="readyToPickupSection" class="accordion-collapse collapse {{ $booking->status === 'confirmed' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
@@ -450,13 +486,7 @@
       <div class="accordion-item border-0 shadow-sm mb-3">
         <h2 class="accordion-header">
           <button class="accordion-button {{ in_array($booking->status, ['completed', 'deposit_returned']) ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#afterReturnInspectionSection" aria-expanded="{{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'true' : 'false' }}">
-            <i class="bi bi-chevron-down me-2"></i>
             <span class="fw-bold me-2"><i class="bi bi-clipboard-check me-2 text-info"></i>After Return Inspection</span>
-            @if($hasAfterInspection)
-              <span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Completed</span>
-            @elseif(in_array($booking->status, ['completed', 'deposit_returned']))
-              <span class="badge bg-warning text-dark ms-2">Pending</span>
-            @endif
           </button>
         </h2>
         <div id="afterReturnInspectionSection" class="accordion-collapse collapse {{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'show' : '' }}" data-bs-parent="#statusAccordion">
@@ -518,21 +548,81 @@
       <div class="accordion-item border-0 shadow-sm mb-3">
         <h2 class="accordion-header">
           <button class="accordion-button {{ $booking->status === 'deposit_returned' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#depositReturnedSection" aria-expanded="{{ $booking->status === 'deposit_returned' ? 'true' : 'false' }}">
-            <i class="bi bi-chevron-down me-2"></i>
             <span class="fw-bold me-2"><i class="bi bi-arrow-return-left me-2 text-success"></i>Deposit Returned</span>
-            @if($booking->status === 'deposit_returned')
-              <span class="badge bg-success text-white ms-2">Current Status</span>
-            @endif
           </button>
         </h2>
         <div id="depositReturnedSection" class="accordion-collapse collapse {{ $booking->status === 'deposit_returned' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
           <div class="accordion-body p-0">
             <div class="card border-0">
               <div class="card-body p-4">
-                @if($booking->status === 'deposit_returned')
+                @if($booking->status === 'deposit_returned' || $booking->deposit_decision)
                   <div class="text-center py-4">
                     <i class="bi bi-check-circle-fill text-success display-4 mb-3"></i>
-                    <p class="text-muted mb-0">Deposit has been returned for this booking.</p>
+                    <p class="text-muted mb-0">Deposit has been paid for this booking.</p>
+                  </div>
+                @elseif($booking->status === 'completed' && !$booking->deposit_decision)
+                  @php
+                    // Get the deposit payment to display bank details
+                    $depositPayment = $booking->payments->where('payment_type', 'deposit')->where('status', 'verified')->first();
+                  @endphp
+                  {{-- Process Deposit Form --}}
+                  <div class="card border-0 shadow-sm mb-0">
+                    <div class="card-header bg-warning-subtle text-warning-emphasis border-0 py-3 px-4">
+                      <h6 class="fw-bold mb-0"><i class="bi bi-wallet2 me-2"></i>Process Deposit</h6>
+                    </div>
+                    <div class="card-body p-4">
+                      <form method="POST" action="{{ route('staff.bookings.process-refund', $booking->booking_id) }}" enctype="multipart/form-data">
+                        @csrf
+                        {{-- Fixed Decision --}}
+                        <div class="mb-2">
+                          <label class="form-label small">Decision</label>
+                          <input type="text" class="form-control bg-light" value="Refund Deposit" readonly>
+                          <input type="hidden" name="deposit_decision" value="refund">
+                        </div>
+                        {{-- Fixed Amount --}}
+                        <div class="mb-2">
+                          <label class="form-label small">Amount (RM)</label>
+                          <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-white">RM</span>
+                            <input type="text" class="form-control border-start-0 ps-0 bg-light" value="{{ number_format($booking->deposit_amount, 2) }}" readonly>
+                            <input type="hidden" name="deposit_refund_amount" value="{{ $booking->deposit_amount }}">
+                          </div>
+                        </div>
+                        {{-- Display Bank Details --}}
+                        @if($depositPayment)
+                          <div class="mb-3 p-3 bg-light rounded-3 border">
+                            <h6 class="fw-bold small mb-3"><i class="bi bi-bank me-2"></i>Customer Bank Details</h6>
+                            <div class="row g-2">
+                              <div class="col-12">
+                                <label class="form-label x-small text-muted mb-1">Bank Name</label>
+                                <div class="fw-bold text-dark">{{ $depositPayment->bank_name ?? 'N/A' }}</div>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label x-small text-muted mb-1">Account Holder Name</label>
+                                <div class="fw-bold text-dark">{{ $depositPayment->account_holder_name ?? 'N/A' }}</div>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label x-small text-muted mb-1">Account Number</label>
+                                <div class="fw-bold text-dark">{{ $depositPayment->account_number ?? 'N/A' }}</div>
+                              </div>
+                            </div>
+                          </div>
+                        @else
+                          <div class="mb-3 p-3 bg-warning-subtle rounded-3 border border-warning">
+                            <p class="small mb-0 text-warning-emphasis">
+                              <i class="bi bi-exclamation-triangle me-2"></i>Bank details not available. Deposit payment may not be verified yet.
+                            </p>
+                          </div>
+                        @endif
+                        {{-- Upload Receipt --}}
+                        <div class="mb-3">
+                          <label class="form-label small">Refund Receipt <span class="text-danger">*</span></label>
+                          <input type="file" name="refund_receipt" class="form-control" accept="image/*,.pdf" required>
+                          <small class="text-muted">Upload receipt or proof of refund transaction (image or PDF, max 5MB)</small>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold">Process Decision</button>
+                      </form>
+                    </div>
                   </div>
                 @else
                   <div class="alert alert-info border-0 shadow-sm mb-0">
@@ -633,39 +723,8 @@
     {{-- ACTIONS PANEL (Full Width Below) --}}
     <div class="col-12">
       <div class="row g-4">
-        @if($booking->status === 'completed' && !$booking->deposit_decision)
-          <div class="col-md-6">
-            <div class="card border-0 shadow-sm">
-              <div class="card-header bg-white border-0 pt-4 px-4">
-                <h6 class="fw-bold mb-0"><i class="bi bi-wallet2 me-2"></i>Process Deposit</h6>
-              </div>
-              <div class="card-body p-4">
-                <form method="POST" action="{{ route('staff.bookings.process-refund', $booking->booking_id) }}">
-                  @csrf
-                  <div class="mb-2">
-                    <label class="form-label small">Decision</label>
-                    <select name="deposit_decision" class="form-select mb-2" required>
-                      <option value="">Choose decision...</option>
-                      <option value="refund">Refund Deposit</option>
-                      <option value="burn">Forfeit (Damages/Fines)</option>
-                    </select>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label small">Amount (RM)</label>
-                    <div class="input-group">
-                      <span class="input-group-text border-end-0 bg-white">RM</span>
-                      <input type="number" name="deposit_refund_amount" class="form-control border-start-0 ps-0" step="0.01" value="{{ $booking->deposit_amount }}" max="{{ $booking->deposit_amount }}" required>
-                    </div>
-                  </div>
-                  <button type="submit" class="btn btn-warning w-100 fw-bold">Process Decision</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        @endif
-
         {{-- Add Penalty --}}
-        <div class="col-md-{{ $booking->status === 'completed' && !$booking->deposit_decision ? '6' : '12' }}">
+        <div class="col-md-12">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4 px-4">
               <h6 class="fw-bold mb-0">Issue Penalty</h6>
@@ -786,64 +845,4 @@
 </div>
 </div>
 
-{{-- Add Payment Modal --}}
-<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addPaymentModalLabel">Add Payment</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form method="POST" action="{{ route('staff.payments.store', $booking->booking_id) }}" enctype="multipart/form-data">
-        @csrf
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-            <select name="payment_type" class="form-select" required>
-              <option value="deposit">Deposit</option>
-              <option value="rental">Rental Payment</option>
-              <option value="penalty">Penalty Payment</option>
-              <option value="refund">Refund</option>
-              <option value="installment">Installment</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Penalty (if payment type is penalty/installment)</label>
-            <select name="penalty_id" class="form-select">
-              <option value="">Select penalty (optional)</option>
-              @foreach($booking->penalties as $penalty)
-                <option value="{{ $penalty->penalty_id }}">{{ ucfirst($penalty->penalty_type) }} - RM {{ number_format($penalty->amount, 2) }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Amount (RM) <span class="text-danger">*</span></label>
-            <input type="number" name="amount" step="0.01" min="0" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Payment Method <span class="text-danger">*</span></label>
-            <select name="payment_method" class="form-select" required>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="cash">Cash</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Payment Date <span class="text-danger">*</span></label>
-            <input type="datetime-local" name="payment_date" class="form-control" value="{{ now()->format('Y-m-d\TH:i') }}" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Receipt/Proof (optional)</label>
-            <input type="file" name="receipt" class="form-control" accept="image/*,.pdf">
-            <small class="text-muted">Upload payment receipt or proof (image or PDF)</small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-hasta">Add Payment</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 @endsection

@@ -172,6 +172,11 @@ class Booking extends Model
      */
     public function getCurrentPhase(): int
     {
+        // Phase 5: Deposit Returned - final stage
+        if ($this->status === 'deposit_returned') {
+            return 5;
+        }
+
         // Phase 4: Completed - rental finished
         if ($this->status === 'completed') {
             return 4;
@@ -226,7 +231,7 @@ class Booking extends Model
     public function isPhase2Complete(): bool
     {
         // Phase 2 is complete when booking is verified, confirmed, or beyond
-        return in_array($this->status, ['verified', 'confirmed', 'active', 'completed']);
+        return in_array($this->status, ['verified', 'confirmed', 'active', 'completed', 'deposit_returned']);
     }
 
     /**

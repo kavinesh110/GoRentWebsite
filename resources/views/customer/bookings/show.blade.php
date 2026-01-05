@@ -222,6 +222,7 @@
   $phase2Complete = $booking->isPhase2Complete();
   $phase3Complete = $booking->isPhase3Complete();
   $phase4Complete = $booking->isPhase4Complete();
+  $phase5Complete = $booking->deposit_decision !== null || $booking->status === 'deposit_returned';
   
   // Check if cancellation is allowed (24 hours before pickup)
   $canCancel = false;
@@ -322,6 +323,21 @@
             @endif
           </div>
           <div class="phase-label">Return</div>
+        </div>
+        
+        <div class="phase-line {{ $phase4Complete ? 'completed' : '' }}"></div>
+        
+        {{-- Phase 5: Deposit Returned --}}
+        {{-- Phase 5 is active when Phase 4 is complete but Phase 5 is not yet complete --}}
+        <div class="phase-step {{ $phase5Complete ? 'completed' : ($phase4Complete ? 'active' : '') }}">
+          <div class="phase-circle">
+            @if($phase5Complete)
+              <i class="bi bi-check-lg"></i>
+            @else
+              5
+            @endif
+          </div>
+          <div class="phase-label">Deposit Returned</div>
         </div>
       </div>
     </div>
@@ -545,14 +561,14 @@
           <h5><i class="bi bi-pen me-2"></i> Phase 3: Pickup & Agreement</h5>
           @if($phase3Complete || $phase4Complete)
             <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Complete</span>
-          @elseif($phase2Complete && in_array($booking->status, ['confirmed', 'active', 'completed']))
+          @elseif($phase2Complete)
             <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> Action Required</span>
           @else
             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> Locked</span>
           @endif
         </div>
         <div class="phase-card-body">
-          @if($phase3Complete || $phase4Complete || ($phase2Complete && in_array($booking->status, ['confirmed', 'active', 'completed'])))
+          @if($phase3Complete || $phase4Complete || $phase2Complete)
             @if($phase3Complete || $phase4Complete)
               {{-- Show completion message if Phase 3 or 4 is complete --}}
               <div class="status-info-box success mb-3">
@@ -655,20 +671,19 @@
             <div class="card border mb-4">
               <div class="card-body">
                 @if($bothPhotosUploaded)
-                  <div class="alert alert-success mb-3">
-                    <i class="bi bi-check-circle me-2"></i><strong>Both photos uploaded!</strong> Phase 3 is complete. You can proceed to Phase 4.
+                  <div class="alert alert-success mb-0">
+                    <i class="bi bi-check-circle me-2"></i><strong>Photos uploaded!</strong> Phase 3 is complete. You can proceed to Phase 4.
                   </div>
                 @else
                   <div class="alert alert-info mb-3">
                     <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete Phase 3 and proceed to Phase 4.
                   </div>
-                @endif
-                
-                <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="pickupPhotosForm">
+                  
+                  <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="pickupPhotosForm">
                   @csrf
                   <input type="hidden" name="taken_at" value="{{ now()->format('Y-m-d') }}">
                   
-                  <div class="row g-3">
+                  <div class="row g-3" id="pickupPhotosInputContainer">
                     {{-- Signed Agreement Photo --}}
                     <div class="col-md-6">
                       <label class="form-label fw-bold"><i class="bi bi-file-earmark-check me-2"></i>Signed Agreement Photo <span class="text-danger">*</span></label>
@@ -696,7 +711,7 @@
                     </div>
                   </div>
                   
-                  <div class="mt-3">
+                  <div class="mt-3" id="pickupPhotosButtonContainer">
                     <button type="submit" class="btn btn-hasta w-100">
                       <i class="bi bi-upload me-2"></i>
                       @if($bothPhotosUploaded)
@@ -708,7 +723,7 @@
                   </div>
                   
                   @if(!$bothPhotosUploaded)
-                    <div class="mt-2 text-center">
+                    <div class="mt-2 text-center" id="pickupPhotosWarning">
                       <small class="text-muted">
                         @if($agreementPhoto && !$keysPhoto)
                           <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Receiving Keys photo
@@ -720,7 +735,8 @@
                       </small>
                     </div>
                   @endif
-                </form>
+                  </form>
+                @endif
               </div>
             </div>
 
@@ -788,20 +804,19 @@
               <div class="card border mb-4">
                 <div class="card-body">
                   @if($bothReturnPhotosUploaded)
-                    <div class="alert alert-success mb-3">
-                      <i class="bi bi-check-circle me-2"></i><strong>Both photos uploaded!</strong> Your booking return process is complete.
+                    <div class="alert alert-success mb-0">
+                      <i class="bi bi-check-circle me-2"></i><strong>Photos uploaded!</strong> Your booking return process is complete.
                     </div>
                   @else
                     <div class="alert alert-info mb-3">
                       <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete the return process.
                     </div>
-                  @endif
-                  
-                  <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="returnPhotosForm">
+                    
+                    <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="returnPhotosForm">
                     @csrf
                     <input type="hidden" name="taken_at" value="{{ now()->format('Y-m-d') }}">
                     
-                    <div class="row g-3">
+                    <div class="row g-3" id="returnPhotosInputContainer">
                       {{-- Keys in Car Photo --}}
                       <div class="col-md-6">
                         <label class="form-label fw-bold"><i class="bi bi-key me-2"></i>Keys in Car Photo <span class="text-danger">*</span></label>
@@ -829,7 +844,7 @@
                       </div>
                     </div>
                     
-                    <div class="mt-3">
+                    <div class="mt-3" id="returnPhotosButtonContainer">
                       <button type="submit" class="btn btn-hasta w-100">
                         <i class="bi bi-upload me-2"></i>
                         @if($bothReturnPhotosUploaded)
@@ -841,7 +856,7 @@
                     </div>
                     
                     @if(!$bothReturnPhotosUploaded)
-                      <div class="mt-2 text-center">
+                      <div class="mt-2 text-center" id="returnPhotosWarning">
                         <small class="text-muted">
                           @if($keysInCarPhoto && !$parkingPhoto)
                             <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Parking Location photo
@@ -853,7 +868,8 @@
                         </small>
                       </div>
                     @endif
-                  </form>
+                    </form>
+                  @endif
                 </div>
               </div>
             @endif
@@ -865,6 +881,80 @@
                 <div>
                   <strong>Complete Previous Phases First</strong>
                   <p class="mb-0 small text-muted">This phase will unlock after you complete Phase 3 (upload pickup photos).</p>
+                </div>
+              </div>
+            </div>
+          @endif
+        </div>
+      </div>
+
+      {{-- ========== PHASE 5: DEPOSIT RETURNED ========== --}}
+      <div class="card phase-card">
+        <div class="phase-card-header d-flex justify-content-between align-items-center">
+          <h5><i class="bi bi-wallet2 me-2"></i> Phase 5: Deposit Returned</h5>
+          @if($phase5Complete)
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Complete</span>
+          @elseif($phase4Complete)
+            <span class="badge bg-info"><i class="bi bi-hourglass-split me-1"></i> In Progress</span>
+          @else
+            <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> Locked</span>
+          @endif
+        </div>
+        <div class="phase-card-body">
+          @if($phase5Complete)
+            <div class="status-info-box success">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-wallet2 text-success me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Deposit Returned</strong>
+                  <p class="mb-0 small text-muted">
+                    @if($booking->deposit_decision === 'refund')
+                      Your deposit of <strong>RM {{ number_format($booking->deposit_refund_amount ?? $booking->deposit_amount ?? 0, 2) }}</strong> has been refunded.
+                    @elseif($booking->deposit_decision === 'carry_forward')
+                      Your deposit has been carried forward to your next booking.
+                    @elseif($booking->deposit_decision === 'burn')
+                      Your deposit has been applied to cover penalties or damages.
+                    @else
+                      Your deposit has been processed by Hasta staff.
+                    @endif
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            @if($booking->deposit_decision === 'refund' && $booking->deposit_refund_amount)
+              <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                  <div class="p-3 bg-light rounded">
+                    <div class="small text-muted">Refund Amount</div>
+                    <div class="fw-bold text-success">RM {{ number_format($booking->deposit_refund_amount, 2) }}</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="p-3 bg-light rounded">
+                    <div class="small text-muted">Status</div>
+                    <div class="fw-bold">Processed</div>
+                  </div>
+                </div>
+              </div>
+            @endif
+          @elseif($phase4Complete)
+            <div class="status-info-box info">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-hourglass-split text-info me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Awaiting Deposit Processing</strong>
+                  <p class="mb-0 small">Hasta staff is processing your deposit return. You will be notified once it's completed.</p>
+                </div>
+              </div>
+            </div>
+          @else
+            <div class="status-info-box">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-lock-fill text-secondary me-3" style="font-size: 24px;"></i>
+                <div>
+                  <strong>Complete Previous Phases First</strong>
+                  <p class="mb-0 small text-muted">This phase will unlock after you complete Phase 4 (return the car).</p>
                 </div>
               </div>
             </div>
@@ -1074,6 +1164,61 @@
         </div>
       </div>
 
+      {{-- Feedback Form (Only for completed bookings) --}}
+      @if(in_array($booking->status, ['completed', 'deposit_returned']))
+        @if(!$booking->feedback)
+        <div class="card phase-card" id="feedback">
+          <div class="phase-card-body">
+            <h6 class="fw-bold mb-3"><i class="bi bi-star me-2"></i> Rate Your Experience</h6>
+            <p class="small text-muted mb-3">Help us improve by sharing your feedback about this rental experience.</p>
+            <form method="POST" action="{{ route('customer.bookings.feedback.store', $booking->booking_id) }}">
+              @csrf
+              <div class="mb-3">
+                <label class="form-label">Rating <span class="text-danger">*</span></label>
+                <div class="d-flex gap-2">
+                  @for($i = 1; $i <= 5; $i++)
+                    <label style="cursor: pointer;">
+                      <input type="radio" name="rating" value="{{ $i }}" class="d-none rating-input" required>
+                      <i class="bi bi-star-fill rating-star" style="font-size: 24px; color: #ddd;" data-value="{{ $i }}"></i>
+                    </label>
+                  @endfor
+                </div>
+                <small class="text-muted">Click on a star to rate (1 = Poor, 5 = Excellent)</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Your Feedback</label>
+                <textarea name="comment" class="form-control" rows="4" placeholder="Share your experience with this car rental..."></textarea>
+                <small class="text-muted">Tell us what you liked or what we can improve</small>
+              </div>
+              <button type="submit" class="btn btn-hasta w-100">
+                <i class="bi bi-send me-2"></i>Submit Feedback
+              </button>
+            </form>
+          </div>
+        </div>
+        @else
+        <div class="card phase-card" id="feedback">
+          <div class="phase-card-body">
+            <h6 class="fw-bold mb-3"><i class="bi bi-star-fill text-warning me-2"></i> Your Rating</h6>
+            <div class="d-flex align-items-center mb-3">
+              @for($i = 1; $i <= 5; $i++)
+                <i class="bi bi-star-fill" style="font-size: 20px; color: {{ $i <= $booking->feedback->rating ? '#FFD700' : '#ddd' }};"></i>
+              @endfor
+              <span class="ms-2 small text-muted">({{ $booking->feedback->rating }}/5)</span>
+            </div>
+            @if($booking->feedback->comment)
+              <div class="p-3 bg-light rounded">
+                <p class="small mb-0">"{{ $booking->feedback->comment }}"</p>
+              </div>
+            @endif
+            <p class="small text-muted mt-2 mb-0">
+              <i class="bi bi-check-circle text-success me-1"></i>Thank you for your feedback!
+            </p>
+          </div>
+        </div>
+        @endif
+      @endif
+
       {{-- Cancellation Request Status (if exists) --}}
       @if($booking->cancellationRequest)
         @php $cancelRequest = $booking->cancellationRequest; @endphp
@@ -1166,49 +1311,6 @@
         </div>
       </div>
 
-      {{-- Feedback Form (Only for completed bookings) --}}
-      @if($booking->status === 'completed')
-        @if(!$booking->feedback)
-        <div class="card phase-card">
-          <div class="phase-card-body">
-            <h6 class="fw-bold mb-3"><i class="bi bi-star me-2"></i> Rate Your Experience</h6>
-            <form method="POST" action="{{ route('customer.bookings.feedback.store', $booking->booking_id) }}">
-              @csrf
-              <div class="mb-3">
-                <label class="form-label">Rating <span class="text-danger">*</span></label>
-                <div class="d-flex gap-2">
-                  @for($i = 1; $i <= 5; $i++)
-                    <label style="cursor: pointer;">
-                      <input type="radio" name="rating" value="{{ $i }}" class="d-none rating-input" required>
-                      <i class="bi bi-star-fill rating-star" style="font-size: 24px; color: #ddd;" data-value="{{ $i }}"></i>
-                    </label>
-                  @endfor
-                </div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Comment</label>
-                <textarea name="comment" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
-              </div>
-              <button type="submit" class="btn btn-hasta btn-sm w-100">Submit Feedback</button>
-            </form>
-          </div>
-        </div>
-        @else
-        <div class="card phase-card">
-          <div class="phase-card-body">
-            <h6 class="fw-bold mb-3"><i class="bi bi-star-fill text-warning me-2"></i> Your Rating</h6>
-            <div class="d-flex align-items-center mb-2">
-              @for($i = 1; $i <= 5; $i++)
-                <i class="bi bi-star-fill" style="font-size: 20px; color: {{ $i <= $booking->feedback->rating ? '#FFD700' : '#ddd' }};"></i>
-              @endfor
-            </div>
-            @if($booking->feedback->comment)
-              <p class="small text-muted mb-0">"{{ $booking->feedback->comment }}"</p>
-            @endif
-          </div>
-        </div>
-        @endif
-      @endif
     </div>
   </div>
 </div>
@@ -1239,6 +1341,9 @@ if (pickupPhotosForm) {
       return false;
     }
     
+    // Hide the entire form after submission
+    this.style.display = 'none';
+    
     // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
     if (submitBtn) {
@@ -1261,6 +1366,9 @@ if (returnPhotosForm) {
       alert('Please select at least one photo to upload.');
       return false;
     }
+    
+    // Hide the entire form after submission
+    this.style.display = 'none';
     
     // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
