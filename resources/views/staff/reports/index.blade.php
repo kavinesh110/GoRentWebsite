@@ -21,100 +21,163 @@
     min-height: calc(100vh - 70px);
   }
 
-  .stat-card {
+  /* KPI Cards */
+  .kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 20px;
-    transition: all 0.2s ease;
   }
 
-  .stat-card:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    border-color: #cbd5e1;
-  }
-
-  .stat-value {
-    font-size: 28px;
+  .kpi-value {
+    font-size: 26px;
     font-weight: 700;
     color: var(--slate-900);
     line-height: 1.2;
-    margin: 8px 0 4px;
   }
 
-  .stat-label {
+  .kpi-label {
     font-size: 12px;
     font-weight: 600;
     color: var(--slate-500);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 4px;
   }
 
-  .stat-change {
-    font-size: 13px;
-    color: var(--slate-500);
+  .kpi-change {
+    font-size: 12px;
     margin-top: 8px;
   }
 
-  .chart-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
+  .kpi-change.positive { color: #059669; }
+  .kpi-change.negative { color: #dc2626; }
+  .kpi-change.neutral { color: var(--slate-500); }
 
-  .chart-title {
-    font-size: 16px;
-    font-weight: 600;
+  /* Section Headers */
+  .section-header {
+    font-size: 18px;
+    font-weight: 700;
     color: var(--slate-900);
     margin-bottom: 20px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid var(--slate-200);
   }
 
-  .filter-card {
+  .section-header i {
+    color: var(--slate-600);
+    margin-right: 8px;
+  }
+
+  /* Cards */
+  .report-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
-  .form-label {
-    font-size: 12px;
+  .card-header-custom {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fafbfc;
     font-weight: 600;
-    color: var(--slate-700);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-  }
-
-  .form-control, .form-select {
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px 12px;
     font-size: 14px;
     color: var(--slate-900);
   }
 
-  .form-control:focus, .form-select:focus {
-    border-color: #cbd5e1;
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+  .card-body-custom {
+    padding: 20px;
   }
 
-  .btn-filter {
+  /* Tables */
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .report-table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--slate-500);
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    background: #fafbfc;
+  }
+
+  .report-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    color: var(--slate-700);
+    vertical-align: middle;
+  }
+
+  .report-table tbody tr:hover {
+    background: #fafbfc;
+  }
+
+  .report-table .text-right {
+    text-align: right;
+  }
+
+  .report-table .font-medium {
+    font-weight: 500;
+  }
+
+  .report-table .font-semibold {
+    font-weight: 600;
+    color: var(--slate-900);
+  }
+
+  /* Filter Card */
+  .filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--slate-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .filter-input {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--slate-900);
+    width: 100%;
+  }
+
+  .filter-input:focus {
+    outline: none;
+    border-color: var(--slate-400);
+    box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1);
+  }
+
+  .btn-apply {
     background: var(--slate-900);
     color: #ffffff;
     border: none;
     border-radius: 6px;
-    padding: 8px 20px;
+    padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    transition: all 0.2s;
+    cursor: pointer;
   }
 
-  .btn-filter:hover {
+  .btn-apply:hover {
     background: var(--slate-800);
   }
 
@@ -123,67 +186,145 @@
     color: var(--slate-700);
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 8px 20px;
+    padding: 8px 16px;
     font-size: 13px;
     font-weight: 500;
-    transition: all 0.2s;
+    text-decoration: none;
   }
 
   .btn-reset:hover {
     background: #f8fafc;
-    border-color: #cbd5e1;
+    color: var(--slate-900);
   }
 
-  .table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+  /* Chart Container */
+  .chart-container {
+    position: relative;
+    height: 250px;
+  }
+
+  .chart-container-sm {
+    position: relative;
+    height: 180px;
+  }
+
+  /* Progress Bar */
+  .progress-bar-custom {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
     overflow: hidden;
   }
 
-  .table-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #fafbfc;
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
   }
 
-  .table-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--slate-900);
-    margin: 0;
-  }
-
-  .table {
-    margin: 0;
-  }
-
-  .table thead th {
+  /* Badge */
+  .status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--slate-500);
-    padding: 12px 20px;
+  }
+
+  /* Nav Tabs */
+  .report-tabs {
+    display: flex;
+    gap: 4px;
     border-bottom: 1px solid #e2e8f0;
-    background: #fafbfc;
+    margin-bottom: 24px;
+    padding-bottom: 0;
   }
 
-  .table tbody td {
-    padding: 16px 20px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
+  .report-tab {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--slate-600);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .report-tab:hover {
+    color: var(--slate-900);
+  }
+
+  .report-tab.active {
+    color: var(--slate-900);
+    border-bottom-color: var(--slate-900);
+    font-weight: 600;
+  }
+
+  /* Revenue Filter Buttons */
+  .revenue-filter-btn {
+    background: #ffffff;
+    color: var(--slate-600);
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    transition: all 0.15s ease;
+  }
+
+  .revenue-filter-btn:hover {
+    background: #f8fafc;
+    color: var(--slate-900);
+    border-color: #cbd5e1;
+  }
+
+  .revenue-filter-btn.active {
+    background: var(--slate-900);
+    color: #ffffff;
+    border-color: var(--slate-900);
+  }
+
+  .revenue-filter-btn:first-child {
+    border-radius: 6px 0 0 6px;
+  }
+
+  .revenue-filter-btn:last-child {
+    border-radius: 0 6px 6px 0;
+  }
+
+  .revenue-filter-btn:not(:first-child):not(:last-child) {
+    border-radius: 0;
+  }
+
+  /* Month Selector */
+  .month-selector {
+    background: #ffffff;
     color: var(--slate-700);
-    vertical-align: middle;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    min-width: 140px;
+    transition: all 0.15s ease;
+    cursor: pointer;
   }
 
-  .table tbody tr:hover {
-    background: #fafbfc;
+  .month-selector:hover {
+    border-color: #cbd5e1;
   }
 
+  .month-selector:focus {
+    outline: none;
+    border-color: var(--slate-900);
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+  }
+
+  /* Responsive */
   @media (max-width: 768px) {
     .container-fluid { padding-left: 1rem !important; padding-right: 1rem !important; }
-    .stat-value { font-size: 24px; }
+    .kpi-value { font-size: 22px; }
+    .month-selector { min-width: 120px; font-size: 11px; }
   }
 </style>
 @endpush
@@ -192,185 +333,653 @@
 <div class="d-flex reports-container">
   @include('staff._nav')
   <div class="flex-fill">
-    <div class="container-fluid px-4 px-md-5 py-5">
+    <div class="container-fluid px-4 px-md-5 py-4">
       
       {{-- Header --}}
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-5">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
-          <h1 class="h3 fw-bold mb-1" style="color: var(--slate-900);">Business Reports</h1>
-          <p class="text-muted mb-0" style="font-size: 14px;">Comprehensive analytics and insights</p>
+          <h1 class="h4 fw-bold mb-1" style="color: var(--slate-900);">Business Reports</h1>
+          <p class="text-muted mb-0" style="font-size: 13px;">
+            Reporting period: {{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($endDate)->format('M d, Y') }}
+            ({{ $daysDiff }} days)
+          </p>
         </div>
       </div>
 
       {{-- Date Filter --}}
       <div class="filter-card">
         <form method="GET" action="{{ route('staff.reports') }}" class="row g-3 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">Start Date</label>
-            <input type="date" name="start_date" class="form-control" value="{{ $startDate }}">
+          <div class="col-md-3">
+            <div class="filter-label">Start Date</div>
+            <input type="date" name="start_date" class="filter-input" value="{{ $startDate }}">
           </div>
-          <div class="col-md-4">
-            <label class="form-label">End Date</label>
-            <input type="date" name="end_date" class="form-control" value="{{ $endDate }}">
+          <div class="col-md-3">
+            <div class="filter-label">End Date</div>
+            <input type="date" name="end_date" class="filter-input" value="{{ $endDate }}">
           </div>
-          <div class="col-md-4 d-flex gap-2">
-            <button type="submit" class="btn-filter flex-fill">Apply Filter</button>
+          <div class="col-md-6 d-flex gap-2 justify-content-md-end">
+            <button type="submit" class="btn-apply">Apply Filter</button>
             <a href="{{ route('staff.reports') }}" class="btn-reset">Reset</a>
           </div>
         </form>
       </div>
 
-      {{-- Key Metrics --}}
+      {{-- ============================================== --}}
+      {{-- EXECUTIVE SUMMARY - KEY METRICS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-speedometer2"></i>Executive Summary</div>
+      
       <div class="row g-3 mb-4">
+        {{-- Total Revenue --}}
         <div class="col-xl-3 col-md-6">
-          <div class="stat-card">
-            <div class="stat-label">Total Revenue</div>
-            <div class="stat-value">RM{{ number_format($totalRevenue ?? 0, 0) }}</div>
-            <div class="stat-change">
-              <span>Deposits: RM{{ number_format($totalDeposits ?? 0, 0) }}</span>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value">RM{{ number_format($totalRevenue, 0) }}</div>
+            <div class="kpi-change {{ $revenueChange >= 0 ? 'positive' : 'negative' }}">
+              <i class="bi bi-arrow-{{ $revenueChange >= 0 ? 'up' : 'down' }}"></i>
+              {{ abs(round($revenueChange, 1)) }}% vs previous period
             </div>
           </div>
         </div>
 
+        {{-- Total Bookings --}}
         <div class="col-xl-3 col-md-6">
-          <div class="stat-card">
-            <div class="stat-label">Total Bookings</div>
-            <div class="stat-value">{{ number_format($totalBookings ?? 0, 0) }}</div>
-            <div class="stat-change">
-              <span>Avg Value: RM{{ number_format($avgBookingValue ?? 0, 0) }}</span>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Bookings</div>
+            <div class="kpi-value">{{ number_format($totalBookings) }}</div>
+            <div class="kpi-change {{ $bookingsChange >= 0 ? 'positive' : 'negative' }}">
+              <i class="bi bi-arrow-{{ $bookingsChange >= 0 ? 'up' : 'down' }}"></i>
+              {{ abs(round($bookingsChange, 1)) }}% vs previous period
             </div>
           </div>
         </div>
 
+        {{-- Average Booking Value --}}
         <div class="col-xl-3 col-md-6">
-          <div class="stat-card">
-            <div class="stat-label">Total Penalties</div>
-            <div class="stat-value">{{ $penaltyStats->total ?? 0 }}</div>
-            <div class="stat-change">
-              <span>Amount: RM{{ number_format($penaltyStats->total_amount ?? 0, 0) }}</span>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg. Booking Value</div>
+            <div class="kpi-value">RM{{ number_format($avgBookingValue, 0) }}</div>
+            <div class="kpi-change neutral">
+              Avg. duration: {{ round($avgRentalDuration, 1) }} hours
             </div>
           </div>
         </div>
 
+        {{-- Completion Rate --}}
         <div class="col-xl-3 col-md-6">
-          <div class="stat-card">
-            <div class="stat-label">Penalties Paid</div>
-            <div class="stat-value">{{ $penaltyStats->paid_count ?? 0 }}</div>
-            <div class="stat-change">
-              <span>Pending: {{ $penaltyStats->pending_count ?? 0 }}</span>
+          <div class="kpi-card">
+            <div class="kpi-label">Completion Rate</div>
+            <div class="kpi-value">{{ round($completionRate, 1) }}%</div>
+            <div class="kpi-change neutral">
+              {{ $completedBookings }} completed / {{ $cancelledBookings }} cancelled
             </div>
           </div>
         </div>
       </div>
 
-      {{-- Charts Row 1 --}}
+      {{-- Second Row KPIs --}}
+      <div class="row g-3 mb-5">
+        {{-- Active Customers --}}
+        <div class="col-xl-3 col-md-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Active Customers</div>
+            <div class="kpi-value">{{ number_format($activeCustomers) }}</div>
+            <div class="kpi-change neutral">
+              {{ $newCustomers }} new in period
+            </div>
+          </div>
+        </div>
+
+        {{-- Fleet Utilization --}}
+        <div class="col-xl-3 col-md-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Fleet Status</div>
+            <div class="kpi-value">{{ $availableCars }}/{{ $totalCars }}</div>
+            <div class="kpi-change neutral">
+              {{ $carsInUse }} in use, {{ $carsInMaintenance }} maintenance
+            </div>
+          </div>
+        </div>
+
+        {{-- Deposits --}}
+        <div class="col-xl-3 col-md-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Deposits Collected</div>
+            <div class="kpi-value">RM{{ number_format($totalDeposits, 0) }}</div>
+            <div class="kpi-change neutral">
+              Refunded: RM{{ number_format($totalRefunds, 0) }}
+            </div>
+          </div>
+        </div>
+
+        {{-- Penalties --}}
+        <div class="col-xl-3 col-md-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Penalties Issued</div>
+            <div class="kpi-value">{{ $penaltyStats->total ?? 0 }}</div>
+            <div class="kpi-change neutral">
+              RM{{ number_format($penaltyStats->total_amount ?? 0, 0) }} total value
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- ============================================== --}}
+      {{-- REVENUE & FINANCIAL REPORTS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-currency-dollar"></i>Revenue & Financial</div>
+
+      {{-- Revenue Chart with Filter --}}
       <div class="row g-4 mb-4">
-        {{-- Monthly Revenue --}}
+        <div class="col-12">
+          <div class="report-card">
+            <div class="card-header-custom d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span>Revenue Trend</span>
+              <div class="d-flex align-items-center gap-2">
+                <select id="monthSelector" class="month-selector" style="display: none;">
+                  <option value="">All Months</option>
+                  @foreach($availableMonths as $month)
+                    <option value="{{ $month['monthKey'] }}">{{ $month['label'] }}</option>
+                  @endforeach
+                </select>
+                <div class="btn-group" role="group" aria-label="Revenue period filter">
+                  <button type="button" class="btn btn-sm revenue-filter-btn active" data-period="daily">Daily</button>
+                  <button type="button" class="btn btn-sm revenue-filter-btn" data-period="weekly">Weekly</button>
+                  <button type="button" class="btn btn-sm revenue-filter-btn" data-period="monthly">Monthly</button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body-custom">
+              <div style="height: 320px;">
+                <canvas id="revenueFilterChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        {{-- Revenue Trend Chart (smaller) --}}
         <div class="col-lg-8">
-          <div class="chart-card">
-            <div class="chart-title">Monthly Revenue Trend</div>
-            <canvas id="monthlyRevenueChart" height="80"></canvas>
+          <div class="report-card">
+            <div class="card-header-custom">Revenue by Period</div>
+            <div class="card-body-custom">
+              <div class="chart-container">
+                <canvas id="revenueTrendChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
 
-        {{-- Booking Status Distribution --}}
+        {{-- Payment Methods --}}
         <div class="col-lg-4">
-          <div class="chart-card">
-            <div class="chart-title">Booking Status Distribution</div>
-            <canvas id="bookingStatusChart" height="200"></canvas>
+          <div class="report-card">
+            <div class="card-header-custom">Payment Methods</div>
+            <div class="card-body-custom">
+              <div class="chart-container-sm">
+                <canvas id="paymentMethodsChart"></canvas>
+              </div>
+              <div class="mt-3">
+                @foreach($paymentMethods as $method)
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span style="font-size: 13px; color: var(--slate-700);">{{ ucfirst(str_replace('_', ' ', $method->payment_method)) }}</span>
+                  <span style="font-size: 13px; font-weight: 600;">RM{{ number_format($method->total, 0) }}</span>
+                </div>
+                @endforeach
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {{-- Charts Row 2 --}}
+      {{-- Revenue by Car --}}
+      <div class="row g-4 mb-5">
+        <div class="col-12">
+          <div class="report-card">
+            <div class="card-header-custom">Revenue by Vehicle</div>
+            <div class="card-body-custom p-0">
+              <div class="table-responsive">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;">#</th>
+                      <th>Vehicle</th>
+                      <th>Plate Number</th>
+                      <th class="text-right">Bookings</th>
+                      <th class="text-right">Revenue</th>
+                      <th class="text-right">Avg/Booking</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @forelse($revenueByCar as $index => $car)
+                    <tr>
+                      <td class="font-medium">{{ $index + 1 }}</td>
+                      <td class="font-semibold">{{ $car->brand }} {{ $car->model }}</td>
+                      <td style="color: var(--slate-500);">{{ strtoupper($car->plate_number) }}</td>
+                      <td class="text-right">{{ $car->booking_count }}</td>
+                      <td class="text-right font-semibold">RM{{ number_format($car->total_revenue, 2) }}</td>
+                      <td class="text-right">RM{{ $car->booking_count > 0 ? number_format($car->total_revenue / $car->booking_count, 2) : '0.00' }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="6" class="text-center py-4" style="color: var(--slate-500);">No revenue data</td></tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- ============================================== --}}
+      {{-- BOOKING & OPERATIONS REPORTS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-calendar-check"></i>Booking & Operations</div>
+
       <div class="row g-4 mb-4">
-        {{-- Daily Revenue --}}
+        {{-- Bookings Over Time --}}
         <div class="col-lg-8">
-          <div class="chart-card">
-            <div class="chart-title">Daily Revenue</div>
-            <canvas id="dailyRevenueChart" height="80"></canvas>
+          <div class="report-card">
+            <div class="card-header-custom">Booking Volume</div>
+            <div class="card-body-custom">
+              <div class="chart-container">
+                <canvas id="bookingVolumeChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
 
-        {{-- Penalty Status --}}
+        {{-- Booking Status --}}
         <div class="col-lg-4">
-          <div class="chart-card">
-            <div class="chart-title">Penalty Status</div>
-            <canvas id="penaltyStatusChart" height="200"></canvas>
+          <div class="report-card">
+            <div class="card-header-custom">Status Breakdown</div>
+            <div class="card-body-custom">
+              <div class="chart-container-sm">
+                <canvas id="bookingStatusChart"></canvas>
+              </div>
+              <div class="mt-3">
+                @php
+                  $statusColors = [
+                    'created' => '#fef3c7',
+                    'verified' => '#dbeafe',
+                    'confirmed' => '#e0e7ff',
+                    'active' => '#cffafe',
+                    'completed' => '#d1fae5',
+                    'deposit_returned' => '#d1fae5',
+                    'cancelled' => '#fee2e2'
+                  ];
+                @endphp
+                @foreach($bookingsByStatus as $status => $count)
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span style="font-size: 13px; color: var(--slate-700);">{{ ucfirst(str_replace('_', ' ', $status)) }}</span>
+                  <span style="font-size: 13px; font-weight: 600;">{{ $count }}</span>
+                </div>
+                @endforeach
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {{-- Top Customers & Cars --}}
-      <div class="row g-4 mb-4">
-        {{-- Top Customers --}}
+      {{-- Peak Days --}}
+      <div class="row g-4 mb-5">
         <div class="col-lg-6">
-          <div class="table-card">
-            <div class="table-header">
-              <h6 class="table-title mb-0">Top Customers by Revenue</h6>
+          <div class="report-card">
+            <div class="card-header-custom">Bookings by Day of Week</div>
+            <div class="card-body-custom">
+              <div class="chart-container-sm">
+                <canvas id="bookingsByDayChart"></canvas>
+              </div>
             </div>
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th class="text-end">Revenue (RM)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @forelse($topCustomers as $customer)
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="report-card">
+            <div class="card-header-custom">Operational Metrics</div>
+            <div class="card-body-custom">
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase; margin-bottom: 4px;">Completion Rate</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--slate-900);">{{ round($completionRate, 1) }}%</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase; margin-bottom: 4px;">Cancellation Rate</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #dc2626;">{{ round($cancellationRate, 1) }}%</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase; margin-bottom: 4px;">Avg Duration</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--slate-900);">{{ round($avgRentalDuration, 1) }}h</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase; margin-bottom: 4px;">Avg Value</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--slate-900);">RM{{ number_format($avgBookingValue, 0) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- ============================================== --}}
+      {{-- VEHICLE PERFORMANCE REPORTS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-car-front"></i>Vehicle Performance</div>
+
+      <div class="row g-4 mb-4">
+        {{-- Most Rented Cars --}}
+        <div class="col-lg-6">
+          <div class="report-card">
+            <div class="card-header-custom">Most Rented Vehicles</div>
+            <div class="card-body-custom p-0">
+              <div class="table-responsive">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>Vehicle</th>
+                      <th class="text-right">Bookings</th>
+                      <th class="text-right">Hours</th>
+                      <th class="text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @forelse($mostRentedCars->take(5) as $car)
                     <tr>
                       <td>
-                        <div style="font-weight: 500; color: var(--slate-900);">{{ $customer->full_name }}</div>
-                        <div style="font-size: 12px; color: var(--slate-500);">{{ $customer->email }}</div>
+                        <div class="font-semibold">{{ $car->brand }} {{ $car->model }}</div>
+                        <div style="font-size: 11px; color: var(--slate-500);">{{ strtoupper($car->plate_number) }}</div>
                       </td>
-                      <td class="text-end" style="font-weight: 600; color: var(--slate-900);">
-                        {{ number_format($customer->total_revenue ?? 0, 2) }}
-                      </td>
+                      <td class="text-right font-semibold">{{ $car->booking_count }}</td>
+                      <td class="text-right">{{ number_format($car->total_hours) }}h</td>
+                      <td class="text-right font-semibold">RM{{ number_format($car->total_revenue, 0) }}</td>
                     </tr>
-                  @empty
-                    <tr>
-                      <td colspan="2" class="text-center py-4 text-muted">No customer data</td>
-                    </tr>
-                  @endforelse
-                </tbody>
-              </table>
+                    @empty
+                    <tr><td colspan="4" class="text-center py-4" style="color: var(--slate-500);">No data</td></tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
 
-        {{-- Top Cars --}}
+        {{-- Least Utilized Cars --}}
         <div class="col-lg-6">
-          <div class="table-card">
-            <div class="table-header">
-              <h6 class="table-title mb-0">Top Cars by Bookings</h6>
-            </div>
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th class="text-end">Bookings</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @forelse($topCars as $car)
+          <div class="report-card">
+            <div class="card-header-custom">Least Utilized Vehicles</div>
+            <div class="card-body-custom p-0">
+              <div class="table-responsive">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>Vehicle</th>
+                      <th class="text-right">Bookings</th>
+                      <th class="text-right">Hours</th>
+                      <th class="text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @forelse($leastUtilizedCars->take(5) as $car)
                     <tr>
                       <td>
-                        <div style="font-weight: 500; color: var(--slate-900);">{{ $car->brand }} {{ $car->model }}</div>
-                        <div style="font-size: 12px; color: var(--slate-500);">{{ strtoupper($car->plate_number) }}</div>
+                        <div class="font-semibold">{{ $car->brand }} {{ $car->model }}</div>
+                        <div style="font-size: 11px; color: var(--slate-500);">{{ strtoupper($car->plate_number) }}</div>
                       </td>
-                      <td class="text-end" style="font-weight: 600; color: var(--slate-900);">
-                        {{ $car->bookings_count ?? 0 }}
-                      </td>
+                      <td class="text-right">{{ $car->booking_count }}</td>
+                      <td class="text-right">{{ number_format($car->total_hours) }}h</td>
+                      <td class="text-right">RM{{ number_format($car->total_revenue, 0) }}</td>
                     </tr>
-                  @empty
+                    @empty
+                    <tr><td colspan="4" class="text-center py-4" style="color: var(--slate-500);">No data</td></tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- Fleet Status Overview --}}
+      <div class="row g-4 mb-5">
+        <div class="col-12">
+          <div class="report-card">
+            <div class="card-header-custom">Fleet Overview</div>
+            <div class="card-body-custom">
+              <div class="row g-4">
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background: #d1fae5;">
+                    <div style="font-size: 32px; font-weight: 700; color: #059669;">{{ $availableCars }}</div>
+                    <div style="font-size: 12px; color: #065f46; font-weight: 600;">Available</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background: #dbeafe;">
+                    <div style="font-size: 32px; font-weight: 700; color: #2563eb;">{{ $carsInUse }}</div>
+                    <div style="font-size: 12px; color: #1e40af; font-weight: 600;">In Use</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background: #fef3c7;">
+                    <div style="font-size: 32px; font-weight: 700; color: #d97706;">{{ $carsInMaintenance }}</div>
+                    <div style="font-size: 12px; color: #92400e; font-weight: 600;">Maintenance</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background: #e2e8f0;">
+                    <div style="font-size: 32px; font-weight: 700; color: var(--slate-700);">{{ $totalCars }}</div>
+                    <div style="font-size: 12px; color: var(--slate-600); font-weight: 600;">Total Fleet</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- ============================================== --}}
+      {{-- CUSTOMER REPORTS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-people"></i>Customer Analytics</div>
+
+      <div class="row g-4 mb-4">
+        {{-- Customer Overview --}}
+        <div class="col-lg-4">
+          <div class="report-card h-100">
+            <div class="card-header-custom">Customer Overview</div>
+            <div class="card-body-custom">
+              <div class="mb-4">
+                <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase; margin-bottom: 4px;">Total Customers</div>
+                <div style="font-size: 28px; font-weight: 700; color: var(--slate-900);">{{ number_format($totalCustomers) }}</div>
+              </div>
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase;">New</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #059669;">{{ $newCustomers }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase;">Active</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #2563eb;">{{ $activeCustomers }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase;">Returning</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #7c3aed;">{{ $returningCustomers }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase;">Repeat Rate</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--slate-900);">{{ round($repeatBookingRate, 1) }}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{-- Top Customers by Revenue --}}
+        <div class="col-lg-4">
+          <div class="report-card h-100">
+            <div class="card-header-custom">Top Customers (Revenue)</div>
+            <div class="card-body-custom p-0">
+              <div class="table-responsive">
+                <table class="report-table">
+                  <thead>
                     <tr>
-                      <td colspan="2" class="text-center py-4 text-muted">No car data</td>
+                      <th>Customer</th>
+                      <th class="text-right">Revenue</th>
                     </tr>
-                  @endforelse
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @forelse($topCustomersByRevenue->take(5) as $customer)
+                    <tr>
+                      <td>
+                        <div class="font-medium" style="font-size: 13px;">{{ $customer->full_name }}</div>
+                        <div style="font-size: 11px; color: var(--slate-500);">{{ $customer->booking_count }} bookings</div>
+                      </td>
+                      <td class="text-right font-semibold">RM{{ number_format($customer->total_revenue, 0) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="2" class="text-center py-4" style="color: var(--slate-500);">No data</td></tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{-- Top Customers by Bookings --}}
+        <div class="col-lg-4">
+          <div class="report-card h-100">
+            <div class="card-header-custom">Top Customers (Bookings)</div>
+            <div class="card-body-custom p-0">
+              <div class="table-responsive">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th class="text-right">Bookings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @forelse($topCustomersByBookings->take(5) as $customer)
+                    <tr>
+                      <td>
+                        <div class="font-medium" style="font-size: 13px;">{{ $customer->full_name }}</div>
+                        <div style="font-size: 11px; color: var(--slate-500);">RM{{ number_format($customer->total_revenue, 0) }}</div>
+                      </td>
+                      <td class="text-right font-semibold">{{ $customer->booking_count }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="2" class="text-center py-4" style="color: var(--slate-500);">No data</td></tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- ============================================== --}}
+      {{-- PENALTIES & DISCOUNTS --}}
+      {{-- ============================================== --}}
+      <div class="section-header"><i class="bi bi-exclamation-triangle"></i>Penalties & Discounts</div>
+
+      <div class="row g-4 mb-4">
+        {{-- Penalty Overview --}}
+        <div class="col-lg-6">
+          <div class="report-card">
+            <div class="card-header-custom">Penalty Statistics</div>
+            <div class="card-body-custom">
+              <div class="row g-3 mb-4">
+                <div class="col-4">
+                  <div class="text-center p-3 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 24px; font-weight: 700; color: var(--slate-900);">{{ $penaltyStats->total ?? 0 }}</div>
+                    <div style="font-size: 11px; color: var(--slate-500); text-transform: uppercase;">Total</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="text-center p-3 rounded" style="background: #d1fae5;">
+                    <div style="font-size: 24px; font-weight: 700; color: #059669;">{{ $penaltyStats->paid_count ?? 0 }}</div>
+                    <div style="font-size: 11px; color: #065f46; text-transform: uppercase;">Paid</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="text-center p-3 rounded" style="background: #fee2e2;">
+                    <div style="font-size: 24px; font-weight: 700; color: #dc2626;">{{ $penaltyStats->pending_count ?? 0 }}</div>
+                    <div style="font-size: 11px; color: #991b1b; text-transform: uppercase;">Pending</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <span style="font-size: 13px; color: var(--slate-700);">Total Penalty Value</span>
+                <span style="font-size: 14px; font-weight: 600;">RM{{ number_format($penaltyStats->total_amount ?? 0, 2) }}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <span style="font-size: 13px; color: var(--slate-700);">Amount Collected</span>
+                <span style="font-size: 14px; font-weight: 600; color: #059669;">RM{{ number_format($penaltyStats->paid_amount ?? 0, 2) }}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center py-2">
+                <span style="font-size: 13px; color: var(--slate-700);">Outstanding</span>
+                <span style="font-size: 14px; font-weight: 600; color: #dc2626;">RM{{ number_format(($penaltyStats->total_amount ?? 0) - ($penaltyStats->paid_amount ?? 0), 2) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{-- Penalty by Type + Discount Usage --}}
+        <div class="col-lg-6">
+          <div class="report-card">
+            <div class="card-header-custom">Penalty Breakdown & Discounts</div>
+            <div class="card-body-custom">
+              <div class="mb-4">
+                <div style="font-size: 12px; font-weight: 600; color: var(--slate-700); margin-bottom: 12px;">Penalties by Type</div>
+                @forelse($penaltyByType as $penalty)
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span style="font-size: 13px; color: var(--slate-700);">{{ ucfirst($penalty->penalty_type) }}</span>
+                  <div>
+                    <span style="font-size: 12px; color: var(--slate-500); margin-right: 8px;">{{ $penalty->count }}x</span>
+                    <span style="font-size: 13px; font-weight: 600;">RM{{ number_format($penalty->total, 2) }}</span>
+                  </div>
+                </div>
+                @empty
+                <div class="text-center py-3" style="color: var(--slate-500); font-size: 13px;">No penalties in this period</div>
+                @endforelse
+              </div>
+
+              <div>
+                <div style="font-size: 12px; font-weight: 600; color: var(--slate-700); margin-bottom: 12px;">Discount Usage</div>
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span style="font-size: 13px; color: var(--slate-700);">Vouchers Used</span>
+                  <div>
+                    <span style="font-size: 12px; color: var(--slate-500); margin-right: 8px;">{{ $discountUsage->voucher_used_count ?? 0 }}x</span>
+                    <span style="font-size: 13px; font-weight: 600;">RM{{ number_format($discountUsage->total_voucher_discount ?? 0, 2) }}</span>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2">
+                  <span style="font-size: 13px; color: var(--slate-700);">Promos Applied</span>
+                  <div>
+                    <span style="font-size: 12px; color: var(--slate-500); margin-right: 8px;">{{ $discountUsage->promo_used_count ?? 0 }}x</span>
+                    <span style="font-size: 13px; font-weight: 600;">RM{{ number_format($discountUsage->total_promo_discount ?? 0, 2) }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -384,139 +993,27 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Monthly Revenue Chart
-const monthlyRevenueCtx = document.getElementById('monthlyRevenueChart').getContext('2d');
-const monthlyRevenueData = {!! json_encode($monthlyRevenue) !!};
-new Chart(monthlyRevenueCtx, {
-  type: 'line',
-  data: {
-    labels: monthlyRevenueData.map(r => {
-      const date = new Date(r.month + '-01');
-      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    }),
-    datasets: [{
-      label: 'Revenue (RM)',
-      data: monthlyRevenueData.map(r => parseFloat(r.total)),
-      borderColor: '#475569',
-      backgroundColor: 'rgba(71, 85, 105, 0.1)',
-      borderWidth: 2,
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      pointBackgroundColor: '#475569',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: true,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 12,
-        titleFont: { size: 13, weight: '600' },
-        bodyFont: { size: 13 },
-        displayColors: false,
-        callbacks: {
-          label: function(context) {
-            return 'RM ' + context.parsed.y.toLocaleString();
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: '#f1f5f9',
-          borderColor: '#e2e8f0'
-        },
-        ticks: {
-          color: '#64748b',
-          font: { size: 11 },
-          callback: function(value) {
-            return 'RM ' + value.toLocaleString();
-          }
-        }
-      },
-      x: {
-        grid: {
-          display: false
-        },
-        ticks: {
-          color: '#64748b',
-          font: { size: 11 }
-        }
-      }
-    }
-  }
-});
+// Chart defaults
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
 
-// Booking Status Distribution Chart
-const bookingStatusCtx = document.getElementById('bookingStatusChart').getContext('2d');
-const bookingStatusData = {!! json_encode($bookingsByStatus) !!};
-new Chart(bookingStatusCtx, {
-  type: 'doughnut',
-  data: {
-    labels: Object.keys(bookingStatusData).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
-    datasets: [{
-      data: Object.values(bookingStatusData),
-      backgroundColor: [
-        '#fef3c7',
-        '#dbeafe',
-        '#d1fae5',
-        '#fee2e2',
-        '#e2e8f0'
-      ],
-      borderWidth: 0,
-      hoverOffset: 4
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: true,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          padding: 12,
-          font: { size: 12 },
-          color: '#64748b',
-          usePointStyle: true
-        }
-      },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 12,
-        titleFont: { size: 13, weight: '600' },
-        bodyFont: { size: 13 },
-        callbacks: {
-          label: function(context) {
-            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-          }
-        }
-      }
-    }
-  }
-});
+// ==========================================
+// FILTERABLE REVENUE CHART (Daily/Weekly/Monthly)
+// ==========================================
+const revenueDataSets = {
+  daily: {!! json_encode($dailyRevenueData) !!},
+  weekly: {!! json_encode($weeklyRevenueData) !!},
+  monthly: {!! json_encode($monthlyRevenueData) !!}
+};
 
-// Daily Revenue Chart
-const dailyRevenueCtx = document.getElementById('dailyRevenueChart').getContext('2d');
-const dailyRevenueData = {!! json_encode($dailyRevenueData) !!};
-new Chart(dailyRevenueCtx, {
+const revenueFilterCtx = document.getElementById('revenueFilterChart').getContext('2d');
+let revenueFilterChart = new Chart(revenueFilterCtx, {
   type: 'bar',
   data: {
-    labels: dailyRevenueData.map(d => d.date),
+    labels: revenueDataSets.daily.map(d => d.label),
     datasets: [{
-      label: 'Revenue (RM)',
-      data: dailyRevenueData.map(d => d.revenue),
+      label: 'Revenue',
+      data: revenueDataSets.daily.map(d => d.value),
       backgroundColor: '#475569',
       borderRadius: 4,
       borderSkipped: false
@@ -524,99 +1021,270 @@ new Chart(dailyRevenueCtx, {
   },
   options: {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false
-      },
+      legend: { display: false },
       tooltip: {
         backgroundColor: '#1e293b',
         padding: 12,
         titleFont: { size: 13, weight: '600' },
         bodyFont: { size: 13 },
-        displayColors: false,
         callbacks: {
-          label: function(context) {
-            return 'RM ' + context.parsed.y.toLocaleString();
-          }
+          label: ctx => 'RM ' + ctx.parsed.y.toLocaleString()
         }
       }
     },
     scales: {
       y: {
         beginAtZero: true,
-        grid: {
-          color: '#f1f5f9',
-          borderColor: '#e2e8f0'
-        },
+        grid: { color: '#f1f5f9' },
         ticks: {
           color: '#64748b',
           font: { size: 11 },
-          callback: function(value) {
-            return 'RM ' + value.toLocaleString();
-          }
+          callback: v => 'RM ' + v.toLocaleString()
         }
       },
       x: {
-        grid: {
-          display: false
-        },
+        grid: { display: false },
+        ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45, minRotation: 0 }
+      }
+    }
+  }
+});
+
+// Function to filter daily data by month
+function filterDailyDataByMonth(monthKey) {
+  if (!monthKey || monthKey === '') {
+    return revenueDataSets.daily;
+  }
+  
+  // Filter by monthKey (e.g., "2025-01")
+  return revenueDataSets.daily.filter(d => d.monthKey === monthKey);
+}
+
+// Function to update chart with data
+function updateRevenueChart(data) {
+  revenueFilterChart.data.labels = data.map(d => d.label);
+  revenueFilterChart.data.datasets[0].data = data.map(d => d.value);
+  revenueFilterChart.update('active');
+}
+
+// Month selector handler
+const monthSelector = document.getElementById('monthSelector');
+monthSelector.addEventListener('change', function() {
+  const selectedMonth = this.value;
+  
+  // If "All Months" is selected, show monthly aggregated data
+  // Otherwise, show daily data for the selected month
+  if (!selectedMonth || selectedMonth === '') {
+    updateRevenueChart(revenueDataSets.monthly);
+  } else {
+    const filteredData = filterDailyDataByMonth(selectedMonth);
+    updateRevenueChart(filteredData);
+  }
+});
+
+// Revenue filter button handlers
+document.querySelectorAll('.revenue-filter-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    // Update active state
+    document.querySelectorAll('.revenue-filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Get selected period
+    const period = this.dataset.period;
+    
+    // Show/hide month selector
+    if (period === 'monthly') {
+      monthSelector.style.display = 'block';
+      // Reset to "All Months" and show monthly aggregated data
+      monthSelector.value = '';
+      updateRevenueChart(revenueDataSets.monthly);
+    } else {
+      monthSelector.style.display = 'none';
+      // Use the period's data directly
+      const data = revenueDataSets[period];
+      updateRevenueChart(data);
+    }
+  });
+});
+
+// Revenue Trend Chart (smaller one)
+const revenueTrendCtx = document.getElementById('revenueTrendChart').getContext('2d');
+new Chart(revenueTrendCtx, {
+  type: 'line',
+  data: {
+    labels: revenueDataSets.daily.map(d => d.label),
+    datasets: [{
+      label: 'Revenue',
+      data: revenueDataSets.daily.map(d => d.value),
+      borderColor: '#475569',
+      backgroundColor: 'rgba(71, 85, 105, 0.1)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#475569',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        padding: 10,
+        callbacks: {
+          label: ctx => 'RM ' + ctx.parsed.y.toLocaleString()
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
         ticks: {
           color: '#64748b',
-          font: { size: 10 },
-          maxRotation: 45,
-          minRotation: 45
+          font: { size: 11 },
+          callback: v => 'RM ' + v.toLocaleString()
+        }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45 }
+      }
+    }
+  }
+});
+
+// Payment Methods Chart
+const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+const paymentMethodsData = {!! json_encode($paymentMethods) !!};
+new Chart(paymentMethodsCtx, {
+  type: 'doughnut',
+  data: {
+    labels: paymentMethodsData.map(p => p.payment_method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())),
+    datasets: [{
+      data: paymentMethodsData.map(p => parseFloat(p.total)),
+      backgroundColor: ['#475569', '#64748b', '#94a3b8', '#cbd5e1'],
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.label + ': RM ' + ctx.parsed.toLocaleString()
         }
       }
     }
   }
 });
 
-// Penalty Status Chart
-const penaltyStatusCtx = document.getElementById('penaltyStatusChart').getContext('2d');
-const penaltyStats = {!! json_encode($penaltyStats) !!};
-new Chart(penaltyStatusCtx, {
+// Booking Volume Chart
+const bookingVolumeCtx = document.getElementById('bookingVolumeChart').getContext('2d');
+const dailyBookingsData = {!! json_encode($dailyBookingsData) !!};
+if (dailyBookingsData.length > 0) {
+  new Chart(bookingVolumeCtx, {
+    type: 'bar',
+    data: {
+      labels: dailyBookingsData.map(d => d.date),
+      datasets: [{
+        label: 'Bookings',
+        data: dailyBookingsData.map(d => d.count),
+        backgroundColor: '#475569',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9' },
+          ticks: { color: '#64748b', font: { size: 11 }, stepSize: 1 }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45 }
+        }
+      }
+    }
+  });
+}
+
+// Booking Status Chart
+const bookingStatusCtx = document.getElementById('bookingStatusChart').getContext('2d');
+const bookingsByStatus = {!! json_encode($bookingsByStatus) !!};
+const statusColors = {
+  'created': '#fef3c7',
+  'verified': '#dbeafe',
+  'confirmed': '#e0e7ff',
+  'active': '#cffafe',
+  'completed': '#d1fae5',
+  'deposit_returned': '#bbf7d0',
+  'cancelled': '#fee2e2'
+};
+new Chart(bookingStatusCtx, {
   type: 'doughnut',
   data: {
-    labels: ['Paid', 'Pending'],
+    labels: Object.keys(bookingsByStatus).map(s => s.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())),
     datasets: [{
-      data: [
-        penaltyStats.paid_count || 0,
-        penaltyStats.pending_count || 0
-      ],
-      backgroundColor: [
-        '#d1fae5',
-        '#fee2e2'
-      ],
-      borderWidth: 0,
-      hoverOffset: 4
+      data: Object.values(bookingsByStatus),
+      backgroundColor: Object.keys(bookingsByStatus).map(s => statusColors[s] || '#e2e8f0'),
+      borderWidth: 0
     }]
   },
   options: {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          padding: 12,
-          font: { size: 12 },
-          color: '#64748b',
-          usePointStyle: true
-        }
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 12,
-        titleFont: { size: 13, weight: '600' },
-        bodyFont: { size: 13 },
         callbacks: {
-          label: function(context) {
-            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-          }
+          label: ctx => ctx.label + ': ' + ctx.parsed
         }
+      }
+    }
+  }
+});
+
+// Bookings by Day Chart
+const bookingsByDayCtx = document.getElementById('bookingsByDayChart').getContext('2d');
+const bookingsByDayData = {!! json_encode($bookingsByDayOfWeek) !!};
+new Chart(bookingsByDayCtx, {
+  type: 'bar',
+  data: {
+    labels: bookingsByDayData.map(d => d.day_name),
+    datasets: [{
+      label: 'Bookings',
+      data: bookingsByDayData.map(d => d.count),
+      backgroundColor: '#475569',
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: { color: '#64748b', font: { size: 11 }, stepSize: 1 }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: '#64748b', font: { size: 11 } }
       }
     }
   }

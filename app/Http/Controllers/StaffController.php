@@ -1860,10 +1860,84 @@ class StaffController extends Controller
         $startDate = $request->get('start_date', now()->subMonths(3)->format('Y-m-d'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
 
-        $start = \Carbon\Carbon::parse($startDate);
+        $start = \Carbon\Carbon::parse($startDate)->startOfDay();
         $end = \Carbon\Carbon::parse($endDate)->endOfDay();
+        $daysDiff = $start->diffInDays($end);
 
-        // Revenue by month
+        // Calculate previous period for comparison
+        $prevStart = $start->copy()->subDays($daysDiff + 1);
+        $prevEnd = $start->copy()->subDay();
+
+        // ==========================================
+        // 1. REVENUE & FINANCIAL REPORTS
+        // ==========================================
+        
+        // Total Revenue (rental payments only)
+        $totalRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->whereBetween('payment_date', [$start, $end])
+            ->sum('amount');
+
+        // Previous period revenue for comparison
+        $prevRevenue = Payment::where('status', 'verified')
+            ->where('payment_type', 'rental')
+            ->whereBetween('payment_date', [$prevStart, $prevEnd])
+            ->sum('amount');
+
+        $revenueChange = $prevRevenue > 0 ? (($totalRevenue - $prevRevenue) / $prevRevenue) * 100 : 0;
+
+        // Deposits collected
+        $totalDeposits = Payment::where('status', 'verified')
+            ->where('payment_type', 'deposit')
+            ->whereBetween('payment_date', [$start, $end])
+            ->sum('amount');
+
+        // Deposits refunded
+        $totalRefunds = Payment::where('status', 'verified')
+            ->where('payment_type', 'refund')
+            ->whereBetween('payment_date', [$start, $end])
+            ->sum('amount');
+
+        // ========== REVENUE DATA FOR FILTERABLE CHART ==========
+        
+        // Daily revenue data
+        $dailyRevenueData = [];
+        $currentDate = $start->copy();
+        while ($currentDate <= $end) {
+            $revenue = Payment::where('status', 'verified')
+                ->where('payment_type', 'rental')
+                ->whereDate('payment_date', $currentDate->format('Y-m-d'))
+                ->sum('amount');
+            $dailyRevenueData[] = [
+                'label' => $currentDate->format('M d'),
+                'value' => (float) $revenue,
+                'monthKey' => $currentDate->format('Y-m'), // For month filtering
+                'date' => $currentDate->format('Y-m-d') // Full date for reference
+            ];
+            $currentDate->addDay();
+        }
+
+        // Weekly revenue data
+        $weeklyRevenueData = [];
+        $currentDate = $start->copy()->startOfWeek();
+        while ($currentDate <= $end) {
+            $weekEnd = $currentDate->copy()->endOfWeek();
+            if ($weekEnd > $end) $weekEnd = $end;
+            if ($currentDate < $start) $currentDate = $start->copy();
+            
+            $revenue = Payment::where('status', 'verified')
+                ->where('payment_type', 'rental')
+                ->whereBetween('payment_date', [$currentDate, $weekEnd])
+                ->sum('amount');
+            $weeklyRevenueData[] = [
+                'label' => 'Week ' . $currentDate->weekOfYear . ' (' . $currentDate->format('M d') . ')',
+                'value' => (float) $revenue
+            ];
+            $currentDate->addWeek();
+        }
+
+        // Monthly revenue data
+        $monthlyRevenueData = [];
         $monthlyRevenue = Payment::where('status', 'verified')
             ->where('payment_type', 'rental')
             ->whereBetween('payment_date', [$start, $end])
@@ -1871,113 +1945,295 @@ class StaffController extends Controller
             ->groupBy('month')
             ->orderBy('month')
             ->get();
+        
+        foreach ($monthlyRevenue as $item) {
+            $monthlyRevenueData[] = [
+                'label' => \Carbon\Carbon::parse($item->month . '-01')->format('M Y'),
+                'value' => (float) $item->total
+            ];
+        }
+
+        // Extract unique months from daily revenue data for month selector
+        $availableMonths = [];
+        $seenMonths = [];
+        foreach ($dailyRevenueData as $dayData) {
+            $monthKey = $dayData['monthKey'];
+            if (!in_array($monthKey, $seenMonths)) {
+                $seenMonths[] = $monthKey;
+                $date = \Carbon\Carbon::parse($monthKey . '-01');
+                $availableMonths[] = [
+                    'monthKey' => $monthKey,
+                    'label' => $date->format('M Y')
+                ];
+            }
+        }
+        // Sort by monthKey (chronological order)
+        usort($availableMonths, function($a, $b) {
+            return strcmp($a['monthKey'], $b['monthKey']);
+        });
+
+        // Revenue by Car (Top 10)
+        $revenueByCar = Car::select('cars.*')
+            ->selectRaw('COALESCE(SUM(bookings.final_amount), 0) as total_revenue')
+            ->selectRaw('COUNT(bookings.booking_id) as booking_count')
+            ->leftJoin('bookings', function($join) use ($start, $end) {
+                $join->on('cars.id', '=', 'bookings.car_id')
+                    ->whereBetween('bookings.created_at', [$start, $end])
+                    ->whereIn('bookings.status', ['completed', 'active', 'deposit_returned']);
+            })
+            ->groupBy('cars.id')
+            ->orderByDesc('total_revenue')
+            ->take(10)
+            ->get();
+
+        // Payment method breakdown
+        $paymentMethods = Payment::where('status', 'verified')
+            ->whereBetween('payment_date', [$start, $end])
+            ->selectRaw('payment_method, COUNT(*) as count, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->get();
+
+        // ==========================================
+        // 2. BOOKING & OPERATIONS REPORTS
+        // ==========================================
+
+        // Total bookings
+        $totalBookings = Booking::whereBetween('created_at', [$start, $end])->count();
+        $prevBookings = Booking::whereBetween('created_at', [$prevStart, $prevEnd])->count();
+        $bookingsChange = $prevBookings > 0 ? (($totalBookings - $prevBookings) / $prevBookings) * 100 : 0;
 
         // Bookings by status
         $bookingsByStatus = Booking::whereBetween('created_at', [$start, $end])
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->get()
-            ->pluck('count', 'status');
+            ->pluck('count', 'status')
+            ->toArray();
 
-        // Top customers by revenue
-        $topCustomers = Customer::with(['bookings' => function($q) use ($start, $end) {
-            $q->whereBetween('created_at', [$start, $end]);
-        }])
-            ->get()
-            ->map(function($customer) {
-                $customer->total_revenue = $customer->bookings->sum('final_amount');
-                return $customer;
-            })
-            ->sortByDesc('total_revenue')
-            ->take(10)
-            ->values();
-
-        // Top cars by bookings
-        $topCars = Car::withCount(['bookings' => function($q) use ($start, $end) {
-            $q->whereBetween('created_at', [$start, $end]);
-        }])
-            ->orderBy('bookings_count', 'desc')
-            ->take(10)
-            ->get();
-
-        // Daily revenue (last 30 days or date range if less than 30 days)
-        $daysDiff = $start->diffInDays($end);
-        $dailyRevenueData = [];
-        if ($daysDiff <= 90) {
-            // If range is 90 days or less, show daily data
-            $currentDate = $start->copy();
-            while ($currentDate <= $end) {
-                $revenue = Payment::where('status', 'verified')
-                    ->where('payment_type', 'rental')
-                    ->whereDate('payment_date', $currentDate->format('Y-m-d'))
-                    ->sum('amount');
-                $dailyRevenueData[] = [
-                    'date' => $currentDate->format('M d'),
-                    'revenue' => $revenue
-                ];
-                $currentDate->addDay();
-            }
-        } else {
-            // If range is more than 90 days, show weekly data
-            $currentDate = $start->copy()->startOfWeek();
-            while ($currentDate <= $end) {
-                $weekEnd = $currentDate->copy()->endOfWeek();
-                if ($weekEnd > $end) {
-                    $weekEnd = $end;
-                }
-                $revenue = Payment::where('status', 'verified')
-                    ->where('payment_type', 'rental')
-                    ->whereBetween('payment_date', [$currentDate->format('Y-m-d'), $weekEnd->format('Y-m-d')])
-                    ->sum('amount');
-                $dailyRevenueData[] = [
-                    'date' => $currentDate->format('M d') . ' - ' . $weekEnd->format('M d'),
-                    'revenue' => $revenue
-                ];
-                $currentDate->addWeek();
-            }
-        }
-
-        // Total revenue and deposits
-        $totalRevenue = Payment::where('status', 'verified')
-            ->where('payment_type', 'rental')
-            ->whereBetween('payment_date', [$start, $end])
-            ->sum('amount');
-
-        $totalDeposits = Payment::where('status', 'verified')
-            ->where('payment_type', 'deposit')
-            ->whereBetween('payment_date', [$start, $end])
-            ->sum('amount');
-
-        // Total bookings count
-        $totalBookings = Booking::whereBetween('created_at', [$start, $end])->count();
+        // Completion & Cancellation rates
+        $completedBookings = ($bookingsByStatus['completed'] ?? 0) + ($bookingsByStatus['deposit_returned'] ?? 0);
+        $cancelledBookings = $bookingsByStatus['cancelled'] ?? 0;
+        $completionRate = $totalBookings > 0 ? ($completedBookings / $totalBookings) * 100 : 0;
+        $cancellationRate = $totalBookings > 0 ? ($cancelledBookings / $totalBookings) * 100 : 0;
 
         // Average booking value
         $avgBookingValue = $totalBookings > 0 ? ($totalRevenue / $totalBookings) : 0;
+
+        // Average rental duration (hours)
+        $avgRentalDuration = Booking::whereBetween('created_at', [$start, $end])
+            ->whereNotNull('rental_hours')
+            ->avg('rental_hours') ?? 0;
+
+        // Peak booking days (day of week)
+        $bookingsByDayOfWeek = Booking::whereBetween('created_at', [$start, $end])
+            ->selectRaw('DAYNAME(created_at) as day_name, DAYOFWEEK(created_at) as day_num, COUNT(*) as count')
+            ->groupBy('day_name', 'day_num')
+            ->orderBy('day_num')
+            ->get();
+
+        // Daily bookings count
+        $dailyBookingsData = [];
+        if ($daysDiff <= 31) {
+            $currentDate = $start->copy();
+            while ($currentDate <= $end) {
+                $count = Booking::whereDate('created_at', $currentDate->format('Y-m-d'))->count();
+                $dailyBookingsData[] = [
+                    'date' => $currentDate->format('M d'),
+                    'count' => $count
+                ];
+                $currentDate->addDay();
+            }
+        }
+
+        // ==========================================
+        // 3. VEHICLE PERFORMANCE REPORTS
+        // ==========================================
+
+        // Fleet overview
+        $totalCars = Car::count();
+        $availableCars = Car::where('status', 'available')->count();
+        $carsInUse = Car::where('status', 'in_use')->count();
+        $carsInMaintenance = Car::where('status', 'maintenance')->count();
+
+        // Most rented cars (by booking count)
+        $mostRentedCars = Car::select('cars.*')
+            ->selectRaw('COUNT(bookings.booking_id) as booking_count')
+            ->selectRaw('COALESCE(SUM(bookings.rental_hours), 0) as total_hours')
+            ->selectRaw('COALESCE(SUM(bookings.final_amount), 0) as total_revenue')
+            ->leftJoin('bookings', function($join) use ($start, $end) {
+                $join->on('cars.id', '=', 'bookings.car_id')
+                    ->whereBetween('bookings.created_at', [$start, $end]);
+            })
+            ->groupBy('cars.id')
+            ->orderByDesc('booking_count')
+            ->take(10)
+            ->get();
+
+        // Least utilized cars (cars with fewest bookings)
+        $leastUtilizedCars = Car::select('cars.*')
+            ->selectRaw('COUNT(bookings.booking_id) as booking_count')
+            ->selectRaw('COALESCE(SUM(bookings.rental_hours), 0) as total_hours')
+            ->leftJoin('bookings', function($join) use ($start, $end) {
+                $join->on('cars.id', '=', 'bookings.car_id')
+                    ->whereBetween('bookings.created_at', [$start, $end]);
+            })
+            ->groupBy('cars.id')
+            ->orderBy('booking_count')
+            ->take(10)
+            ->get();
+
+        // Car utilization rate (% of days booked)
+        $carUtilization = [];
+        foreach ($mostRentedCars as $car) {
+            $totalHours = $car->total_hours;
+            $maxPossibleHours = $daysDiff * 24;
+            $utilizationRate = $maxPossibleHours > 0 ? ($totalHours / $maxPossibleHours) * 100 : 0;
+            $carUtilization[$car->id] = min(100, $utilizationRate);
+        }
+
+        // ==========================================
+        // 4. CUSTOMER REPORTS
+        // ==========================================
+
+        // Total customers
+        $totalCustomers = Customer::count();
+        
+        // New customers in period
+        $newCustomers = Customer::whereBetween('created_at', [$start, $end])->count();
+        
+        // Customers who booked in period
+        $activeCustomers = Customer::whereHas('bookings', function($q) use ($start, $end) {
+            $q->whereBetween('created_at', [$start, $end]);
+        })->count();
+
+        // Returning customers (multiple bookings)
+        $returningCustomers = Customer::whereHas('bookings', function($q) use ($start, $end) {
+            $q->whereBetween('created_at', [$start, $end]);
+        }, '>', 1)->count();
+
+        $repeatBookingRate = $activeCustomers > 0 ? ($returningCustomers / $activeCustomers) * 100 : 0;
+
+        // Top customers by revenue
+        $topCustomersByRevenue = Customer::select('customers.*')
+            ->selectRaw('COALESCE(SUM(bookings.final_amount), 0) as total_revenue')
+            ->selectRaw('COUNT(bookings.booking_id) as booking_count')
+            ->leftJoin('bookings', function($join) use ($start, $end) {
+                $join->on('customers.customer_id', '=', 'bookings.customer_id')
+                    ->whereBetween('bookings.created_at', [$start, $end])
+                    ->whereIn('bookings.status', ['completed', 'active', 'deposit_returned']);
+            })
+            ->groupBy('customers.customer_id')
+            ->orderByDesc('total_revenue')
+            ->take(10)
+            ->get();
+
+        // Top customers by bookings
+        $topCustomersByBookings = Customer::select('customers.*')
+            ->selectRaw('COUNT(bookings.booking_id) as booking_count')
+            ->selectRaw('COALESCE(SUM(bookings.final_amount), 0) as total_revenue')
+            ->leftJoin('bookings', function($join) use ($start, $end) {
+                $join->on('customers.customer_id', '=', 'bookings.customer_id')
+                    ->whereBetween('bookings.created_at', [$start, $end]);
+            })
+            ->groupBy('customers.customer_id')
+            ->orderByDesc('booking_count')
+            ->take(10)
+            ->get();
+
+        // Customer verification status
+        $customerVerificationStats = Customer::selectRaw('verification_status, COUNT(*) as count')
+            ->groupBy('verification_status')
+            ->get()
+            ->pluck('count', 'verification_status')
+            ->toArray();
+
+        // ==========================================
+        // 5. PENALTY & DISCOUNT REPORTS
+        // ==========================================
 
         // Penalty statistics
         $penaltyStats = Penalty::whereBetween('created_at', [$start, $end])
             ->selectRaw('
                 COUNT(*) as total,
-                SUM(CASE WHEN status = "paid" THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN status = "paid" OR status = "settled" THEN 1 ELSE 0 END) as paid_count,
                 SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_count,
-                SUM(amount) as total_amount,
-                SUM(CASE WHEN status = "paid" THEN amount ELSE 0 END) as paid_amount
+                COALESCE(SUM(amount), 0) as total_amount,
+                COALESCE(SUM(CASE WHEN status = "paid" OR status = "settled" THEN amount ELSE 0 END), 0) as paid_amount
+            ')
+            ->first();
+
+        // Penalty breakdown by type
+        $penaltyByType = Penalty::whereBetween('created_at', [$start, $end])
+            ->selectRaw('penalty_type, COUNT(*) as count, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('penalty_type')
+            ->get();
+
+        // Voucher/Discount usage
+        $discountUsage = Booking::whereBetween('created_at', [$start, $end])
+            ->selectRaw('
+                COUNT(CASE WHEN voucher_discount > 0 THEN 1 END) as voucher_used_count,
+                COALESCE(SUM(voucher_discount), 0) as total_voucher_discount,
+                COUNT(CASE WHEN promo_discount > 0 THEN 1 END) as promo_used_count,
+                COALESCE(SUM(promo_discount), 0) as total_promo_discount
             ')
             ->first();
 
         return view('staff.reports.index', [
+            // Date range
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'monthlyRevenue' => $monthlyRevenue,
-            'dailyRevenueData' => $dailyRevenueData,
-            'bookingsByStatus' => $bookingsByStatus,
-            'topCustomers' => $topCustomers,
-            'topCars' => $topCars,
-            'penaltyStats' => $penaltyStats,
+            'daysDiff' => $daysDiff,
+            
+            // Revenue & Financial
             'totalRevenue' => $totalRevenue,
+            'prevRevenue' => $prevRevenue,
+            'revenueChange' => $revenueChange,
             'totalDeposits' => $totalDeposits,
-            'totalBookings' => $totalBookings,
+            'totalRefunds' => $totalRefunds,
+            'dailyRevenueData' => $dailyRevenueData,
+            'weeklyRevenueData' => $weeklyRevenueData,
+            'monthlyRevenueData' => $monthlyRevenueData,
+            'availableMonths' => $availableMonths,
+            'revenueByCar' => $revenueByCar,
+            'paymentMethods' => $paymentMethods,
             'avgBookingValue' => $avgBookingValue,
+            
+            // Bookings & Operations
+            'totalBookings' => $totalBookings,
+            'prevBookings' => $prevBookings,
+            'bookingsChange' => $bookingsChange,
+            'bookingsByStatus' => $bookingsByStatus,
+            'completedBookings' => $completedBookings,
+            'cancelledBookings' => $cancelledBookings,
+            'completionRate' => $completionRate,
+            'cancellationRate' => $cancellationRate,
+            'avgRentalDuration' => $avgRentalDuration,
+            'bookingsByDayOfWeek' => $bookingsByDayOfWeek,
+            'dailyBookingsData' => $dailyBookingsData,
+            
+            // Vehicle Performance
+            'totalCars' => $totalCars,
+            'availableCars' => $availableCars,
+            'carsInUse' => $carsInUse,
+            'carsInMaintenance' => $carsInMaintenance,
+            'mostRentedCars' => $mostRentedCars,
+            'leastUtilizedCars' => $leastUtilizedCars,
+            'carUtilization' => $carUtilization,
+            
+            // Customer Reports
+            'totalCustomers' => $totalCustomers,
+            'newCustomers' => $newCustomers,
+            'activeCustomers' => $activeCustomers,
+            'returningCustomers' => $returningCustomers,
+            'repeatBookingRate' => $repeatBookingRate,
+            'topCustomersByRevenue' => $topCustomersByRevenue,
+            'topCustomersByBookings' => $topCustomersByBookings,
+            'customerVerificationStats' => $customerVerificationStats,
+            
+            // Penalties & Discounts
+            'penaltyStats' => $penaltyStats,
+            'penaltyByType' => $penaltyByType,
+            'discountUsage' => $discountUsage,
         ]);
     }
 
