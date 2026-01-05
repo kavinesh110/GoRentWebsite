@@ -428,7 +428,7 @@
   const dropoffDateInput = document.getElementById('dropoff_date');
   const pickupTimeInput = document.getElementById('pickup_time');
   const dropoffTimeInput = document.getElementById('dropoff_time');
-  const pricePerHour = Number({{ json_encode(floatval($baseRate)) }});
+  const pricePerHour = Number('{{ $baseRate }}');
   const subtotalDisplay = document.getElementById('subtotal-display');
   const totalDisplay = document.querySelector('.total-price-value');
   

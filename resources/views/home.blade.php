@@ -528,64 +528,70 @@
               </div>
             @endif
 
-            @if(!session('auth_role') || session('auth_role') !== 'customer')
+            @php
+              $canSubmit = false;
+              $isLoggedIn = session('auth_role') === 'customer' && session('auth_id');
+              if ($isLoggedIn) {
+                $canSubmit = isset($hasCompletedBooking) && $hasCompletedBooking;
+              }
+            @endphp
+
+            @if(!$isLoggedIn)
               <div class="alert alert-info mb-4">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>Please login</strong> to report car issues. Support is available for customers who have completed at least one booking.
               </div>
-            @else
-              @if(!isset($hasCompletedBooking) || !$hasCompletedBooking)
-                <div class="alert alert-warning mb-4">
-                  <i class="bi bi-exclamation-triangle me-2"></i>
-                  <strong>Support access:</strong> Car issue reports can only be submitted after you have completed at least one booking with us.
-                </div>
-              @else
-                <form method="POST" action="{{ route('support.submit') }}">
-                  @csrf
-                  
-                  <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
-                      <input type="text" name="name" class="form-control" value="{{ session('auth_name') ?? old('name') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
-                      <input type="email" name="email" class="form-control" value="{{ $customerEmail ?? old('email') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Phone Number</label>
-                      <input type="tel" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="Optional">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Car Issues <span class="text-danger">*</span></label>
-                      <select name="category" class="form-select" required>
-                        <option value="">Select car issue</option>
-                        <option value="cleanliness" {{ old('category') === 'cleanliness' ? 'selected' : '' }}>Cleanliness</option>
-                        <option value="lacking_facility" {{ old('category') === 'lacking_facility' ? 'selected' : '' }}>Lacking Facility</option>
-                        <option value="bluetooth" {{ old('category') === 'bluetooth' ? 'selected' : '' }}>Bluetooth</option>
-                        <option value="engine" {{ old('category') === 'engine' ? 'selected' : '' }}>Engine</option>
-                        <option value="others" {{ old('category') === 'others' ? 'selected' : '' }}>Others</option>
-                      </select>
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label fw-bold">Subject <span class="text-danger">*</span></label>
-                      <input type="text" name="subject" class="form-control" value="{{ old('subject') }}" placeholder="Brief summary of your issue" required>
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label fw-bold">Description <span class="text-danger">*</span></label>
-                      <textarea name="description" class="form-control" rows="6" placeholder="Please provide detailed information about your issue..." required>{{ old('description') }}</textarea>
-                      <small class="text-muted">Please include as much detail as possible to help us assist you better.</small>
-                    </div>
-                  </div>
-
-                  <div class="d-grid">
-                    <button type="submit" class="btn btn-hasta btn-lg">
-                      <i class="bi bi-send me-2"></i>Submit Support Request
-                    </button>
-                  </div>
-                </form>
-              @endif
+            @elseif(!$canSubmit)
+              <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Support access:</strong> Car issue reports can only be submitted after you have completed at least one booking with us.
+              </div>
             @endif
+
+            <form method="POST" action="{{ route('support.submit') }}" id="supportForm">
+              @csrf
+              
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                  <input type="text" name="name" class="form-control" value="{{ session('auth_name') ?? old('name') }}" {{ $isLoggedIn ? '' : 'disabled' }} required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
+                  <input type="email" name="email" class="form-control" value="{{ $customerEmail ?? old('email') }}" {{ $isLoggedIn ? '' : 'disabled' }} required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Phone Number</label>
+                  <input type="tel" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="Optional" {{ $isLoggedIn ? '' : 'disabled' }}>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Car Issues <span class="text-danger">*</span></label>
+                  <select name="category" class="form-select" {{ $isLoggedIn ? '' : 'disabled' }} required>
+                    <option value="">Select car issue</option>
+                    <option value="cleanliness" {{ old('category') === 'cleanliness' ? 'selected' : '' }}>Cleanliness</option>
+                    <option value="lacking_facility" {{ old('category') === 'lacking_facility' ? 'selected' : '' }}>Lacking Facility</option>
+                    <option value="bluetooth" {{ old('category') === 'bluetooth' ? 'selected' : '' }}>Bluetooth</option>
+                    <option value="engine" {{ old('category') === 'engine' ? 'selected' : '' }}>Engine</option>
+                    <option value="others" {{ old('category') === 'others' ? 'selected' : '' }}>Others</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-bold">Subject <span class="text-danger">*</span></label>
+                  <input type="text" name="subject" class="form-control" value="{{ old('subject') }}" placeholder="Brief summary of your issue" {{ $isLoggedIn ? '' : 'disabled' }} required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-bold">Description <span class="text-danger">*</span></label>
+                  <textarea name="description" class="form-control" rows="6" placeholder="Please provide detailed information about your issue..." {{ $isLoggedIn ? '' : 'disabled' }} required>{{ old('description') }}</textarea>
+                  <small class="text-muted">Please include as much detail as possible to help us assist you better.</small>
+                </div>
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn btn-hasta btn-lg" id="submitBtn" {{ $canSubmit ? '' : 'disabled' }}>
+                  <i class="bi bi-send me-2"></i>Submit Support Request
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -607,6 +613,17 @@
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       }
+    }
+
+    // Prevent form submission if user doesn't have bookings
+    const supportForm = document.getElementById('supportForm');
+    const submitBtn = document.getElementById('submitBtn');
+    if (supportForm && submitBtn && submitBtn.disabled) {
+      supportForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert('Car issue reports can only be submitted after you have completed at least one booking with us.');
+        return false;
+      });
     }
   });
   

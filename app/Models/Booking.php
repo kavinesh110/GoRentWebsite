@@ -235,13 +235,20 @@ class Booking extends Model
      */
     public function isPhase3Complete(): bool
     {
-        // Phase 3 is complete when agreement is signed AND pickup photos exist
-        $hasAgreement = $this->agreement_signed_at !== null;
-        $hasPickupPhotos = $this->rentalPhotos()
-            ->whereIn('photo_type', ['before', 'pickup', 'agreement'])
+        // Phase 3 is complete when both required pickup photos exist
+        // Check for both required photos: signed agreement and receiving keys
+        $hasAgreementPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'agreement')
             ->exists();
         
-        return $hasAgreement && $hasPickupPhotos && in_array($this->status, ['active', 'completed']);
+        $hasKeysPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'pickup')
+            ->exists();
+        
+        // Phase 3 requires: agreement photo uploaded AND keys photo uploaded
+        // Status can be 'confirmed' or 'active' (allows completion before status changes to active)
+        // Note: Uploading agreement photo automatically marks agreement as signed
+        return $hasAgreementPhoto && $hasKeysPhoto && in_array($this->status, ['confirmed', 'active', 'completed']);
     }
 
     /**
@@ -250,16 +257,19 @@ class Booking extends Model
      */
     public function isPhase4Complete(): bool
     {
-        // Phase 4 is complete when booking is completed with return photos
-        if ($this->status !== 'completed') {
-            return false;
-        }
-
-        $hasReturnPhotos = $this->rentalPhotos()
-            ->whereIn('photo_type', ['after', 'key', 'parking'])
+        // Phase 4 is complete when both required return photos exist
+        // Check for both required photos: keys in car and parking location
+        $hasKeysPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'key')
             ->exists();
         
-        return $hasReturnPhotos;
+        $hasParkingPhoto = $this->rentalPhotos()
+            ->where('photo_type', 'parking')
+            ->exists();
+        
+        // Phase 4 requires: keys in car photo AND parking location photo
+        // When both are uploaded, booking should be marked as completed
+        return $hasKeysPhoto && $hasParkingPhoto;
     }
 
     /**

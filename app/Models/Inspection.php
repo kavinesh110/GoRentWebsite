@@ -66,30 +66,6 @@ class Inspection extends Model
     }
 
     /**
-     * Check if inspection is pending
-     */
-    public function isPending(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    /**
-     * Check if inspection is completed
-     */
-    public function isCompleted(): bool
-    {
-        return $this->status === 'completed';
-    }
-
-    /**
-     * Get type label
-     */
-    public function getTypeLabelAttribute(): string
-    {
-        return $this->type === 'before' ? 'Before Pickup' : 'After Return';
-    }
-
-    /**
      * Get status badge class
      */
     public function getStatusBadgeClassAttribute(): string

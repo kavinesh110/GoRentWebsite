@@ -236,7 +236,7 @@
         
         const durTxt = document.getElementById('durationText');
         const totPr = document.getElementById('totalPrice');
-        const baseRate = {{ floatval($car->base_rate_per_hour) }};
+        const baseRate = parseFloat('{{ $car->base_rate_per_hour }}');
 
         function update() {
             const start = new Date(pDate.value + 'T' + pTime.value);

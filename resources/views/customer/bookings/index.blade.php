@@ -94,12 +94,28 @@
                            'bg-light text-muted')) }} px-3">
                         {{ ucfirst($booking->status ?? 'N/A') }}
                       </span>
+                      @php
+                        $unpaidPenalties = $booking->penalties ? $booking->penalties->where('status', '!=', 'settled')->count() : 0;
+                      @endphp
+                      @if($unpaidPenalties > 0)
+                        <span class="badge bg-danger rounded-pill px-3" title="You have {{ $unpaidPenalties }} unpaid penalty(ies)">
+                          <i class="bi bi-exclamation-triangle-fill me-1"></i>Penalty Due
+                        </span>
+                      @endif
                     </div>
                     <div class="text-muted">{{ $booking->car->brand ?? 'N/A' }} {{ $booking->car->model ?? '' }} ({{ $booking->car->plate_number ?? 'N/A' }})</div>
                   </div>
                   <div class="text-md-end">
                     <div class="small text-muted mb-1">Total Amount</div>
                     <div class="h5 fw-bold text-hasta mb-0">RM {{ number_format($booking->final_amount ?? 0, 2) }}</div>
+                    @php
+                      $totalPenaltyAmount = $booking->penalties ? $booking->penalties->where('status', '!=', 'settled')->sum('amount') : 0;
+                    @endphp
+                    @if($totalPenaltyAmount > 0)
+                      <div class="small text-danger fw-bold mt-1">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Penalty: RM {{ number_format($totalPenaltyAmount, 2) }}
+                      </div>
+                    @endif
                   </div>
                 </div>
 

@@ -58,11 +58,11 @@ class StaffController extends Controller
         $totalRevenue = Payment::where('status', 'verified')
             ->where('payment_type', 'rental')
             ->sum('amount');
-        
+
         $totalDeposits = Payment::where('status', 'verified')
             ->where('payment_type', 'deposit')
             ->sum('amount');
-        
+
         $monthlyRevenue = Payment::where('status', 'verified')
             ->where('payment_type', 'rental')
             ->whereMonth('payment_date', now()->month)
@@ -106,7 +106,7 @@ class StaffController extends Controller
     }
 
     // ========== CAR MANAGEMENT ==========
-    
+
     /**
      * List all cars with filtering and search capabilities
      * Supports filtering by status (available, in_use, maintenance)
@@ -120,7 +120,7 @@ class StaffController extends Controller
         $this->ensureStaff($request);
 
         $query = Car::query();
-        
+
         // Filter by car status (available, in_use, maintenance)
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
@@ -138,7 +138,7 @@ class StaffController extends Controller
 
         // Paginate results (12 cars per page) with booking counts for delete warnings
         $cars = $query->withCount('bookings')->orderBy('created_at', 'desc')->paginate(12);
-        
+
         // Get open issue counts for each car (only flagged for maintenance)
         $carIds = $cars->pluck('id')->toArray();
         $issuesCounts = SupportTicket::whereIn('car_id', $carIds)
@@ -595,19 +595,71 @@ class StaffController extends Controller
         $data = $request->validate([
             'penalty_type'   => 'required|in:late,fuel,damage,accident,other',
             'description'    => 'nullable|string',
-            'amount'         => 'required|numeric|min:0',
+            'amount'         => 'required|numeric|min:0.01',
             'is_installment' => 'sometimes|boolean',
-            'status'         => 'required|in:pending,partially_paid,settled',
+            'installment_count' => 'nullable|integer|min:2|max:12',
+            'status'         => 'nullable|in:pending,partially_paid,settled',
+            'actual_return_time' => 'nullable|date',
+            'pickup_fuel' => 'nullable|numeric|min:0|max:8',
+            'return_fuel' => 'nullable|numeric|min:0|max:8',
         ]);
+
+        // Auto-calculate late return penalty
+        if ($data['penalty_type'] === 'late' && $request->has('actual_return_time') && $request->actual_return_time) {
+            $expectedReturn = $booking->end_datetime;
+            $actualReturn = \Carbon\Carbon::parse($request->actual_return_time);
+            
+            if ($actualReturn > $expectedReturn) {
+                $hoursLate = ceil($expectedReturn->diffInHours($actualReturn));
+                $calculatedAmount = $hoursLate * 30; // RM30 per hour
+                // Use calculated amount if provided, otherwise use form amount
+                if ($calculatedAmount > 0) {
+                    $data['amount'] = $calculatedAmount;
+                }
+                $data['description'] = ($data['description'] ?? '') . " ({$hoursLate} hours late)";
+            }
+        }
+
+        // Auto-calculate fuel shortage penalty
+        if ($data['penalty_type'] === 'fuel' && $request->has('pickup_fuel') && $request->has('return_fuel')) {
+            $pickupFuel = (float) $request->pickup_fuel;
+            $returnFuel = (float) $request->return_fuel;
+            if ($pickupFuel > 0 || $returnFuel >= 0) {
+                $shortage = max(0, $pickupFuel - $returnFuel);
+                $calculatedAmount = $shortage * 10; // RM10 per bar
+                // Use calculated amount if provided, otherwise use form amount
+                if ($calculatedAmount > 0) {
+                    $data['amount'] = $calculatedAmount;
+                }
+                $data['description'] = ($data['description'] ?? '') . " (Shortage: {$shortage} bars)";
+            }
+        }
 
         // Link penalty to booking and set installment flag
         $data['booking_id'] = $booking->booking_id;
-        $data['is_installment'] = $request->has('is_installment');
+        $data['is_installment'] = $request->has('is_installment') && $request->is_installment == '1';
+        $data['status'] = $data['status'] ?? 'pending';
 
         // Create penalty record
-        Penalty::create($data);
+        $penalty = Penalty::create($data);
 
-        return redirect()->back()->with('success', 'Penalty recorded for this booking.');
+        // If installment is enabled, create installment schedule
+        if ($data['is_installment'] && isset($data['installment_count']) && $data['installment_count'] > 1) {
+            $installmentAmount = $data['amount'] / $data['installment_count'];
+            $dueDate = now()->addMonth();
+            
+            // Store installment info in description for now (can be moved to separate table later)
+            $penalty->update([
+                'description' => ($penalty->description ?? '') . " | Installment Plan: {$data['installment_count']} payments of RM " . number_format($installmentAmount, 2) . " monthly"
+            ]);
+        }
+
+        $message = 'Penalty recorded successfully.';
+        if ($data['is_installment']) {
+            $message .= ' Installment plan has been set up.';
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
@@ -820,19 +872,20 @@ class StaffController extends Controller
     {
         $this->ensureStaff($request);
 
-        // Eager load staff relationship (to show who created each activity)
+        // Calendar Logic
+        $month = $request->get('month', now()->month);
+        $year = $request->get('year', now()->year);
+        $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
+        
+        // Calendar Grid Calculation
+        $calendarStart = $startDate->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
+        $calendarEnd = $endDate->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
+        
+        // Eager load staff relationship
         $query = Activity::with('staff');
 
-        // Filter by activity status
-        // Active: end_date >= today (still running)
-        // Expired: end_date < today (past activities)
-        if ($request->has('status') && $request->status === 'active') {
-            $query->where('end_date', '>=', now());
-        } elseif ($request->has('status') && $request->status === 'expired') {
-            $query->where('end_date', '<', now());
-        }
-
-        // Search functionality: search in activity title or description
+        // Search functionality
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -841,12 +894,25 @@ class StaffController extends Controller
             });
         }
 
-        // Paginate results (15 activities per page)
-        $activities = $query->orderBy('start_date', 'desc')->paginate(15);
+        // For the calendar, we want all activities that overlap with the visible month
+        $activities = $query->where(function($q) use ($calendarStart, $calendarEnd) {
+            $q->whereBetween('start_date', [$calendarStart, $calendarEnd])
+              ->orWhereBetween('end_date', [$calendarStart, $calendarEnd])
+              ->orWhere(function($sq) use ($calendarStart, $calendarEnd) {
+                  $sq->where('start_date', '<=', $calendarStart)
+                    ->where('end_date', '>=', $calendarEnd);
+              });
+        })->get();
 
         return view('staff.activities.index', [
             'activities' => $activities,
             'filters' => $request->only(['status', 'search']),
+            'month' => $month,
+            'year' => $year,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'calendarStart' => $calendarStart,
+            'calendarEnd' => $calendarEnd,
         ]);
     }
 
@@ -1703,79 +1769,6 @@ class StaffController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    // ========== CAR AVAILABILITY CALENDAR ==========
-
-    /**
-     * Display car availability calendar
-     * Shows which cars are booked/available on each date
-     * 
-     * @param Request $request May contain car_id and month/year filters
-     * @return \Illuminate\View\View
-     */
-    public function calendar(Request $request)
-    {
-        $this->ensureStaff($request);
-
-        // Get selected car or all cars
-        $selectedCarId = $request->get('car_id');
-        $selectedMonth = $request->get('month', now()->month);
-        $selectedYear = $request->get('year', now()->year);
-
-        $cars = Car::orderBy('plate_number')->get();
-        
-        // Get bookings for the selected month
-        $startDate = \Carbon\Carbon::create($selectedYear, $selectedMonth, 1)->startOfMonth();
-        $endDate = $startDate->copy()->endOfMonth();
-
-        $query = Booking::with(['car', 'customer'])
-            ->where(function($q) use ($startDate, $endDate) {
-                // Bookings that overlap with the selected month
-                $q->whereBetween('start_datetime', [$startDate, $endDate])
-                  ->orWhereBetween('end_datetime', [$startDate, $endDate])
-                  ->orWhere(function($subQ) use ($startDate, $endDate) {
-                      $subQ->where('start_datetime', '<=', $startDate)
-                           ->where('end_datetime', '>=', $endDate);
-                  });
-            })
-            ->whereIn('status', ['created', 'confirmed', 'active']); // Only active bookings
-
-        if ($selectedCarId) {
-            $query->where('car_id', $selectedCarId);
-        }
-
-        $bookings = $query->get();
-
-        // Build calendar data structure
-        $calendarData = [];
-        $daysInMonth = $startDate->daysInMonth;
-
-        for ($day = 1; $day <= $daysInMonth; $day++) {
-            $date = \Carbon\Carbon::create($selectedYear, $selectedMonth, $day);
-            $calendarData[$day] = [
-                'date' => $date,
-                'bookings' => [],
-            ];
-
-            foreach ($bookings as $booking) {
-                $bookingStart = \Carbon\Carbon::parse($booking->start_datetime);
-                $bookingEnd = \Carbon\Carbon::parse($booking->end_datetime);
-
-                if ($date->between($bookingStart->startOfDay(), $bookingEnd->endOfDay())) {
-                    $calendarData[$day]['bookings'][] = $booking;
-                }
-            }
-        }
-
-        return view('staff.calendar.index', [
-            'cars' => $cars,
-            'selectedCarId' => $selectedCarId,
-            'selectedMonth' => $selectedMonth,
-            'selectedYear' => $selectedYear,
-            'startDate' => $startDate,
-            'calendarData' => $calendarData,
-        ]);
-    }
-
     // ========== ADVANCED REPORTING ==========
 
     /**
@@ -2364,236 +2357,4 @@ class StaffController extends Controller
         return redirect()->back()->with('success', 'Issue marked as resolved!');
     }
 
-    // ========== INSPECTION MANAGEMENT ==========
-
-    /**
-     * List all inspections with filtering
-     * 
-     * @param Request $request
-     * @return \Illuminate\View\View
-     */
-    public function inspections(Request $request)
-    {
-        $this->ensureStaff($request);
-
-        $query = Inspection::with(['booking.customer', 'car', 'inspector']);
-
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by date
-        if ($request->filled('date')) {
-            $query->whereDate('created_at', $request->date);
-        }
-
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('car', function($cq) use ($search) {
-                    $cq->where('brand', 'like', "%{$search}%")
-                       ->orWhere('model', 'like', "%{$search}%")
-                       ->orWhere('plate_number', 'like', "%{$search}%");
-                })
-                ->orWhereHas('booking.customer', function($cuq) use ($search) {
-                    $cuq->where('full_name', 'like', "%{$search}%");
-                });
-            });
-        }
-
-        $inspections = $query->orderByRaw("FIELD(status, 'pending', 'in_progress', 'completed')")
-            ->orderBy('created_at', 'desc')
-            ->paginate(12);
-
-        // Stats
-        $stats = [
-            'total' => Inspection::count(),
-            'pending' => Inspection::where('status', 'pending')->count(),
-            'in_progress' => Inspection::where('status', 'in_progress')->count(),
-            'completed' => Inspection::where('status', 'completed')->count(),
-            'before' => Inspection::where('type', 'before')->where('status', 'pending')->count(),
-            'after' => Inspection::where('type', 'after')->where('status', 'pending')->count(),
-        ];
-
-        return view('staff.inspections.index', [
-            'inspections' => $inspections,
-            'filters' => $request->only(['status', 'type', 'date', 'search']),
-            'stats' => $stats,
-        ]);
-    }
-
-    /**
-     * Show inspection details
-     * 
-     * @param Request $request
-     * @param int $id Inspection ID
-     * @return \Illuminate\View\View
-     */
-    public function inspectionsShow(Request $request, $id)
-    {
-        $this->ensureStaff($request);
-
-        $inspection = Inspection::with(['booking.customer', 'booking.payments', 'car', 'inspector'])
-            ->findOrFail($id);
-
-        return view('staff.inspections.show', [
-            'inspection' => $inspection,
-        ]);
-    }
-
-    /**
-     * Start an inspection (change status to in_progress)
-     * 
-     * @param Request $request
-     * @param int $id Inspection ID
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function inspectionsStart(Request $request, $id)
-    {
-        $this->ensureStaff($request);
-        $staffId = session('auth_id');
-
-        $inspection = Inspection::findOrFail($id);
-        
-        $inspection->update([
-            'status' => 'in_progress',
-            'inspected_by' => $staffId,
-        ]);
-
-        return redirect()->route('staff.inspections.show', $id)
-            ->with('success', 'Inspection started. Please complete the inspection form.');
-    }
-
-    /**
-     * Complete an inspection with details and photos
-     * 
-     * @param Request $request
-     * @param int $id Inspection ID
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function inspectionsComplete(Request $request, $id)
-    {
-        $this->ensureStaff($request);
-        $staffId = session('auth_id');
-
-        $inspection = Inspection::with('booking')->findOrFail($id);
-
-        $validated = $request->validate([
-            'exterior_condition' => 'required|string|max:1000',
-            'interior_condition' => 'required|string|max:1000',
-            'engine_condition' => 'nullable|string|max:1000',
-            'fuel_level' => 'required|integer|min:0|max:100',
-            'mileage_reading' => 'required|integer|min:0',
-            'damages_found' => 'nullable|string|max:2000',
-            'notes' => 'nullable|string|max:2000',
-            'photos' => 'nullable|array|max:10',
-            'photos.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
-
-        // Handle photo uploads
-        $photoPaths = $inspection->photos ?? [];
-        if ($request->hasFile('photos')) {
-            foreach ($request->file('photos') as $photo) {
-                $path = $photo->store('inspections/' . $inspection->booking_id, 'public');
-                $photoPaths[] = $path;
-            }
-        }
-
-        $inspection->update([
-            'status' => 'completed',
-            'exterior_condition' => $validated['exterior_condition'],
-            'interior_condition' => $validated['interior_condition'],
-            'engine_condition' => $validated['engine_condition'] ?? null,
-            'fuel_level' => $validated['fuel_level'],
-            'mileage_reading' => $validated['mileage_reading'],
-            'damages_found' => $validated['damages_found'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'photos' => $photoPaths,
-            'inspected_by' => $staffId,
-            'inspected_at' => now(),
-        ]);
-
-        // Update car mileage if this is an after inspection
-        if ($inspection->type === 'after') {
-            $inspection->car->update([
-                'current_mileage' => $validated['mileage_reading'],
-            ]);
-        }
-
-        // If before inspection completed and booking is in verification, update booking status
-        if ($inspection->type === 'before' && $inspection->booking->status === 'verified') {
-            $inspection->booking->update(['status' => 'active']);
-        }
-
-        // If after inspection completed and booking is active, update booking status
-        if ($inspection->type === 'after' && $inspection->booking->status === 'active') {
-            $inspection->booking->update(['status' => 'completed']);
-        }
-
-        return redirect()->route('staff.inspections.show', $id)
-            ->with('success', 'Inspection completed successfully!');
-    }
-
-    /**
-     * Upload additional photos to an inspection
-     * 
-     * @param Request $request
-     * @param int $id Inspection ID
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function inspectionsUploadPhotos(Request $request, $id)
-    {
-        $this->ensureStaff($request);
-
-        $inspection = Inspection::findOrFail($id);
-
-        $request->validate([
-            'photos' => 'required|array|min:1|max:10',
-            'photos.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
-
-        $photoPaths = $inspection->photos ?? [];
-        foreach ($request->file('photos') as $photo) {
-            $path = $photo->store('inspections/' . $inspection->booking_id, 'public');
-            $photoPaths[] = $path;
-        }
-
-        $inspection->update(['photos' => $photoPaths]);
-
-        return redirect()->back()->with('success', 'Photos uploaded successfully!');
-    }
-
-    /**
-     * Create inspection for a booking (called when booking status changes)
-     * This is a utility method that can be called from other methods
-     * 
-     * @param Booking $booking
-     * @param string $type 'before' or 'after'
-     * @return Inspection
-     */
-    public static function createInspectionForBooking(Booking $booking, string $type): Inspection
-    {
-        // Check if inspection already exists
-        $existing = Inspection::where('booking_id', $booking->booking_id)
-            ->where('type', $type)
-            ->first();
-
-        if ($existing) {
-            return $existing;
-        }
-
-        return Inspection::create([
-            'booking_id' => $booking->booking_id,
-            'car_id' => $booking->car_id,
-            'type' => $type,
-            'status' => 'pending',
-        ]);
-    }
 }

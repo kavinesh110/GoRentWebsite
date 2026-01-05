@@ -1,136 +1,158 @@
 {{-- Staff Navigation Sidebar --}}
-<div class="staff-nav shadow-sm" style="background: #fff; border-right: 1px solid #edf2f7; min-height: calc(100vh - 60px); padding: 0; position: sticky; top: 60px; width: 260px; flex-shrink: 0; z-index: 1000;">
-  {{-- Staff Profile Summary --}}
-  <div class="px-4 py-4 mb-2 border-bottom bg-light-subtle">
+<div class="staff-nav" style="background: #fff; border-right: 1px solid #edf2f7; min-height: calc(100vh - 70px); padding: 0; position: sticky; top: 70px; width: 260px; flex-shrink: 0; z-index: 1000; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+  {{-- Staff Profile Summary (Simplified) --}}
+  <div class="px-4 py-4 mb-2">
     <div class="d-flex align-items-center gap-3">
-      <div class="bg-hasta text-white rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 42px; height: 42px; font-size: 18px;">
+      <div class="bg-hasta text-white rounded-3 d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 40px; height: 40px; font-size: 16px;">
         {{ substr(session('auth_name') ?? 'S', 0, 1) }}
       </div>
       <div class="overflow-hidden">
-        <div class="fw-bold text-dark text-truncate" style="font-size: 15px;">{{ session('auth_name') }}</div>
-        <div class="text-muted small">Hasta Staff</div>
+        <div class="fw-bold text-dark text-truncate" style="font-size: 14px; letter-spacing: -0.3px;">{{ session('auth_name') }}</div>
+        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Staff Portal</div>
       </div>
     </div>
   </div>
 
-  <div class="px-3 py-2">
+  <div class="px-3">
     <nav class="nav flex-column gap-1">
-      <div class="nav-section-label text-uppercase text-muted fw-bold mb-2 mt-2 px-3" style="font-size: 11px; letter-spacing: 0.8px;">Main Menu</div>
+      {{-- SECTION: CORE --}}
+      <div class="nav-section-label">Main Menu</div>
       
-      <a href="{{ route('staff.dashboard') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.dashboard') ? 'active' : '' }}">
-        <i class="bi bi-speedometer2"></i>
+      <a href="{{ route('staff.dashboard') }}" class="nav-link {{ request()->routeIs('staff.dashboard') ? 'active' : '' }}">
+        <i class="bi bi-grid-1x2-fill"></i>
         <span>Dashboard</span>
       </a>
 
-      <div class="nav-section-label text-uppercase text-muted fw-bold mb-2 mt-3 px-3" style="font-size: 11px; letter-spacing: 0.8px;">Management</div>
+      {{-- SECTION: OPERATIONS --}}
+      <div class="nav-section-label">Operations</div>
       
-      <a href="{{ route('staff.cars') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.cars*') ? 'active' : '' }}">
-        <i class="bi bi-car-front"></i>
-        <span>Manage Cars</span>
+      <a href="{{ route('staff.cars') }}" class="nav-link {{ request()->routeIs('staff.cars*') ? 'active' : '' }}">
+        <i class="bi bi-car-front-fill"></i>
+        <span>Fleet Management</span>
       </a>
-      <a href="{{ route('staff.bookings') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.bookings*') ? 'active' : '' }}">
-        <i class="bi bi-calendar-check"></i>
-        <span>Bookings</span>
+      <a href="{{ route('staff.bookings') }}" class="nav-link {{ request()->routeIs('staff.bookings*') ? 'active' : '' }}">
+        <i class="bi bi-journal-check"></i>
+        <span>Booking Records</span>
       </a>
-      <a href="{{ route('staff.cancellation-requests') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.cancellation-requests*') ? 'active' : '' }}">
-        <i class="bi bi-x-circle"></i>
+      <a href="{{ route('staff.cancellation-requests') }}" class="nav-link {{ request()->routeIs('staff.cancellation-requests*') ? 'active' : '' }}">
+        <i class="bi bi-x-octagon-fill"></i>
         <span>Cancellations</span>
       </a>
-      <a href="{{ route('staff.customers') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.customers*') ? 'active' : '' }}">
-        <i class="bi bi-people"></i>
-        <span>Customers</span>
+      <a href="{{ route('staff.customers') }}" class="nav-link {{ request()->routeIs('staff.customers*') ? 'active' : '' }}">
+        <i class="bi bi-people-fill"></i>
+        <span>Customer Database</span>
       </a>
 
-      <div class="nav-section-label text-uppercase text-muted fw-bold mb-2 mt-3 px-3" style="font-size: 11px; letter-spacing: 0.8px;">Marketing & Tools</div>
+      {{-- SECTION: GROWTH --}}
+      <div class="nav-section-label">Marketing & Growth</div>
 
-      <a href="{{ route('staff.activities') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.activities*') ? 'active' : '' }}">
-        <i class="bi bi-megaphone"></i>
-        <span>Promotions</span>
+      <a href="{{ route('staff.activities') }}" class="nav-link {{ request()->routeIs('staff.activities*') ? 'active' : '' }}">
+        <i class="bi bi-megaphone-fill"></i>
+        <span>Active Promotions</span>
       </a>
-      <a href="{{ route('staff.vouchers') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.vouchers*') ? 'active' : '' }}">
-        <i class="bi bi-ticket-perforated"></i>
-        <span>Vouchers</span>
+      <a href="{{ route('staff.vouchers') }}" class="nav-link {{ request()->routeIs('staff.vouchers*') ? 'active' : '' }}">
+        <i class="bi bi-ticket-perforated-fill"></i>
+        <span>Voucher Codes</span>
       </a>
-      <a href="{{ route('staff.feedbacks') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.feedbacks*') ? 'active' : '' }}">
-        <i class="bi bi-chat-square-text"></i>
-        <span>Feedback</span>
-      </a>
-      <a href="{{ route('staff.locations') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.locations*') ? 'active' : '' }}">
-        <i class="bi bi-geo-alt"></i>
-        <span>Locations</span>
+      <a href="{{ route('staff.feedbacks') }}" class="nav-link {{ request()->routeIs('staff.feedbacks*') ? 'active' : '' }}">
+        <i class="bi bi-star-fill"></i>
+        <span>Reviews & Ratings</span>
       </a>
 
-      <div class="nav-section-label text-uppercase text-muted fw-bold mb-2 mt-3 px-3" style="font-size: 11px; letter-spacing: 0.8px;">Operations</div>
+      {{-- SECTION: SUPPORT --}}
+      <div class="nav-section-label">Service & Maintenance</div>
 
-      <a href="{{ route('staff.calendar') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.calendar*') ? 'active' : '' }}">
-        <i class="bi bi-calendar3"></i>
-        <span>Schedule</span>
-      </a>
-      <a href="{{ route('staff.reports') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.reports*') ? 'active' : '' }}">
-        <i class="bi bi-bar-chart"></i>
-        <span>Reports</span>
-      </a>
-      <a href="{{ route('staff.penalties') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.penalties*') ? 'active' : '' }}">
-        <i class="bi bi-exclamation-octagon"></i>
-        <span>Penalties</span>
-      </a>
-      <a href="{{ route('staff.support-tickets') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.support-tickets*') ? 'active' : '' }}">
+      <a href="{{ route('staff.support-tickets') }}" class="nav-link {{ request()->routeIs('staff.support-tickets*') ? 'active' : '' }}">
         <i class="bi bi-headset"></i>
-        <span>Support Tickets</span>
+        <span>Support Center</span>
       </a>
-      <a href="{{ route('staff.maintenance-issues') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.maintenance-issues*') ? 'active' : '' }}">
+      <a href="{{ route('staff.maintenance-issues') }}" class="nav-link {{ request()->routeIs('staff.maintenance-issues*') ? 'active' : '' }}">
         <i class="bi bi-tools"></i>
-        <span>Maintenance Issues</span>
+        <span>Maintenance Log</span>
       </a>
-      <a href="{{ route('staff.inspections') }}" class="nav-link d-flex align-items-center gap-3 {{ request()->routeIs('staff.inspections*') ? 'active' : '' }}">
-        <i class="bi bi-clipboard-check"></i>
-        <span>Inspections</span>
+      <a href="{{ route('staff.penalties') }}" class="nav-link {{ request()->routeIs('staff.penalties*') ? 'active' : '' }}">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>Penalties Ledger</span>
       </a>
 
-      <div class="mt-4 mb-3 px-3">
-        <hr class="my-2 opacity-10">
+      {{-- SECTION: SYSTEM --}}
+      <div class="nav-section-label">Configuration</div>
+
+      <a href="{{ route('staff.locations') }}" class="nav-link {{ request()->routeIs('staff.locations*') ? 'active' : '' }}">
+        <i class="bi bi-geo-alt-fill"></i>
+        <span>Service Locations</span>
+      </a>
+      <a href="{{ route('staff.reports') }}" class="nav-link {{ request()->routeIs('staff.reports*') ? 'active' : '' }}">
+        <i class="bi bi-bar-chart-line-fill"></i>
+        <span>Business Reports</span>
+      </a>
+
+      <div class="my-3 px-3">
+        <hr class="m-0 opacity-10">
       </div>
       
-      <a href="{{ route('home') }}" class="nav-link d-flex align-items-center gap-3" style="color: #718096; font-size: 14px;">
-        <i class="bi bi-house"></i>
-        <span>Public Website</span>
+      <a href="{{ route('home') }}" class="nav-link secondary-link">
+        <i class="bi bi-arrow-left-circle"></i>
+        <span>Back to Website</span>
       </a>
-      <button type="button" class="nav-link border-0 bg-transparent w-100 text-start d-flex align-items-center gap-3" style="color: #718096; font-size: 14px; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logoutModal">
-        <i class="bi bi-box-arrow-right"></i>
-        <span>Logout</span>
+      <button type="button" class="nav-link secondary-link border-0 bg-transparent w-100 text-start" data-bs-toggle="modal" data-bs-target="#logoutModal">
+        <i class="bi bi-power"></i>
+        <span>Secure Logout</span>
       </button>
     </nav>
   </div>
 </div>
 
 <style>
+  .staff-nav .nav-section-label {
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 700;
+    margin-bottom: 4px;
+    margin-top: 12px;
+    padding: 0 16px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
   .staff-nav .nav-link {
-    color: #4a5568;
+    color: #64748b;
     padding: 10px 16px;
-    border-radius: 10px;
-    font-size: 14.5px;
+    border-radius: 8px;
+    font-size: 13.5px;
     font-weight: 500;
-    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
   }
   .staff-nav .nav-link i {
     font-size: 1.1rem;
-    color: #a0aec0;
-    transition: all 0.25s ease;
+    width: 20px;
+    text-align: center;
+    transition: all 0.2s ease;
   }
   .staff-nav .nav-link:hover {
-    background: #f7fafc;
+    background: #f8fafc;
     color: var(--hasta) !important;
-  }
-  .staff-nav .nav-link:hover i {
-    color: var(--hasta);
+    border-color: #f1f5f9;
   }
   .staff-nav .nav-link.active {
-    background: var(--hasta);
-    color: #fff !important;
-    box-shadow: 0 4px 12px rgba(203, 55, 55, 0.2);
+    background: #fff1f1;
+    color: var(--hasta) !important;
+    font-weight: 600;
+    border-color: #fee2e2;
   }
   .staff-nav .nav-link.active i {
-    color: #fff !important;
+    color: var(--hasta);
+  }
+  .staff-nav .secondary-link {
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .staff-nav .secondary-link:hover {
+    color: #475569 !important;
+    background: #f1f5f9;
   }
 
   @media (max-width: 768px) {
