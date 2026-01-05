@@ -400,7 +400,7 @@
             <option value="hatchback">Hatchback (Budget)</option>
             <option value="sedan">Sedan (Comfort)</option>
             <option value="suv">SUV (Family)</option>
-            <option value="van">Van (Group)</option>
+            <option value="mpv">MPV (Group)</option>
           </select>
         </div>
       </div>
@@ -475,8 +475,8 @@
         <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
           <i class="bi bi-credit-card h3 mb-0 text-primary"></i>
         </div>
-        <h5 class="fw-bold">2. Pay Deposit</h5>
-        <p class="text-muted small px-lg-4">Secure your booking with a simple RM 50 deposit and receipt upload.</p>
+        <h5 class="fw-bold">2. Pay & Confirm</h5>
+        <p class="text-muted small px-lg-4">Pay the full rental amount plus deposit upfront and upload your receipt.</p>
       </div>
       <div class="col-md-4 text-center">
         <div class="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
@@ -560,11 +560,22 @@
                   <label class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
                   <input type="email" name="email" class="form-control" value="{{ $customerEmail ?? old('email') }}" {{ $isLoggedIn ? '' : 'disabled' }} required>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <label class="form-label fw-bold">Phone Number</label>
                   <input type="tel" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="Optional" {{ $isLoggedIn ? '' : 'disabled' }}>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">Select Booking <span class="text-danger">*</span></label>
+                  <select name="booking_id" class="form-select" {{ $isLoggedIn ? '' : 'disabled' }} required>
+                    <option value="">Select booking</option>
+                    @foreach($completedBookings as $booking)
+                      <option value="{{ $booking->booking_id }}" {{ old('booking_id') == $booking->booking_id ? 'selected' : '' }}>
+                        #{{ $booking->booking_id }} - {{ $booking->car->brand }} {{ $booking->car->model }}
+                      </option>
+                    @endforeach
+                  </select>
+                </div>
+                <div class="col-md-4">
                   <label class="form-label fw-bold">Car Issues <span class="text-danger">*</span></label>
                   <select name="category" class="form-select" {{ $isLoggedIn ? '' : 'disabled' }} required>
                     <option value="">Select car issue</option>

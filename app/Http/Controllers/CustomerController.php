@@ -556,14 +556,12 @@ class CustomerController extends Controller
         $customerId = $this->getCustomerId($request);
         $customer = Customer::findOrFail($customerId);
 
-        // Get available vouchers that meet all criteria:
+        // Get available vouchers that meet criteria:
         // 1. Voucher is active
         // 2. Voucher hasn't expired
-        // 3. Customer has enough stamps to redeem
-        // 4. Customer hasn't already redeemed this voucher
+        // 3. Customer hasn't already redeemed this voucher
         $availableVouchers = Voucher::where('is_active', true)
             ->where('expiry_date', '>=', now())
-            ->where('min_stamps_required', '<=', $customer->total_stamps ?? 0)
             ->whereDoesntHave('redemptions', function($q) use ($customerId) {
                 $q->where('customer_id', $customerId);
             })
@@ -983,14 +981,20 @@ class CustomerController extends Controller
                 
                 // Auto-award loyalty stamps
                 $customer = $booking->customer;
-                $rentalHours = $booking->rental_hours ?? 0;
-                $stampsToAward = floor($rentalHours / 9); // 1 stamp per 9 hours
+                $rentalHours = (int)($booking->rental_hours ?? 0);
                 
+                $oldTotalHours = (int)($customer->total_rental_hours ?? 0);
+                $newTotalHours = $oldTotalHours + $rentalHours;
+                
+                $oldLifetimeStamps = floor($oldTotalHours / 9);
+                $newLifetimeStamps = floor($newTotalHours / 9);
+                $stampsToAward = $newLifetimeStamps - $oldLifetimeStamps;
+                
+                $customer->total_rental_hours = $newTotalHours;
                 if ($stampsToAward > 0) {
                     $customer->total_stamps = ($customer->total_stamps ?? 0) + $stampsToAward;
-                    $customer->total_rental_hours = ($customer->total_rental_hours ?? 0) + $rentalHours;
-                    $customer->save();
                 }
+                $customer->save();
             }
         }
 

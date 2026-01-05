@@ -343,6 +343,7 @@
             <span class="h3 fw-800 text-hasta-red mb-0 total-price-value">RM 0</span>
           </div>
         </div>
+        
 
         {{-- Available Vouchers --}}
         @if(isset($availableVouchers) && $availableVouchers->count() > 0)
@@ -364,7 +365,7 @@
           <div class="alert alert-warning border-0 d-flex gap-2 p-3 rounded-3 mb-0">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <div class="small">
-              <strong>Notice:</strong> A RM 50 deposit is required to confirm this booking. You will be asked to upload the payment receipt on the next page.
+              <strong>Notice:</strong> Full payment (rental + deposit) is required to confirm this booking. You will be asked to upload the payment receipt on the next page.
             </div>
           </div>
         </div>
@@ -385,7 +386,7 @@
           </div>
           <div class="d-flex gap-2">
             <i class="bi bi-info-circle-fill text-primary"></i>
-            <small>Refundable RM 50 Deposit</small>
+            <small>Refundable deposit included</small>
           </div>
         </div>
       </div>

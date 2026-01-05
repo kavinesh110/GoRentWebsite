@@ -10,27 +10,41 @@
 
   {{-- LOYALTY SUMMARY --}}
   <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft">
-        <div class="card-body p-3 text-center">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-soft h-100">
+        <div class="card-body p-3 text-center d-flex flex-column justify-content-center">
           <div class="small text-muted text-uppercase mb-1">Total Stamps</div>
           <div class="h4 fw-bold mb-0 text-hasta">{{ $customer->total_stamps ?? 0 }}</div>
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft">
-        <div class="card-body p-3 text-center">
-          <div class="small text-muted text-uppercase mb-1">Available Vouchers</div>
-          <div class="h4 fw-bold mb-0">{{ $availableVouchers->count() }}</div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-soft h-100">
+        <div class="card-body p-3">
+          @php
+            $currentHours = $customer->total_rental_hours ?? 0;
+            $hoursTowardsNextStamp = $currentHours % 9;
+            $hoursRemaining = 9 - $hoursTowardsNextStamp;
+            $percentComplete = ($hoursTowardsNextStamp / 9) * 100;
+          @endphp
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted text-uppercase">Progress to Next Stamp</div>
+            <div class="small fw-bold">{{ $hoursTowardsNextStamp }}/9 Hours</div>
+          </div>
+          <div class="progress" style="height: 10px; border-radius: 10px;">
+            <div class="progress-bar bg-hasta" role="progressbar" style="width: {{ $percentComplete }}%;" aria-valuenow="{{ $percentComplete }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <div class="text-center mt-2">
+            <small class="text-muted">Rent for another <strong>{{ $hoursRemaining }}</strong> hours to earn your next stamp!</small>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-4">
-      <div class="card border-0 shadow-soft">
-        <div class="card-body p-3 text-center">
-          <div class="small text-muted text-uppercase mb-1">Redeemed Vouchers</div>
-          <div class="h4 fw-bold mb-0">{{ $redeemedVouchers->count() }}</div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-soft h-100">
+        <div class="card-body p-3 text-center d-flex flex-column justify-content-center">
+          <div class="small text-muted text-uppercase mb-1">Lifetime Hours</div>
+          <div class="h4 fw-bold mb-0 text-primary">{{ $customer->total_rental_hours ?? 0 }}</div>
         </div>
       </div>
     </div>

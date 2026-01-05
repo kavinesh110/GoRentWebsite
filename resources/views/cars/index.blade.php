@@ -157,7 +157,7 @@
             <option value="hatchback" {{ ($filters['type'] ?? '') === 'hatchback' ? 'selected' : '' }}>Hatchback (Budget)</option>
             <option value="sedan" {{ ($filters['type'] ?? '') === 'sedan' ? 'selected' : '' }}>Sedan (Comfort)</option>
             <option value="suv" {{ ($filters['type'] ?? '') === 'suv' ? 'selected' : '' }}>SUV (Family)</option>
-            <option value="van" {{ ($filters['type'] ?? '') === 'van' ? 'selected' : '' }}>Van (Group)</option>
+            <option value="mpv" {{ ($filters['type'] ?? '') === 'mpv' ? 'selected' : '' }}>MPV (Group)</option>
           </select>
         </div>
       </div>

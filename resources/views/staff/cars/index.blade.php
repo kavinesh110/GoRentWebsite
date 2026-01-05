@@ -94,6 +94,41 @@
         </div>
       @endif
 
+      {{-- FLEET OVERVIEW --}}
+      <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="fw-bold mb-0">Fleet Overview</h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #d1fae5;">
+                <div style="font-size: 32px; font-weight: 700; color: #059669;">{{ $fleetStats['available'] }}</div>
+                <div style="font-size: 12px; color: #065f46; font-weight: 600;">Available</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #dbeafe;">
+                <div style="font-size: 32px; font-weight: 700; color: #2563eb;">{{ $fleetStats['in_use'] }}</div>
+                <div style="font-size: 12px; color: #1e40af; font-weight: 600;">In Use</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #fef3c7;">
+                <div style="font-size: 32px; font-weight: 700; color: #d97706;">{{ $fleetStats['maintenance'] }}</div>
+                <div style="font-size: 12px; color: #92400e; font-weight: 600;">Maintenance</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center p-3 rounded" style="background: #e2e8f0;">
+                <div style="font-size: 32px; font-weight: 700; color: #475569;">{{ $fleetStats['total'] }}</div>
+                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Total Fleet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {{-- SEARCH & FILTERS --}}
       <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
         <div class="card-body p-3 bg-white">
@@ -104,7 +139,7 @@
                 <input type="text" name="search" class="form-control border-0 bg-transparent py-2 px-2" placeholder="Search by brand, model, or plate number..." value="{{ $filters['search'] ?? '' }}">
               </div>
             </div>
-            <div class="col-lg-3">
+            <div class="col-lg-2">
               <select name="status" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
                 <option value="">All Fleet Statuses</option>
                 <option value="available" {{ ($filters['status'] ?? '') === 'available' ? 'selected' : '' }}>Available & Ready</option>
@@ -112,7 +147,25 @@
                 <option value="maintenance" {{ ($filters['status'] ?? '') === 'maintenance' ? 'selected' : '' }}>Under Maintenance</option>
               </select>
             </div>
-            <div class="col-lg-4 d-flex gap-2">
+            <div class="col-lg-2">
+              <select name="car_type" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
+                <option value="">All Car Types</option>
+                @php
+                  $carTypeLabels = [
+                    'hatchback' => 'Hatchback (Budget)',
+                    'sedan' => 'Sedan (Comfort)',
+                    'suv' => 'SUV (Family)',
+                    'mpv' => 'MPV (Group)'
+                  ];
+                @endphp
+                @foreach($availableCarTypes as $type)
+                  <option value="{{ $type }}" {{ ($filters['car_type'] ?? '') === $type ? 'selected' : '' }}>
+                    {{ $carTypeLabels[$type] ?? ucfirst($type) }}
+                  </option>
+                @endforeach
+              </select>
+            </div>
+            <div class="col-lg-3 d-flex gap-2">
               <button type="submit" class="btn btn-sm btn-dark px-4 flex-fill rounded-3 py-2 fw-bold">Apply Filters</button>
               <a href="{{ route('staff.cars') }}" class="btn btn-sm btn-light border px-3 rounded-3 py-2 fw-semibold text-muted">Reset</a>
             </div>
@@ -166,16 +219,10 @@
 
                 {{-- Key Stats Row --}}
                 <div class="row g-2 mb-4 bg-light rounded-3 p-2">
-                  <div class="col-6">
+                  <div class="col-12">
                     <div class="p-2">
                       <div class="small text-muted mb-0" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Mileage</div>
                       <div class="fw-bold text-slate-700">{{ number_format($car->current_mileage) }} km</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-2 text-end">
-                      <div class="small text-muted mb-0" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Location</div>
-                      <div class="fw-bold text-slate-700 text-truncate">{{ $car->location->name ?? 'Student Mall' }}</div>
                     </div>
                   </div>
                 </div>
@@ -183,16 +230,31 @@
                 {{-- Maintenance Status --}}
                 @php
                   $mileageLimit = $car->service_mileage_limit ?: 5000;
-                  $progress = ($mileageLimit > 0) ? ($car->current_mileage / $mileageLimit * 100) : 0;
-                  $isServiceDue = $car->current_mileage >= $mileageLimit;
-                  $remainingKm = max(0, $mileageLimit - $car->current_mileage);
+                  
+                  // Get last service mileage (from maintenance records) or use initial mileage
+                  $lastServiceMileage = $lastServiceMileages[$car->id] ?? ($car->initial_mileage ?? 0);
+                  
+                  // Calculate distance since last service
+                  $distanceSinceService = $car->current_mileage - $lastServiceMileage;
+                  
+                  // Calculate progress percentage (0-100%)
+                  $progress = ($mileageLimit > 0) ? min(100, ($distanceSinceService / $mileageLimit) * 100) : 0;
+                  
+                  // Check if service is due
+                  $isServiceDue = $distanceSinceService >= $mileageLimit;
+                  
+                  // Calculate remaining km to next service
+                  $remainingKm = max(0, $mileageLimit - $distanceSinceService);
+                  
+                  // If overdue, calculate how much past the service point
+                  $overdueKm = $isServiceDue ? ($distanceSinceService - $mileageLimit) : 0;
                 @endphp
                 <div class="mb-4">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="small fw-bold text-slate-700" style="font-size: 11px;">Service Progress</span>
                     <span class="small {{ $isServiceDue ? 'text-danger fw-bold' : 'text-muted fw-medium' }}" style="font-size: 11px;">
                       @if($isServiceDue)
-                        Overdue by {{ number_format($car->current_mileage - $mileageLimit) }} km
+                        Service due ({{ number_format($overdueKm) }} km past interval)
                       @else
                         {{ number_format($remainingKm) }} km to next service
                       @endif

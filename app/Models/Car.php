@@ -19,6 +19,7 @@ class Car extends Model
         'plate_number',
         'brand',
         'model',
+        'car_type',
         'fuel_type',
         'year',
         'base_rate_per_hour',

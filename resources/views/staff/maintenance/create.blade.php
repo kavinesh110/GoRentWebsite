@@ -52,6 +52,14 @@
                     Update car's last service date
                   </label>
                 </div>
+                @if($car->status === 'maintenance')
+                <div class="form-check mt-3 p-3 rounded" style="background: #d1fae5; border: 1px solid #6ee7b7;">
+                  <input class="form-check-input" type="checkbox" name="mark_complete" id="mark_complete" value="1" checked>
+                  <label class="form-check-label fw-bold" for="mark_complete" style="color: #065f46;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Mark maintenance complete (set car to Available)
+                  </label>
+                </div>
+                @endif
               </div>
               <div class="col-12 mt-4">
                 <button type="submit" class="btn btn-hasta">Save Maintenance Record</button>

@@ -433,6 +433,17 @@
     <div class="stat-box">
       <div class="stat-label">Loyalty Stamps</div>
       <div class="stat-value">{{ $customer->total_stamps ?? 0 }} <i class="bi bi-star-fill" style="font-size: 16px;"></i></div>
+      @php
+        $currentHours = $customer->total_rental_hours ?? 0;
+        $hoursTowardsNextStamp = $currentHours % 9;
+        $percentComplete = ($hoursTowardsNextStamp / 9) * 100;
+      @endphp
+      <div class="progress mt-2" style="height: 4px; border-radius: 4px;">
+        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $percentComplete }}%;" aria-valuenow="{{ $percentComplete }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <div class="text-center mt-1" style="font-size: 10px; color: #666;">
+        {{ $hoursTowardsNextStamp }}/9h to next
+      </div>
     </div>
   </div>
 

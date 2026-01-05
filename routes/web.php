@@ -111,6 +111,7 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::get('/cars/{carId}/maintenance/{recordId}/edit', [App\Http\Controllers\StaffController::class, 'maintenanceEdit'])->name('maintenance.edit');
     Route::put('/cars/{carId}/maintenance/{recordId}', [App\Http\Controllers\StaffController::class, 'maintenanceUpdate'])->name('maintenance.update');
     Route::delete('/cars/{carId}/maintenance/{recordId}', [App\Http\Controllers\StaffController::class, 'maintenanceDestroy'])->name('maintenance.destroy');
+    Route::post('/cars/{id}/set-available', [App\Http\Controllers\StaffController::class, 'carsSetAvailable'])->name('cars.setAvailable');
     
     // Feedback management
     Route::get('/feedbacks', [App\Http\Controllers\StaffController::class, 'feedbacks'])->name('feedbacks');
