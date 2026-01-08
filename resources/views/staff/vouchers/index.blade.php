@@ -24,12 +24,17 @@
       {{-- Header --}}
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1 class="h4 fw-800 mb-0 text-slate-800">Voucher Management</h1>
-          <p class="text-muted mb-0" style="font-size: 13px;">Create and manage loyalty reward vouchers for customers.</p>
+          <h1 class="h4 fw-800 mb-0 text-slate-800">Voucher & Promotion</h1>
+          <p class="text-muted mb-0" style="font-size: 13px;">Create and manage loyalty reward vouchers and promotional campaigns.</p>
         </div>
-        <a href="{{ route('staff.vouchers.create') }}" class="btn btn-hasta btn-sm rounded-2 fw-700 px-3 py-2">
-          <i class="bi bi-plus-lg me-1"></i>New Voucher
-        </a>
+        <div class="d-flex gap-2">
+          <a href="{{ route('staff.vouchers.promotions.create') }}" class="btn btn-primary btn-sm rounded-2 fw-700 px-3 py-2">
+            <i class="bi bi-megaphone-fill me-1"></i>New Promotion
+          </a>
+          <a href="{{ route('staff.vouchers.create') }}" class="btn btn-hasta btn-sm rounded-2 fw-700 px-3 py-2">
+            <i class="bi bi-plus-lg me-1"></i>New Voucher
+          </a>
+        </div>
       </div>
 
       @if(session('success'))
@@ -174,6 +179,99 @@
       {{-- PAGINATION --}}
       <div class="mt-3 d-flex justify-content-center">
         {{ $vouchers->links() }}
+      </div>
+
+      {{-- PROMOTIONS SECTION --}}
+      <div class="mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="h5 fw-800 mb-0 text-slate-800">Promotions</h2>
+            <p class="text-muted mb-0" style="font-size: 13px;">Active promotional campaigns</p>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="ps-3 py-2 border-0 text-uppercase small fw-700 text-slate-500" style="font-size: 11px;">Title</th>
+                    <th class="py-2 border-0 text-uppercase small fw-700 text-slate-500" style="font-size: 11px;">Description</th>
+                    <th class="py-2 border-0 text-uppercase small fw-700 text-slate-500" style="font-size: 11px;">Start Date</th>
+                    <th class="py-2 border-0 text-uppercase small fw-700 text-slate-500" style="font-size: 11px;">End Date</th>
+                    <th class="py-2 border-0 text-uppercase small fw-700 text-slate-500" style="font-size: 11px;">Status</th>
+                    <th class="pe-3 py-2 border-0 text-uppercase small fw-700 text-slate-500 text-end" style="font-size: 11px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="border-top-0">
+                  @forelse($promotions ?? [] as $promotion)
+                    <tr>
+                      <td class="ps-3 py-2">
+                        <div class="fw-800 text-slate-800">{{ $promotion->title }}</div>
+                      </td>
+                      <td class="py-2">
+                        <div class="text-slate-700 fw-500" style="max-width: 200px;">
+                          {{ \Illuminate\Support\Str::limit($promotion->description ?? 'No description', 40) }}
+                        </div>
+                      </td>
+                      <td class="py-2">
+                        <div class="fw-600 text-slate-700">{{ $promotion->start_date->format('d M Y') }}</div>
+                      </td>
+                      <td class="py-2">
+                        <div class="fw-600 text-slate-700">{{ $promotion->end_date->format('d M Y') }}</div>
+                        @if($promotion->end_date < now())
+                          <div class="text-danger" style="font-size: 10px;">Expired</div>
+                        @elseif($promotion->end_date->diffInDays(now()) <= 7)
+                          <div class="text-warning" style="font-size: 10px;">Expires soon</div>
+                        @endif
+                      </td>
+                      <td class="py-2">
+                        @php
+                          $statusColors = [
+                            'expired' => ['bg' => '#fee2e2', 'text' => '#dc2626', 'border' => '#fecaca'],
+                            'active' => ['bg' => '#dcfce7', 'text' => '#16a34a', 'border' => '#bbf7d0'],
+                          ];
+                          if ($promotion->end_date < now()) {
+                            $status = 'expired';
+                          } else {
+                            $status = 'active';
+                          }
+                          $colors = $statusColors[$status] ?? ['bg' => '#f1f5f9', 'text' => '#64748b', 'border' => '#e2e8f0'];
+                        @endphp
+                        <span class="badge rounded-pill px-2 py-1 fw-700" style="background: {{ $colors['bg'] }}; color: {{ $colors['text'] }}; border: 1px solid {{ $colors['border'] }}; font-size: 10px;">
+                          {{ strtoupper($status) }}
+                        </span>
+                      </td>
+                      <td class="pe-3 py-2 text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                          <a href="{{ route('staff.activities.edit', $promotion->activity_id) }}" class="btn btn-sm btn-light rounded-2 px-2 py-1" title="Edit">
+                            <i class="bi bi-pencil text-slate-600" style="font-size: 12px;"></i>
+                          </a>
+                          <form method="POST" action="{{ route('staff.activities.destroy', $promotion->activity_id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this promotion?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-light rounded-2 px-2 py-1" title="Delete">
+                              <i class="bi bi-trash text-danger" style="font-size: 12px;"></i>
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  @empty
+                    <tr>
+                      <td colspan="6" class="text-center py-4">
+                        <div class="text-muted mb-2"><i class="bi bi-megaphone fs-1"></i></div>
+                        <div class="fw-600 text-slate-500">No promotions found</div>
+                        <small class="text-muted">Create your first promotion to get started</small>
+                      </td>
+                    </tr>
+                  @endforelse
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

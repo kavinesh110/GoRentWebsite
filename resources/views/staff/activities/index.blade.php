@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Promotions Calendar - Staff Dashboard')
+@section('title', 'Company Schedule - Staff Dashboard')
 
 @push('styles')
 <style>
@@ -101,7 +101,7 @@
         </div>
         <div class="d-flex gap-2">
           <a href="{{ route('staff.activities.create') }}" class="btn btn-primary shadow-sm px-4 rounded-3 fw-bold">
-            <i class="bi bi-plus-lg me-2"></i>Schedule Activity
+            <i class="bi bi-plus-lg me-2"></i>Schedule Company Activity
           </a>
         </div>
       </div>

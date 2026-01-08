@@ -97,8 +97,8 @@ class CustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Paginate results (10 bookings per page)
-        $bookings = $query->orderBy('created_at', 'desc')->paginate(10);
+        // Paginate results (10 bookings per page) and preserve query string
+        $bookings = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('customer.bookings.index', [
             'bookings' => $bookings,
@@ -1156,8 +1156,8 @@ class CustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Paginate results (10 tickets per page)
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
+        // Paginate results (10 tickets per page) and preserve query string
+        $tickets = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('customer.support-tickets.index', [
             'tickets' => $tickets,

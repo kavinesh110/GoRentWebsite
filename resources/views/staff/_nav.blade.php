@@ -47,12 +47,12 @@
       <div class="nav-section-label">Marketing & Growth</div>
 
       <a href="{{ route('staff.activities') }}" class="nav-link {{ request()->routeIs('staff.activities*') ? 'active' : '' }}">
-        <i class="bi bi-megaphone-fill"></i>
-        <span>Active Promotions</span>
+        <i class="bi bi-calendar-event"></i>
+        <span>Company Schedule</span>
       </a>
       <a href="{{ route('staff.vouchers') }}" class="nav-link {{ request()->routeIs('staff.vouchers*') ? 'active' : '' }}">
         <i class="bi bi-ticket-perforated-fill"></i>
-        <span>Voucher Codes</span>
+        <span>Voucher & Promotion</span>
       </a>
       <a href="{{ route('staff.feedbacks') }}" class="nav-link {{ request()->routeIs('staff.feedbacks*') ? 'active' : '' }}">
         <i class="bi bi-star-fill"></i>

@@ -65,10 +65,28 @@
     {{-- FULL WIDTH: BOOKING & PAYMENT DETAILS --}}
     <div class="col-12">
       @php
-        $hasBeforeInspection = $booking->inspections && $booking->inspections->where('type', 'before')->whereNotNull('photos')->count() > 0;
         $beforeInspection = $booking->inspections ? $booking->inspections->where('type', 'before')->first() : null;
         $afterInspection = $booking->inspections ? $booking->inspections->where('type', 'after')->first() : null;
-        $hasAfterInspection = $afterInspection && $afterInspection->status === 'completed' && $afterInspection->photos;
+        
+        // Safely handle photos - convert string to array if needed
+        if ($beforeInspection && $beforeInspection->photos) {
+          $beforeInspectionPhotos = is_string($beforeInspection->photos) 
+            ? json_decode($beforeInspection->photos, true) ?? [] 
+            : (is_array($beforeInspection->photos) ? $beforeInspection->photos : []);
+        } else {
+          $beforeInspectionPhotos = [];
+        }
+        
+        if ($afterInspection && $afterInspection->photos) {
+          $afterInspectionPhotos = is_string($afterInspection->photos) 
+            ? json_decode($afterInspection->photos, true) ?? [] 
+            : (is_array($afterInspection->photos) ? $afterInspection->photos : []);
+        } else {
+          $afterInspectionPhotos = [];
+        }
+        
+        $hasBeforeInspection = !empty($beforeInspectionPhotos);
+        $hasAfterInspection = $afterInspection && $afterInspection->status === 'completed' && !empty($afterInspectionPhotos);
         
         // Check if "Before Pickup Inspection" (confirmed) stage is complete
         // Requires: Before pickup inspection form submitted (staff)
@@ -244,12 +262,12 @@
                 <div class="col-md-6">
                   <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 10px;">Pickup Schedule</div>
                   <div class="fw-semibold text-dark"><i class="bi bi-calendar-check me-2 text-muted"></i>{{ $booking->start_datetime?->format('D, d M Y') ?? 'N/A' }}</div>
-                  <div class="small text-muted ms-4">{{ $booking->start_datetime?->format('H:i') ?? '' }} @ {{ $booking->pickup_location ?? 'N/A' }}</div>
+                  <div class="small text-muted ms-4">{{ $booking->start_datetime?->format('H:i') ?? '' }} @ {{ $booking->pickupLocation->name ?? 'N/A' }}</div>
                 </div>
                 <div class="col-md-6">
                   <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 10px;">Return Schedule</div>
                   <div class="fw-semibold text-dark"><i class="bi bi-calendar-x me-2 text-muted"></i>{{ $booking->end_datetime?->format('D, d M Y') ?? 'N/A' }}</div>
-                  <div class="small text-muted ms-4">{{ $booking->end_datetime?->format('H:i') ?? '' }} @ {{ $booking->dropoff_location ?? 'N/A' }}</div>
+                  <div class="small text-muted ms-4">{{ $booking->end_datetime?->format('H:i') ?? '' }} @ {{ $booking->dropoffLocation->name ?? 'N/A' }}</div>
                 </div>
               </div>
             </div>
@@ -441,9 +459,9 @@
                 @endif
               </div>
               <div class="card-body p-4 pt-2">
-                @if($beforeInspection && $beforeInspection->photos)
+                @if(!empty($beforeInspectionPhotos))
                   <div class="row g-2 mb-3">
-                    @foreach($beforeInspection->photos as $photo)
+                    @foreach($beforeInspectionPhotos as $photo)
                       <div class="col-4">
                         <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
                       </div>
@@ -503,9 +521,9 @@
                 </div>
               </div>
               <div class="card-body p-4 pt-2">
-                @if($afterInspection && $afterInspection->photos)
+                @if(!empty($afterInspectionPhotos))
                   <div class="row g-2 mb-3">
-                    @foreach($afterInspection->photos as $photo)
+                    @foreach($afterInspectionPhotos as $photo)
                       <div class="col-4">
                         <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
                       </div>

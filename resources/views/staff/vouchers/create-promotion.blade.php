@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Create Activity - Staff Dashboard')
+@section('title', 'Create Promotion - Staff Dashboard')
 
 @section('content')
 <div class="d-flex" style="min-height: calc(100vh - 60px);">
@@ -7,14 +7,14 @@
   <div class="flex-fill" style="background: var(--bg);">
     <div class="container-fluid px-4 px-md-5" style="padding-top: 32px; padding-bottom: 48px;">
       <div class="mb-4">
-        <a href="{{ route('staff.activities') }}" class="text-decoration-none small">&larr; Back to company schedule</a>
-        <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Schedule Company Activity</h1>
-        <p class="text-muted mb-0" style="font-size: 14px;">Add a new company schedule or activity.</p>
+        <a href="{{ route('staff.vouchers') }}" class="text-decoration-none small">&larr; Back to Voucher & Promotion</a>
+        <h1 class="h3 fw-bold mt-2 mb-1" style="color:#333;">Create New Promotion</h1>
+        <p class="text-muted mb-0" style="font-size: 14px;">Add a new promotional campaign.</p>
       </div>
 
       <div class="card border-0 shadow-soft">
       <div class="card-body p-4">
-        <form method="POST" action="{{ route('staff.activities.store') }}">
+        <form method="POST" action="{{ route('staff.vouchers.promotions.store') }}" enctype="multipart/form-data">
             @csrf
 
             <div class="row g-3">
@@ -25,7 +25,7 @@
               </div>
               <div class="col-12">
                 <label class="form-label">Description</label>
-                <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="4" placeholder="Enter activity description...">{{ old('description') }}</textarea>
+                <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="4" placeholder="Enter promotion description...">{{ old('description') }}</textarea>
                 @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
               </div>
               <div class="col-md-6">
@@ -38,11 +38,17 @@
                 <input type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date') }}" required>
                 @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
               </div>
+              <div class="col-12">
+                <label class="form-label">Hero Image (optional)</label>
+                <input type="file" name="activity_image" class="form-control @error('activity_image') is-invalid @enderror" accept="image/*">
+                <div class="form-text">This image will appear in the homepage hero slider for this promotion.</div>
+                @error('activity_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
+              </div>
             </div>
 
             <div class="mt-4 d-flex gap-2">
-              <button type="submit" class="btn btn-hasta">Schedule Activity</button>
-              <a href="{{ route('staff.activities') }}" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-hasta">Create Promotion</button>
+              <a href="{{ route('staff.vouchers') }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
           </form>
         </div>
