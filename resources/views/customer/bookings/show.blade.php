@@ -579,34 +579,6 @@
                   </div>
                 </div>
               </div>
-              
-              {{-- Show uploaded photos --}}
-              @php
-                $agreementPhoto = $booking->rentalPhotos->where('photo_type', 'agreement')->first();
-                $keysPhoto = $booking->rentalPhotos->where('photo_type', 'pickup')->first();
-              @endphp
-              @if($agreementPhoto || $keysPhoto)
-                <div class="row g-3 mb-3">
-                  @if($agreementPhoto)
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold"><i class="bi bi-file-image me-2"></i>Signed Agreement Photo</label>
-                      <div>
-                        <img src="{{ asset('storage/' . $agreementPhoto->photo_url) }}" alt="Signed Agreement" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $agreementPhoto->photo_url) }}">
-                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $agreementPhoto->taken_at->format('d/m/Y') }}</p>
-                      </div>
-                    </div>
-                  @endif
-                  @if($keysPhoto)
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold"><i class="bi bi-key me-2"></i>Receiving Car Keys Photo</label>
-                      <div>
-                        <img src="{{ asset('storage/' . $keysPhoto->photo_url) }}" alt="Receiving Keys" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $keysPhoto->photo_url) }}">
-                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysPhoto->taken_at->format('d/m/Y') }}</p>
-                      </div>
-                    </div>
-                  @endif
-                </div>
-              @endif
             @elseif($booking->agreement_signed_at)
               <div class="status-info-box success mb-3">
                 <div class="d-flex align-items-center">
@@ -658,24 +630,30 @@
             @endif
 
             {{-- Pickup Photo Upload -- Combined --}}
+            @if(!$phase3Complete && !$phase4Complete)
             <h6 class="fw-bold mb-3">Upload Pickup Photos</h6>
-            <p class="small text-muted mb-3">Upload both photos: 1) The signed agreement, 2) You receiving the car keys</p>
+            <p class="small text-muted mb-3">Upload all required photos: 1) The signed agreement, 2) You receiving the car keys, 3) Car condition photos (4 sides), 4) Fuel gauge reading</p>
             
             @php
               $agreementPhoto = $booking->rentalPhotos->where('photo_type', 'agreement')->first();
               $keysPhoto = $booking->rentalPhotos->where('photo_type', 'pickup')->first();
-              $bothPhotosUploaded = $agreementPhoto && $keysPhoto;
+              $carFrontPhoto = $booking->rentalPhotos->where('photo_type', 'car_front')->first();
+              $carBackPhoto = $booking->rentalPhotos->where('photo_type', 'car_back')->first();
+              $carLeftPhoto = $booking->rentalPhotos->where('photo_type', 'car_left')->first();
+              $carRightPhoto = $booking->rentalPhotos->where('photo_type', 'car_right')->first();
+              $fuelGaugePhoto = $booking->rentalPhotos->where('photo_type', 'fuel_gauge')->first();
+              $allPhotosUploaded = $agreementPhoto && $keysPhoto && $carFrontPhoto && $carBackPhoto && $carLeftPhoto && $carRightPhoto && $fuelGaugePhoto;
             @endphp
             
             <div class="card border mb-4">
               <div class="card-body">
-                @if($bothPhotosUploaded)
+                @if($allPhotosUploaded)
                   <div class="alert alert-success mb-0">
-                    <i class="bi bi-check-circle me-2"></i><strong>Photos uploaded!</strong> Phase 3 is complete. You can proceed to Phase 4.
+                    <i class="bi bi-check-circle me-2"></i><strong>All photos uploaded!</strong> Phase 3 is complete. You can proceed to Phase 4.
                   </div>
                 @else
                   <div class="alert alert-info mb-3">
-                    <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete Phase 3 and proceed to Phase 4.
+                    <i class="bi bi-info-circle me-2"></i>Please upload all required photos (agreement, keys, car 4 sides, and fuel gauge) to complete Phase 3 and proceed to Phase 4.
                   </div>
                   
                   <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="pickupPhotosForm">
@@ -692,7 +670,7 @@
                         <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $agreementPhoto->taken_at->format('d/m/Y') }}</p>
                       </div>
                       @endif
-                      <input type="file" name="agreement_photo" id="agreementPhoto" class="form-control" accept="image/*" {{ $bothPhotosUploaded ? '' : 'required' }}>
+                      <input type="file" name="agreement_photo" id="agreementPhoto" class="form-control" accept="image/*" {{ $allPhotosUploaded ? '' : 'required' }}>
                       <small class="text-muted">Upload photo of the signed agreement</small>
                     </div>
 
@@ -705,32 +683,92 @@
                         <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysPhoto->taken_at->format('d/m/Y') }}</p>
                       </div>
                       @endif
-                      <input type="file" name="keys_photo" id="keysPhoto" class="form-control" accept="image/*" {{ $bothPhotosUploaded ? '' : 'required' }}>
+                      <input type="file" name="keys_photo" id="keysPhoto" class="form-control" accept="image/*" {{ $allPhotosUploaded ? '' : 'required' }}>
                       <small class="text-muted">Upload photo of you receiving the car keys</small>
+                    </div>
+                  </div>
+
+                  {{-- Car Side Photos (4 sides) --}}
+                  <div class="row g-3 mt-2">
+                    <div class="col-12">
+                      <h6 class="fw-bold mb-3"><i class="bi bi-camera me-2"></i>Car Condition Photos (4 Sides) <span class="text-danger">*</span></h6>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-arrow-up-circle me-2"></i>Car Front Photo <span class="text-danger">*</span></label>
+                      @if($carFrontPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $carFrontPhoto->photo_url) }}" alt="Car Front" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $carFrontPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $carFrontPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="car_front_photo" id="carFrontPhoto" class="form-control" accept="image/*" required>
+                      <small class="text-muted">Upload photo of the front of the car</small>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-arrow-down-circle me-2"></i>Car Back Photo <span class="text-danger">*</span></label>
+                      @if($carBackPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $carBackPhoto->photo_url) }}" alt="Car Back" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $carBackPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $carBackPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="car_back_photo" id="carBackPhoto" class="form-control" accept="image/*" required>
+                      <small class="text-muted">Upload photo of the back of the car</small>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-arrow-left-circle me-2"></i>Car Left Side Photo <span class="text-danger">*</span></label>
+                      @if($carLeftPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $carLeftPhoto->photo_url) }}" alt="Car Left" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $carLeftPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $carLeftPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="car_left_photo" id="carLeftPhoto" class="form-control" accept="image/*" required>
+                      <small class="text-muted">Upload photo of the left side of the car</small>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"><i class="bi bi-arrow-right-circle me-2"></i>Car Right Side Photo <span class="text-danger">*</span></label>
+                      @if($carRightPhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $carRightPhoto->photo_url) }}" alt="Car Right" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $carRightPhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $carRightPhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="car_right_photo" id="carRightPhoto" class="form-control" accept="image/*" required>
+                      <small class="text-muted">Upload photo of the right side of the car</small>
+                    </div>
+                  </div>
+
+                  {{-- Fuel Gauge Photo --}}
+                  <div class="row g-3 mt-2">
+                    <div class="col-12">
+                      <label class="form-label fw-bold"><i class="bi bi-fuel-pump me-2"></i>Fuel Gauge Photo <span class="text-danger">*</span></label>
+                      @if($fuelGaugePhoto)
+                      <div class="mb-2">
+                        <img src="{{ asset('storage/' . $fuelGaugePhoto->photo_url) }}" alt="Fuel Gauge" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $fuelGaugePhoto->photo_url) }}">
+                        <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $fuelGaugePhoto->taken_at->format('d/m/Y') }}</p>
+                      </div>
+                      @endif
+                      <input type="file" name="fuel_gauge_photo" id="fuelGaugePhoto" class="form-control" accept="image/*" required>
+                      <small class="text-muted">Upload photo of the fuel gauge reading</small>
                     </div>
                   </div>
                   
                   <div class="mt-3" id="pickupPhotosButtonContainer">
                     <button type="submit" class="btn btn-hasta w-100">
                       <i class="bi bi-upload me-2"></i>
-                      @if($bothPhotosUploaded)
+                      @if($allPhotosUploaded)
                         Update Photos
                       @else
-                        Upload Both Photos
+                        Upload All Photos
                       @endif
                     </button>
                   </div>
                   
-                  @if(!$bothPhotosUploaded)
+                  @if(!$allPhotosUploaded)
                     <div class="mt-2 text-center" id="pickupPhotosWarning">
                       <small class="text-muted">
-                        @if($agreementPhoto && !$keysPhoto)
-                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Receiving Keys photo
-                        @elseif(!$agreementPhoto && $keysPhoto)
-                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Signed Agreement photo
-                        @else
-                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>Both photos required to proceed
-                        @endif
+                        <i class="bi bi-exclamation-triangle text-warning me-1"></i>All photos (agreement, keys, car 4 sides, and fuel gauge) are required to proceed
                       </small>
                     </div>
                   @endif
@@ -738,6 +776,7 @@
                 @endif
               </div>
             </div>
+            @endif
 
           @else
             <div class="status-info-box">
@@ -791,24 +830,31 @@
 
             {{-- Return Photo Upload -- Combined --}}
             @if($phase3Complete || $booking->status === 'active')
+              @if(!$phase4Complete)
               <h6 class="fw-bold mb-3">Upload Return Photos</h6>
-              <p class="small text-muted mb-3">Upload both photos: 1) Keys in the car, 2) Where you parked the car</p>
+              <p class="small text-muted mb-3">Upload all required photos: 1) Keys in the car, 2) Where you parked the car, 3) Car condition photos (4 sides), 4) Fuel gauge reading</p>
+              @endif
               
               @php
                 $keysInCarPhoto = $booking->rentalPhotos->where('photo_type', 'key')->first();
                 $parkingPhoto = $booking->rentalPhotos->where('photo_type', 'parking')->first();
-                $bothReturnPhotosUploaded = $keysInCarPhoto && $parkingPhoto;
+                $returnCarFrontPhoto = $booking->rentalPhotos->where('photo_type', 'after_car_front')->first();
+                $returnCarBackPhoto = $booking->rentalPhotos->where('photo_type', 'after_car_back')->first();
+                $returnCarLeftPhoto = $booking->rentalPhotos->where('photo_type', 'after_car_left')->first();
+                $returnCarRightPhoto = $booking->rentalPhotos->where('photo_type', 'after_car_right')->first();
+                $returnFuelGaugePhoto = $booking->rentalPhotos->where('photo_type', 'after_fuel_gauge')->first();
+                $allReturnPhotosUploaded = $keysInCarPhoto && $parkingPhoto && $returnCarFrontPhoto && $returnCarBackPhoto && $returnCarLeftPhoto && $returnCarRightPhoto && $returnFuelGaugePhoto;
               @endphp
               
               <div class="card border mb-4">
                 <div class="card-body">
-                  @if($bothReturnPhotosUploaded)
+                  @if($allReturnPhotosUploaded)
                     <div class="alert alert-success mb-0">
-                      <i class="bi bi-check-circle me-2"></i><strong>Photos uploaded!</strong> Your booking return process is complete.
+                      <i class="bi bi-check-circle me-2"></i><strong>All photos uploaded!</strong> Your booking return process is complete.
                     </div>
                   @else
                     <div class="alert alert-info mb-3">
-                      <i class="bi bi-info-circle me-2"></i>Please upload both photos to complete the return process.
+                      <i class="bi bi-info-circle me-2"></i>Please upload all required photos (keys, parking, car 4 sides, and fuel gauge) to complete the return process.
                     </div>
                     
                     <form method="POST" action="{{ route('customer.bookings.photos.upload', $booking->booking_id) }}" enctype="multipart/form-data" id="returnPhotosForm">
@@ -825,7 +871,7 @@
                             <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $keysInCarPhoto->taken_at->format('d/m/Y') }}</p>
                           </div>
                         @endif
-                        <input type="file" name="keys_in_car_photo" id="keysInCarPhoto" class="form-control" accept="image/*" {{ $bothReturnPhotosUploaded ? '' : 'required' }}>
+                        <input type="file" name="keys_in_car_photo" id="keysInCarPhoto" class="form-control" accept="image/*" {{ $allReturnPhotosUploaded ? '' : 'required' }}>
                         <small class="text-muted">Upload photo of keys left in the car</small>
                       </div>
 
@@ -838,32 +884,92 @@
                             <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $parkingPhoto->taken_at->format('d/m/Y') }}</p>
                           </div>
                         @endif
-                        <input type="file" name="parking_location_photo" id="parkingLocationPhoto" class="form-control" accept="image/*" {{ $bothReturnPhotosUploaded ? '' : 'required' }}>
+                        <input type="file" name="parking_location_photo" id="parkingLocationPhoto" class="form-control" accept="image/*" {{ $allReturnPhotosUploaded ? '' : 'required' }}>
                         <small class="text-muted">Upload photo of where you parked the car</small>
+                      </div>
+                    </div>
+
+                    {{-- Car Side Photos (4 sides) for Return --}}
+                    <div class="row g-3 mt-2">
+                      <div class="col-12">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-camera me-2"></i>Car Condition Photos (4 Sides) <span class="text-danger">*</span></h6>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-arrow-up-circle me-2"></i>Car Front Photo <span class="text-danger">*</span></label>
+                        @if($returnCarFrontPhoto)
+                        <div class="mb-2">
+                          <img src="{{ asset('storage/' . $returnCarFrontPhoto->photo_url) }}" alt="Car Front" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $returnCarFrontPhoto->photo_url) }}">
+                          <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $returnCarFrontPhoto->taken_at->format('d/m/Y') }}</p>
+                        </div>
+                        @endif
+                        <input type="file" name="return_car_front_photo" id="returnCarFrontPhoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Upload photo of the front of the car</small>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-arrow-down-circle me-2"></i>Car Back Photo <span class="text-danger">*</span></label>
+                        @if($returnCarBackPhoto)
+                        <div class="mb-2">
+                          <img src="{{ asset('storage/' . $returnCarBackPhoto->photo_url) }}" alt="Car Back" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $returnCarBackPhoto->photo_url) }}">
+                          <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $returnCarBackPhoto->taken_at->format('d/m/Y') }}</p>
+                        </div>
+                        @endif
+                        <input type="file" name="return_car_back_photo" id="returnCarBackPhoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Upload photo of the back of the car</small>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-arrow-left-circle me-2"></i>Car Left Side Photo <span class="text-danger">*</span></label>
+                        @if($returnCarLeftPhoto)
+                        <div class="mb-2">
+                          <img src="{{ asset('storage/' . $returnCarLeftPhoto->photo_url) }}" alt="Car Left" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $returnCarLeftPhoto->photo_url) }}">
+                          <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $returnCarLeftPhoto->taken_at->format('d/m/Y') }}</p>
+                        </div>
+                        @endif
+                        <input type="file" name="return_car_left_photo" id="returnCarLeftPhoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Upload photo of the left side of the car</small>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-bold"><i class="bi bi-arrow-right-circle me-2"></i>Car Right Side Photo <span class="text-danger">*</span></label>
+                        @if($returnCarRightPhoto)
+                        <div class="mb-2">
+                          <img src="{{ asset('storage/' . $returnCarRightPhoto->photo_url) }}" alt="Car Right" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $returnCarRightPhoto->photo_url) }}">
+                          <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $returnCarRightPhoto->taken_at->format('d/m/Y') }}</p>
+                        </div>
+                        @endif
+                        <input type="file" name="return_car_right_photo" id="returnCarRightPhoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Upload photo of the right side of the car</small>
+                      </div>
+                    </div>
+
+                    {{-- Fuel Gauge Photo for Return --}}
+                    <div class="row g-3 mt-2">
+                      <div class="col-12">
+                        <label class="form-label fw-bold"><i class="bi bi-fuel-pump me-2"></i>Fuel Gauge Photo <span class="text-danger">*</span></label>
+                        @if($returnFuelGaugePhoto)
+                        <div class="mb-2">
+                          <img src="{{ asset('storage/' . $returnFuelGaugePhoto->photo_url) }}" alt="Fuel Gauge" class="img-fluid rounded mb-2 clickable-photo" style="max-height: 150px; width: 100%; object-fit: cover; cursor: pointer;" data-url="{{ asset('storage/' . $returnFuelGaugePhoto->photo_url) }}">
+                          <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>Uploaded on {{ $returnFuelGaugePhoto->taken_at->format('d/m/Y') }}</p>
+                        </div>
+                        @endif
+                        <input type="file" name="return_fuel_gauge_photo" id="returnFuelGaugePhoto" class="form-control" accept="image/*" required>
+                        <small class="text-muted">Upload photo of the fuel gauge reading</small>
                       </div>
                     </div>
                     
                     <div class="mt-3" id="returnPhotosButtonContainer">
                       <button type="submit" class="btn btn-hasta w-100">
                         <i class="bi bi-upload me-2"></i>
-                        @if($bothReturnPhotosUploaded)
+                        @if($allReturnPhotosUploaded)
                           Update Photos
                         @else
-                          Upload Both Photos
+                          Upload All Photos
                         @endif
                       </button>
                     </div>
                     
-                    @if(!$bothReturnPhotosUploaded)
+                    @if(!$allReturnPhotosUploaded)
                       <div class="mt-2 text-center" id="returnPhotosWarning">
                         <small class="text-muted">
-                          @if($keysInCarPhoto && !$parkingPhoto)
-                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Parking Location photo
-                          @elseif(!$keysInCarPhoto && $parkingPhoto)
-                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Missing: Keys in Car photo
-                          @else
-                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>Both photos required to complete return
-                          @endif
+                          <i class="bi bi-exclamation-triangle text-warning me-1"></i>All photos (keys, parking, car 4 sides, and fuel gauge) are required to complete return
                         </small>
                       </div>
                     @endif

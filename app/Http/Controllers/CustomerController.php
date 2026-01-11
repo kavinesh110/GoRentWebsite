@@ -703,12 +703,17 @@ class CustomerController extends Controller
                 ->with('error', 'Photos can only be uploaded for verified, confirmed, active, or completed bookings.');
         }
 
-        // Check if this is a combined return photos upload (both keys in car and parking location)
-        if ($request->hasFile('keys_in_car_photo') || $request->hasFile('parking_location_photo')) {
+        // Check if this is a combined return photos upload (keys, parking, car sides, fuel gauge)
+        if ($request->hasFile('keys_in_car_photo') || $request->hasFile('parking_location_photo') || $request->hasFile('return_car_front_photo') || $request->hasFile('return_car_back_photo') || $request->hasFile('return_car_left_photo') || $request->hasFile('return_car_right_photo') || $request->hasFile('return_fuel_gauge_photo')) {
             // Combined upload for return photos
         $validated = $request->validate([
                 'keys_in_car_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'parking_location_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'return_car_front_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'return_car_back_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'return_car_left_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'return_car_right_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'return_fuel_gauge_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'taken_at' => 'required|date',
             ]);
 
@@ -783,6 +788,176 @@ class CustomerController extends Controller
                 $messages[] = 'Parking location photo uploaded';
             }
 
+            // Handle return car front photo upload
+            if ($request->hasFile('return_car_front_photo')) {
+                $photo = $request->file('return_car_front_photo');
+                $photoName = time() . '_return_car_front_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'after_car_front')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'after_car_front',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Return car front photo uploaded';
+            }
+
+            // Handle return car back photo upload
+            if ($request->hasFile('return_car_back_photo')) {
+                $photo = $request->file('return_car_back_photo');
+                $photoName = time() . '_return_car_back_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'after_car_back')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'after_car_back',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Return car back photo uploaded';
+            }
+
+            // Handle return car left photo upload
+            if ($request->hasFile('return_car_left_photo')) {
+                $photo = $request->file('return_car_left_photo');
+                $photoName = time() . '_return_car_left_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'after_car_left')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'after_car_left',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Return car left side photo uploaded';
+            }
+
+            // Handle return car right photo upload
+            if ($request->hasFile('return_car_right_photo')) {
+                $photo = $request->file('return_car_right_photo');
+                $photoName = time() . '_return_car_right_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'after_car_right')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'after_car_right',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Return car right side photo uploaded';
+            }
+
+            // Handle return fuel gauge photo upload
+            if ($request->hasFile('return_fuel_gauge_photo')) {
+                $photo = $request->file('return_fuel_gauge_photo');
+                $photoName = time() . '_return_fuel_gauge_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'after_fuel_gauge')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'after_fuel_gauge',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Return fuel gauge photo uploaded';
+            }
+
             // Reload booking with relationships
             $booking->load('rentalPhotos');
 
@@ -813,12 +988,17 @@ class CustomerController extends Controller
                 ->with('success', $message);
         }
 
-        // Check if this is a combined pickup photos upload (both agreement and keys)
-        if ($request->hasFile('agreement_photo') || $request->hasFile('keys_photo')) {
+        // Check if this is a combined pickup photos upload (agreement, keys, car sides, fuel gauge)
+        if ($request->hasFile('agreement_photo') || $request->hasFile('keys_photo') || $request->hasFile('car_front_photo') || $request->hasFile('car_back_photo') || $request->hasFile('car_left_photo') || $request->hasFile('car_right_photo') || $request->hasFile('fuel_gauge_photo')) {
             // Combined upload for pickup photos
             $validated = $request->validate([
                 'agreement_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'keys_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'car_front_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'car_back_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'car_left_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'car_right_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+                'fuel_gauge_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
                 'taken_at' => 'required|date',
             ]);
 
@@ -893,6 +1073,176 @@ class CustomerController extends Controller
                 $messages[] = 'Receiving keys photo uploaded';
             }
 
+            // Handle car front photo upload
+            if ($request->hasFile('car_front_photo')) {
+                $photo = $request->file('car_front_photo');
+                $photoName = time() . '_car_front_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'car_front')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'car_front',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Car front photo uploaded';
+            }
+
+            // Handle car back photo upload
+            if ($request->hasFile('car_back_photo')) {
+                $photo = $request->file('car_back_photo');
+                $photoName = time() . '_car_back_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'car_back')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'car_back',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Car back photo uploaded';
+            }
+
+            // Handle car left photo upload
+            if ($request->hasFile('car_left_photo')) {
+                $photo = $request->file('car_left_photo');
+                $photoName = time() . '_car_left_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'car_left')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'car_left',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Car left side photo uploaded';
+            }
+
+            // Handle car right photo upload
+            if ($request->hasFile('car_right_photo')) {
+                $photo = $request->file('car_right_photo');
+                $photoName = time() . '_car_right_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'car_right')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'car_right',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Car right side photo uploaded';
+            }
+
+            // Handle fuel gauge photo upload
+            if ($request->hasFile('fuel_gauge_photo')) {
+                $photo = $request->file('fuel_gauge_photo');
+                $photoName = time() . '_fuel_gauge_' . uniqid() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('images/rental-photos', $photoName, 'public');
+
+                $existingPhoto = RentalPhoto::where('booking_id', $booking->booking_id)
+                    ->where('photo_type', 'fuel_gauge')
+                    ->first();
+
+                if ($existingPhoto) {
+                    if (Storage::disk('public')->exists($existingPhoto->photo_url)) {
+                        Storage::disk('public')->delete($existingPhoto->photo_url);
+                    }
+                    $existingPhoto->update([
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                    ]);
+                } else {
+                    RentalPhoto::create([
+                        'booking_id' => $booking->booking_id,
+                        'uploaded_by_user_id' => $customerId,
+                        'uploaded_by_role' => 'customer',
+                        'photo_type' => 'fuel_gauge',
+                        'photo_url' => $photoPath,
+                        'taken_at' => $validated['taken_at'],
+                    ]);
+                }
+                $photosUploaded++;
+                $messages[] = 'Fuel gauge photo uploaded';
+            }
+
             // Mark agreement as signed if agreement photo was uploaded
             if ($request->hasFile('agreement_photo') && !$booking->agreement_signed_at) {
                 $booking->agreement_signed_at = now();
@@ -925,7 +1275,7 @@ class CustomerController extends Controller
         // Original single photo upload logic (for return photos, etc.)
         $validated = $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'photo_type' => 'required|in:before,after,key,damage,other,agreement,pickup,parking',
+            'photo_type' => 'required|in:before,after,key,damage,other,agreement,pickup,parking,car_front,car_back,car_left,car_right,fuel_gauge,after_car_front,after_car_back,after_car_left,after_car_right,after_fuel_gauge',
             'taken_at' => 'required|date',
         ]);
 
