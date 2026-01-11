@@ -185,15 +185,16 @@ class CustomerController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit,full_payment', // booking is created with deposit or full payment
+            'payment_type' => 'required|in:deposit,full_payment', // booking is created with deposit (full_payment accepted for compatibility)
             'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:bank_transfer,cash,other,e-wallet',
+            'payment_method' => 'required|in:bank_transfer,cash,e-wallet,other',
             'payment_date' => 'required|date',
             'bank_name' => 'required|string|max:100',
             'account_holder_name' => 'required|string|max:100',
             'account_number' => 'required|string|max:50',
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
+        
 
         // Wrap everything in a database transaction for atomicity
         try {
@@ -250,11 +251,14 @@ class CustomerController extends Controller
             }
 
             // Create payment record linked to this booking
+            // Convert 'full_payment' to 'deposit' for database storage
+            $paymentType = $validated['payment_type'] === 'full_payment' ? 'deposit' : $validated['payment_type'];
+            
             Payment::create([
                 'booking_id' => $booking->booking_id,
                 'penalty_id' => null,
                 'amount' => $validated['amount'],
-                'payment_type' => $validated['payment_type'],
+                'payment_type' => $paymentType,
                 'payment_method' => $validated['payment_method'],
                 'bank_name' => $validated['bank_name'],
                 'account_holder_name' => $validated['account_holder_name'],
