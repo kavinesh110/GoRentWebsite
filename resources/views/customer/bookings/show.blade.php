@@ -816,7 +816,7 @@
                   </div>
                 </div>
               </div>
-            @else
+            @elseif(!$phase4Complete)
               <div class="status-info-box info mb-3">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-info-circle-fill text-info me-3" style="font-size: 24px;"></i>
