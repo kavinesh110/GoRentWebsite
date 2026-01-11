@@ -487,10 +487,50 @@
                     <span>Logout</span>
                 </button>
             @elseif(session('auth_role') === 'customer')
-                <a href="{{ route('customer.profile') }}" class="top-navbar-link">
+                @php
+                    $customerId = session('auth_id');
+                    $customer = $customerId ? \App\Models\Customer::find($customerId) : null;
+                    $profileIncomplete = $customer && !$customer->isProfileComplete();
+                @endphp
+                <a href="{{ route('customer.profile') }}" class="top-navbar-link position-relative" id="profileLink" @if($profileIncomplete) title="Complete your profile to make bookings" @endif>
                     <i class="bi bi-person-circle"></i>
                     <span>{{ explode(' ', session('auth_name') ?? 'User')[0] }}...</span>
+                    @if($profileIncomplete)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 8px; padding: 2px 4px;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </span>
+                    @endif
                 </a>
+                @if($profileIncomplete)
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Show alert when clicking profile icon if incomplete
+                            const profileLink = document.getElementById('profileLink');
+                            if (profileLink) {
+                                profileLink.addEventListener('click', function(e) {
+                                    if (!sessionStorage.getItem('profileAlertShown')) {
+                                        alert('Please complete your profile (personal details and documents) before making any bookings.');
+                                        sessionStorage.setItem('profileAlertShown', 'true');
+                                    }
+                                });
+                            }
+                            
+                            // Intercept "Rent Now" / "Book Now" button clicks on car cards
+                            document.querySelectorAll('a[href*="/cars/"]').forEach(function(link) {
+                                // Check if it's a car detail link (not cars/index)
+                                const href = link.getAttribute('href');
+                                if (href && href.match(/\/cars\/\d+$/) && !href.includes('/cars/index')) {
+                                    link.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        alert('Please complete your profile (personal details and documents) before making any bookings. You will be redirected to your profile page.');
+                                        window.location.href = '{{ route("customer.profile") }}';
+                                    });
+                                }
+                            });
+                        });
+                    </script>
+                @endif
                 <button type="button" class="top-navbar-link border-0 bg-transparent" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logoutModal">
                     <i class="bi bi-box-arrow-right"></i>
                     <span>Logout</span>

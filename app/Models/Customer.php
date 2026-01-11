@@ -102,4 +102,43 @@ class Customer extends Model
     {
         return $this->hasMany(Booking::class, 'customer_id', 'customer_id');
     }
+
+    /**
+     * Check if customer profile is complete (required for booking)
+     * Profile is complete when all required fields are filled:
+     * - full_name
+     * - phone
+     * - utm_role
+     * - ic_url (document uploaded)
+     * - utmid_url (document uploaded)
+     * - license_url (document uploaded)
+     * 
+     * @return bool
+     */
+    public function isProfileComplete(): bool
+    {
+        // Use getRawOriginal to check actual database values, not accessor URLs
+        return !empty($this->full_name) &&
+               !empty($this->phone) &&
+               !empty($this->utm_role) &&
+               !empty($this->getRawOriginal('ic_url')) &&
+               !empty($this->getRawOriginal('utmid_url')) &&
+               !empty($this->getRawOriginal('license_url'));
+    }
+
+    /**
+     * Get list of missing profile fields
+     * @return array
+     */
+    public function getMissingProfileFields(): array
+    {
+        $missing = [];
+        if (empty($this->full_name)) $missing[] = 'Full Name';
+        if (empty($this->phone)) $missing[] = 'Phone Number';
+        if (empty($this->utm_role)) $missing[] = 'UTM Role';
+        if (empty($this->getRawOriginal('ic_url'))) $missing[] = 'IC/Passport Document';
+        if (empty($this->getRawOriginal('utmid_url'))) $missing[] = 'UTM ID Document';
+        if (empty($this->getRawOriginal('license_url'))) $missing[] = 'Driving License Document';
+        return $missing;
+    }
 }

@@ -32,6 +32,17 @@ class BookingController extends Controller
             return redirect()->route('login')->with('error', 'Please login as a customer to book a car.');
         }
 
+        // Check if customer profile is complete
+        $customerId = $request->session()->get('auth_id');
+        $customer = Customer::find($customerId);
+        
+        if (!$customer || !$customer->isProfileComplete()) {
+            $missingFields = $customer ? $customer->getMissingProfileFields() : ['All profile fields'];
+            $missingList = implode(', ', $missingFields);
+            return redirect()->route('customer.profile')
+                ->with('error', "Please complete your profile before making a booking. Missing: {$missingList}");
+        }
+
         try {
             $car = Car::findOrFail($id);
             
@@ -109,6 +120,17 @@ class BookingController extends Controller
         // Ensure user is logged in as customer
         if ($request->session()->get('auth_role') !== 'customer') {
             return redirect()->route('login')->with('error', 'Please login as a customer to make a booking.');
+        }
+
+        // Check if customer profile is complete
+        $customerId = $request->session()->get('auth_id');
+        $customer = Customer::find($customerId);
+        
+        if (!$customer || !$customer->isProfileComplete()) {
+            $missingFields = $customer ? $customer->getMissingProfileFields() : ['All profile fields'];
+            $missingList = implode(', ', $missingFields);
+            return redirect()->route('customer.profile')
+                ->with('error', "Please complete your profile before making a booking. Missing: {$missingList}");
         }
 
         $validated = $request->validate([

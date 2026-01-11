@@ -151,47 +151,95 @@
     font-weight: 500;
   }
   
-  /* Document Grid */
-  .doc-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+  /* Document Cards - Modern Upload Style */
+  .doc-card {
+    background: #fff;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+    height: 100%;
   }
-  .doc-item {
-    border: 2px dashed #e0e0e0;
-    border-radius: 14px;
-    padding: 20px 16px;
+  .doc-card:hover {
+    border-color: var(--hasta);
+    box-shadow: 0 4px 12px rgba(203, 55, 55, 0.1);
+  }
+  .doc-card.uploaded {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #fff 100%);
+  }
+  .doc-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .doc-card-header > i {
+    font-size: 28px;
+    color: var(--hasta);
+    flex-shrink: 0;
+  }
+  .doc-card.uploaded .doc-card-header > i {
+    color: #28a745;
+  }
+  .doc-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .doc-card-status {
+    font-size: 12px;
+  }
+  .doc-card-body {
+    margin-top: auto;
+  }
+  .doc-upload-wrapper {
+    position: relative;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
     text-align: center;
     transition: all 0.2s;
+    background: #f8f9fa;
   }
-  .doc-item:hover {
+  .doc-upload-wrapper:hover {
     border-color: var(--hasta);
     background: #fdf6f6;
   }
-  .doc-item.uploaded {
-    border-style: solid;
+  .doc-upload-wrapper.has-file {
     border-color: #28a745;
-    background: #f0fff4;
+    background: #d4edda;
   }
-  .doc-icon {
-    font-size: 28px;
+  .doc-file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .doc-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 12px;
+    pointer-events: none;
+  }
+  .doc-upload-label i {
+    font-size: 24px;
+    color: #adb5bd;
+  }
+  .doc-upload-wrapper:hover .doc-upload-label i {
     color: var(--hasta);
-    margin-bottom: 10px;
   }
-  .doc-item.uploaded .doc-icon {
-    color: #28a745;
+  .doc-upload-wrapper.has-file .doc-upload-label {
+    color: #155724;
   }
-  .doc-name {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-  .doc-status {
-    font-size: 11px;
-    color: #888;
-    margin-bottom: 10px;
-  }
-  .doc-item.uploaded .doc-status {
+  .doc-upload-wrapper.has-file .doc-upload-label i {
     color: #28a745;
   }
   
@@ -332,35 +380,6 @@
     .stat-label {
       order: 1;
     }
-    .doc-grid {
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-    .doc-item {
-      display: flex;
-      align-items: center;
-      text-align: left;
-      padding: 16px;
-      gap: 16px;
-    }
-    .doc-icon {
-      font-size: 24px;
-      margin-bottom: 0;
-    }
-    .doc-info {
-      flex: 1;
-    }
-    .doc-name {
-      margin-bottom: 4px;
-    }
-    .doc-status {
-      margin-bottom: 0;
-    }
-    .doc-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
     .btn-primary-custom,
     .btn-secondary-custom {
       width: 100%;
@@ -368,6 +387,18 @@
     .button-row {
       flex-direction: column;
       gap: 12px;
+    }
+    .doc-card {
+      padding: 16px;
+    }
+    .doc-card-header > i {
+      font-size: 24px;
+    }
+    .doc-card-title {
+      font-size: 13px;
+    }
+    .doc-upload-wrapper {
+      padding: 12px;
     }
   }
 </style>
@@ -395,20 +426,44 @@
       <span>{{ $errors->first() }}</span>
     </div>
   @endif
+  
+  {{-- Verification Status Alert --}}
+  @php
+    $isProfileComplete = $customer->isProfileComplete();
+    $verificationStatus = $customer->verification_status ?? 'pending';
+  @endphp
+  @if($isProfileComplete && $verificationStatus === 'pending')
+    <div class="alert-custom alert-info-custom" style="background: #e3f2fd; border-left: 4px solid #2196f3; color: #1565c0;">
+      <i class="bi bi-hourglass-split"></i>
+      <span><strong>Profile Complete!</strong> Your profile is waiting for staff verification. You will be notified once your account is verified.</span>
+    </div>
+  @elseif($isProfileComplete && $verificationStatus === 'rejected')
+    <div class="alert-custom alert-danger-custom">
+      <i class="bi bi-x-circle-fill"></i>
+      <span><strong>Verification Rejected.</strong> Please review your documents and contact support if you have questions.</span>
+    </div>
+  @elseif($isProfileComplete && $verificationStatus === 'approved')
+    <div class="alert-custom alert-success-custom">
+      <i class="bi bi-check-circle-fill"></i>
+      <span><strong>Account Verified!</strong> Your profile has been verified and you can now make bookings.</span>
+    </div>
+  @endif
 
   {{-- PROFILE HEADER --}}
   <div class="profile-header">
     <div class="d-flex align-items-center gap-3 gap-md-4">
       <div class="profile-avatar">
-        {{ strtoupper(substr($customer->full_name, 0, 1)) }}
+        {{ strtoupper(substr($customer->full_name ?? $customer->email, 0, 1)) }}
       </div>
       <div class="flex-grow-1">
-        <div class="profile-name">{{ $customer->full_name }}</div>
+        <div class="profile-name">{{ $customer->full_name ?? 'Complete your profile' }}</div>
         <div class="profile-email"><i class="bi bi-envelope me-1"></i> {{ $customer->email }}</div>
         <div class="profile-badges">
-          <span class="profile-badge">
-            <i class="bi bi-person-badge me-1"></i> {{ ucfirst($customer->utm_role ?? 'Customer') }}
-          </span>
+          @if($customer->utm_role)
+            <span class="profile-badge">
+              <i class="bi bi-person-badge me-1"></i> {{ ucfirst($customer->utm_role) }}
+            </span>
+          @endif
           <span class="profile-badge {{ $customer->verification_status === 'approved' ? 'verified' : ($customer->verification_status === 'rejected' ? 'rejected' : 'pending') }}">
             <i class="bi bi-patch-check me-1"></i> {{ ucfirst($customer->verification_status ?? 'Pending') }}
           </span>
@@ -461,7 +516,7 @@
         <div class="info-grid">
           <div class="info-item">
             <span class="info-label">Full Name</span>
-            <span class="info-value">{{ $customer->full_name }}</span>
+            <span class="info-value {{ !$customer->full_name ? 'empty' : '' }}">{{ $customer->full_name ?? 'Not provided' }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Email Address</span>
@@ -526,113 +581,121 @@
       <h2 class="section-title"><i class="bi bi-file-earmark-person"></i> Identity Documents</h2>
     </div>
     <div class="section-body">
-      <p class="text-muted small mb-4">Upload clear copies of your documents for verification. All three documents are required.</p>
+      <p class="text-muted small mb-4">Upload clear copies of your documents for verification. All three documents are required before you can make bookings.</p>
       
-      <form method="POST" action="{{ route('customer.profile.documents.update') }}" enctype="multipart/form-data">
+      @if(session('info'))
+        <div class="alert alert-info small mb-4">
+          <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+        </div>
+      @endif
+      
+      <form method="POST" action="{{ route('customer.profile.documents.update') }}" enctype="multipart/form-data" id="documentForm">
         @csrf
         
-        {{-- Desktop Grid --}}
-        <div class="doc-grid d-none d-md-grid">
+        <div class="row g-4">
           {{-- IC / Passport --}}
-          <div class="doc-item {{ $customer->ic_url ? 'uploaded' : '' }}">
-            <i class="bi bi-person-vcard doc-icon"></i>
-            <div class="doc-name">IC / Passport</div>
-            <div class="doc-status">{{ $customer->ic_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            @if($customer->ic_url)
-              <a href="{{ $customer->ic_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
-                <i class="bi bi-eye"></i> View
-              </a>
-            @endif
-            <input type="file" name="ic_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
-          </div>
-          
-          {{-- UTM ID --}}
-          <div class="doc-item {{ $customer->utmid_url ? 'uploaded' : '' }}">
-            <i class="bi bi-credit-card doc-icon"></i>
-            <div class="doc-name">UTM Student/Staff ID</div>
-            <div class="doc-status">{{ $customer->utmid_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            @if($customer->utmid_url)
-              <a href="{{ $customer->utmid_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
-                <i class="bi bi-eye"></i> View
-              </a>
-            @endif
-            <input type="file" name="utmid_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
-          </div>
-          
-          {{-- Driving License --}}
-          <div class="doc-item {{ $customer->license_url ? 'uploaded' : '' }}">
-            <i class="bi bi-car-front doc-icon"></i>
-            <div class="doc-name">Driving License</div>
-            <div class="doc-status">{{ $customer->license_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            @if($customer->license_url)
-              <a href="{{ $customer->license_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom d-inline-block mb-2">
-                <i class="bi bi-eye"></i> View
-              </a>
-            @endif
-            <input type="file" name="license_document" class="form-control form-control-sm" accept="image/*,.pdf" style="font-size: 12px;">
-          </div>
-        </div>
-        
-        {{-- Mobile List --}}
-        <div class="doc-grid d-md-none">
-          {{-- IC / Passport --}}
-          <div class="doc-item {{ $customer->ic_url ? 'uploaded' : '' }}">
-            <i class="bi bi-person-vcard doc-icon"></i>
-            <div class="doc-info">
-              <div class="doc-name">IC / Passport</div>
-              <div class="doc-status">{{ $customer->ic_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            </div>
-            <div class="doc-actions">
-              @if($customer->ic_url)
-                <a href="{{ $customer->ic_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
-              @endif
-              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
-                <i class="bi bi-upload"></i>
-                <input type="file" name="ic_document" accept="image/*,.pdf" style="display: none;">
-              </label>
+          <div class="col-12 col-md-4">
+            <div class="doc-card {{ $customer->ic_url ? 'uploaded' : '' }}">
+              <div class="doc-card-header">
+                <i class="bi bi-person-vcard"></i>
+                <div>
+                  <div class="doc-card-title">IC / Passport</div>
+                  <div class="doc-card-status">
+                    @if($customer->ic_url)
+                      <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Uploaded</span>
+                    @else
+                      <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Required</span>
+                    @endif
+                  </div>
+                </div>
+              </div>
+              <div class="doc-card-body">
+                @if($customer->ic_url)
+                  <a href="{{ $customer->ic_url }}" target="_blank" class="btn btn-sm btn-outline-secondary w-100 mb-2">
+                    <i class="bi bi-eye me-1"></i> View Document
+                  </a>
+                @endif
+                <div class="doc-upload-wrapper">
+                  <input type="file" name="ic_document" id="ic_document" class="doc-file-input" accept="image/*,.pdf">
+                  <label for="ic_document" class="doc-upload-label">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span id="ic_document_label">Choose file or drag here</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           
           {{-- UTM ID --}}
-          <div class="doc-item {{ $customer->utmid_url ? 'uploaded' : '' }}">
-            <i class="bi bi-credit-card doc-icon"></i>
-            <div class="doc-info">
-              <div class="doc-name">UTM ID</div>
-              <div class="doc-status">{{ $customer->utmid_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            </div>
-            <div class="doc-actions">
-              @if($customer->utmid_url)
-                <a href="{{ $customer->utmid_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
-              @endif
-              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
-                <i class="bi bi-upload"></i>
-                <input type="file" name="utmid_document" accept="image/*,.pdf" style="display: none;">
-              </label>
+          <div class="col-12 col-md-4">
+            <div class="doc-card {{ $customer->utmid_url ? 'uploaded' : '' }}">
+              <div class="doc-card-header">
+                <i class="bi bi-credit-card"></i>
+                <div>
+                  <div class="doc-card-title">UTM Student/Staff ID</div>
+                  <div class="doc-card-status">
+                    @if($customer->utmid_url)
+                      <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Uploaded</span>
+                    @else
+                      <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Required</span>
+                    @endif
+                  </div>
+                </div>
+              </div>
+              <div class="doc-card-body">
+                @if($customer->utmid_url)
+                  <a href="{{ $customer->utmid_url }}" target="_blank" class="btn btn-sm btn-outline-secondary w-100 mb-2">
+                    <i class="bi bi-eye me-1"></i> View Document
+                  </a>
+                @endif
+                <div class="doc-upload-wrapper">
+                  <input type="file" name="utmid_document" id="utmid_document" class="doc-file-input" accept="image/*,.pdf">
+                  <label for="utmid_document" class="doc-upload-label">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span id="utmid_document_label">Choose file or drag here</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           
           {{-- Driving License --}}
-          <div class="doc-item {{ $customer->license_url ? 'uploaded' : '' }}">
-            <i class="bi bi-car-front doc-icon"></i>
-            <div class="doc-info">
-              <div class="doc-name">Driving License</div>
-              <div class="doc-status">{{ $customer->license_url ? 'Uploaded' : 'Not uploaded' }}</div>
-            </div>
-            <div class="doc-actions">
-              @if($customer->license_url)
-                <a href="{{ $customer->license_url }}" target="_blank" class="btn-secondary-custom btn-sm-custom">View</a>
-              @endif
-              <label class="btn-secondary-custom btn-sm-custom" style="cursor: pointer; margin: 0;">
-                <i class="bi bi-upload"></i>
-                <input type="file" name="license_document" accept="image/*,.pdf" style="display: none;">
-              </label>
+          <div class="col-12 col-md-4">
+            <div class="doc-card {{ $customer->license_url ? 'uploaded' : '' }}">
+              <div class="doc-card-header">
+                <i class="bi bi-car-front"></i>
+                <div>
+                  <div class="doc-card-title">Driving License</div>
+                  <div class="doc-card-status">
+                    @if($customer->license_url)
+                      <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Uploaded</span>
+                    @else
+                      <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Required</span>
+                    @endif
+                  </div>
+                </div>
+              </div>
+              <div class="doc-card-body">
+                @if($customer->license_url)
+                  <a href="{{ $customer->license_url }}" target="_blank" class="btn btn-sm btn-outline-secondary w-100 mb-2">
+                    <i class="bi bi-eye me-1"></i> View Document
+                  </a>
+                @endif
+                <div class="doc-upload-wrapper">
+                  <input type="file" name="license_document" id="license_document" class="doc-file-input" accept="image/*,.pdf">
+                  <label for="license_document" class="doc-upload-label">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span id="license_document_label">Choose file or drag here</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
         <div class="text-center mt-4">
-          <button type="submit" class="btn-primary-custom">
-            <i class="bi bi-cloud-upload me-2"></i> Upload Documents
+          <button type="submit" class="btn-primary-custom" id="uploadBtn">
+            <i class="bi bi-cloud-upload me-2"></i> Upload Selected Documents
           </button>
         </div>
       </form>
@@ -687,6 +750,51 @@
       btn.innerHTML = '<i class="bi bi-pencil"></i> Edit';
     }
   }
+  
+  // Document upload file selection feedback
+  document.addEventListener('DOMContentLoaded', function() {
+    const fileInputs = ['ic_document', 'utmid_document', 'license_document'];
+    
+    fileInputs.forEach(function(inputId) {
+      const input = document.getElementById(inputId);
+      const label = document.getElementById(inputId + '_label');
+      const wrapper = input ? input.closest('.doc-upload-wrapper') : null;
+      
+      if (input && label && wrapper) {
+        input.addEventListener('change', function() {
+          if (this.files && this.files.length > 0) {
+            const fileName = this.files[0].name;
+            const truncatedName = fileName.length > 25 ? fileName.substring(0, 22) + '...' : fileName;
+            label.textContent = truncatedName;
+            wrapper.classList.add('has-file');
+          } else {
+            label.textContent = 'Choose file or drag here';
+            wrapper.classList.remove('has-file');
+          }
+        });
+      }
+    });
+    
+    // Form validation before submit
+    const form = document.getElementById('documentForm');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        const ic = document.getElementById('ic_document');
+        const utmid = document.getElementById('utmid_document');
+        const license = document.getElementById('license_document');
+        
+        const hasFiles = (ic && ic.files.length > 0) || 
+                         (utmid && utmid.files.length > 0) || 
+                         (license && license.files.length > 0);
+        
+        if (!hasFiles) {
+          e.preventDefault();
+          alert('Please select at least one document to upload.');
+          return false;
+        }
+      });
+    }
+  });
 </script>
 @endpush
 @endsection

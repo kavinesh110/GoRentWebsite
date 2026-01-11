@@ -22,58 +22,29 @@
         </div>
       @endif
 
-      <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data" class="mt-2 text-start">
+      <form method="POST" action="{{ route('register') }}" class="mt-2 text-start">
         @csrf
         <input type="hidden" name="role" value="customer">
 
-        <div class="row g-3 mb-2">
-          <div class="col-md-6">
-            <label class="form-label">Full name</label>
-            <input type="text" name="full_name" class="form-control" value="{{ old('full_name') }}" required>
-          </div>
-          <div class="col-md-6">
+        <div class="row g-3 mb-4">
+          <div class="col-12">
             <label class="form-label">UTM email</label>
             <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-12">
             <label class="form-label">Password</label>
             <input type="password" name="password" class="form-control" required>
+            <small class="text-muted">Minimum 8 characters</small>
           </div>
-          <div class="col-md-6">
+          <div class="col-12">
             <label class="form-label">Confirm password</label>
             <input type="password" name="password_confirmation" class="form-control" required>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Phone number</label>
-            <input type="text" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="e.g., 0123456789">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">UTM Role</label>
-            <select name="utm_role" class="form-control">
-              <option value="">Select role</option>
-              <option value="student" {{ old('utm_role') === 'student' ? 'selected' : '' }}>Student</option>
-              <option value="staff" {{ old('utm_role') === 'staff' ? 'selected' : '' }}>Staff</option>
-            </select>
-          </div>
-          <div class="col-md-12">
-            <label class="form-label">Residential College (Kolej) <span class="text-muted small">(optional)</span></label>
-            <input type="text" name="college" class="form-control" placeholder="e.g., Kolej Tun Razak" value="{{ old('college') }}">
-          </div>
         </div>
 
-        <div class="row g-3 mt-1">
-          <div class="col-md-4">
-            <label class="form-label small">Upload IC / Passport (coming soon)</label>
-            <input type="file" class="form-control" disabled>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Upload UTM ID (coming soon)</label>
-            <input type="file" class="form-control" disabled>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Upload driving licence (coming soon)</label>
-            <input type="file" class="form-control" disabled>
-          </div>
+        <div class="alert alert-info small mb-3">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Note:</strong> After registration, you'll need to complete your profile (personal details and documents) before you can make bookings.
         </div>
 
         <p class="small text-muted mt-3 mb-3">

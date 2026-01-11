@@ -114,37 +114,33 @@ class AuthController extends Controller
 
             return redirect()->route('staff.dashboard');
         } else {
-            // Handle customer registration
-            // Validate customer registration data
+            // Handle customer registration - simplified to only email and password
+            // All other details must be completed in profile before booking
             $data = $request->validate([
-                'full_name' => 'required|string|max:255',
                 'email' => 'required|email|max:255|unique:customers,email',
                 'password' => 'required|string|min:8|confirmed',
-                'phone' => 'nullable|string|max:30',
-                'utm_role' => 'nullable|in:student,staff',
-                'college' => 'nullable|string|max:100',
             ]);
 
-            // Create customer account with pending verification status
-            // Document URLs (IC, UTM ID, License) are set to null initially - can be uploaded later
+            // Create customer account with minimal data - profile must be completed later
+            // All profile fields are set to null initially
             $customer = Customer::create([
-                'full_name' => $data['full_name'],
+                'full_name' => null, // Must be filled in profile
                 'email' => $data['email'],
-                'phone' => $data['phone'] ?? null,
+                'phone' => null, // Must be filled in profile
                 'password_hash' => Hash::make($data['password']),
-                'ic_url' => null,
-                'utmid_url' => null,
-                'license_url' => null,
-                'utm_role' => $data['utm_role'] ?? null,
-                'college_name' => $data['college'] ?? null,
+                'ic_url' => null, // Must be uploaded in profile
+                'utmid_url' => null, // Must be uploaded in profile
+                'license_url' => null, // Must be uploaded in profile
+                'utm_role' => null, // Must be filled in profile
+                'college_name' => null, // Must be filled in profile
                 'verification_status' => 'pending', // Requires staff approval
             ]);
 
-            // Set session for customer user
+            // Set session for customer user (use email as name until profile is completed)
             session([
                 'auth_role' => 'customer',
                 'auth_id' => $customer->customer_id,
-                'auth_name' => $customer->full_name,
+                'auth_name' => $customer->email, // Will be updated when profile is completed
             ]);
 
             return redirect()->route('register.success');

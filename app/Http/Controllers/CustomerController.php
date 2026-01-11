@@ -362,29 +362,66 @@ class CustomerController extends Controller
             'license_document' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
 
+        $uploadCount = 0;
+        $uploadedDocs = [];
+
         // Helper closure to handle single document field
-        $handleUpload = function (string $field, string $column, string $subdir) use ($request, $customer) {
+        $handleUpload = function (string $field, string $column, string $subdir, string $docName) use ($request, $customer, &$uploadCount, &$uploadedDocs) {
             if (!$request->hasFile($field)) {
-                return;
+                return false;
             }
+            
             $file = $request->file($field);
+            
+            // Validate file is actually valid
+            if (!$file->isValid()) {
+                Log::warning("Invalid file upload for {$field}", ['error' => $file->getError()]);
+                return false;
+            }
+            
+            // Delete old file if exists
             $oldPath = $customer->getRawOriginal($column);
             if ($oldPath && !filter_var($oldPath, FILTER_VALIDATE_URL) && Storage::disk('public')->exists($oldPath)) {
                 Storage::disk('public')->delete($oldPath);
             }
+            
+            // Generate unique filename and store
             $name = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs("images/customers/{$subdir}", $name, 'public');
-            $customer->{$column} = $path;
+            
+            if ($path) {
+                $customer->{$column} = $path;
+                $uploadCount++;
+                $uploadedDocs[] = $docName;
+                return true;
+            }
+            
+            Log::error("Failed to store file for {$field}");
+            return false;
         };
 
-        $handleUpload('ic_document', 'ic_url', 'ic');
-        $handleUpload('utmid_document', 'utmid_url', 'utmid');
-        $handleUpload('license_document', 'license_url', 'licence');
+        $handleUpload('ic_document', 'ic_url', 'ic', 'IC/Passport');
+        $handleUpload('utmid_document', 'utmid_url', 'utmid', 'UTM ID');
+        $handleUpload('license_document', 'license_url', 'licence', 'Driving License');
 
-        $customer->save();
+        // Only save if there were changes
+        if ($uploadCount > 0) {
+            $customer->save();
+            
+            // Refresh the model to ensure accessors work correctly
+            $customer->refresh();
+            
+            // Update session name if profile is now complete
+            if ($customer->isProfileComplete() && $customer->full_name && session('auth_name') === $customer->email) {
+                $request->session()->put('auth_name', $customer->full_name);
+            }
+
+            // No success message - the "Profile Complete" blue alert is enough feedback
+            return redirect()->route('customer.profile');
+        }
 
         return redirect()->route('customer.profile')
-            ->with('success', 'Documents updated successfully!');
+            ->with('info', 'No documents were selected for upload. Please select at least one document.');
     }
 
     /**
