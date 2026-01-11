@@ -1,5 +1,5 @@
 {{-- Staff Navigation Sidebar --}}
-<div class="staff-nav" style="background: #fff; border-right: 1px solid #edf2f7; min-height: calc(100vh - 70px); padding: 0; position: sticky; top: 70px; width: 260px; flex-shrink: 0; z-index: 1000; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+<div class="staff-nav" style="background: #fff; border-right: 1px solid #edf2f7; height: calc(100vh - 70px); padding: 0; position: fixed; top: 70px; left: 0; width: 260px; flex-shrink: 0; z-index: 1000; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; overflow-x: hidden;">
   {{-- Staff Profile Summary (Simplified) --}}
   <div class="px-4 py-4 mb-2">
     <div class="d-flex align-items-center gap-3">
@@ -47,12 +47,12 @@
       <div class="nav-section-label">Marketing & Growth</div>
 
       <a href="{{ route('staff.activities') }}" class="nav-link {{ request()->routeIs('staff.activities*') ? 'active' : '' }}">
-        <i class="bi bi-megaphone-fill"></i>
-        <span>Active Promotions</span>
+        <i class="bi bi-calendar-event"></i>
+        <span>Company Schedule</span>
       </a>
       <a href="{{ route('staff.vouchers') }}" class="nav-link {{ request()->routeIs('staff.vouchers*') ? 'active' : '' }}">
         <i class="bi bi-ticket-perforated-fill"></i>
-        <span>Voucher Codes</span>
+        <span>Voucher & Promotion</span>
       </a>
       <a href="{{ route('staff.feedbacks') }}" class="nav-link {{ request()->routeIs('staff.feedbacks*') ? 'active' : '' }}">
         <i class="bi bi-star-fill"></i>
@@ -155,13 +155,91 @@
     background: #f1f5f9;
   }
 
+  /* Smooth scrolling for sidebar */
+  .staff-nav {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+  }
+  .staff-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+  .staff-nav::-webkit-scrollbar-track {
+    background: #f8fafc;
+  }
+  .staff-nav::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  .staff-nav::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Main content area - independent scrolling */
+  .d-flex:has(.staff-nav) {
+    min-height: auto !important;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+    position: relative;
+  }
+  .d-flex > .flex-fill {
+    margin-left: 260px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    width: calc(100% - 260px);
+  }
+  .d-flex > .flex-fill > .container-fluid {
+    padding-bottom: 100px !important;
+    padding-right: 1.5rem !important;
+    padding-left: 1.5rem !important;
+    box-sizing: border-box;
+  }
+  @media (min-width: 768px) {
+    .d-flex > .flex-fill > .container-fluid {
+      padding-right: 2rem !important;
+      padding-left: 2rem !important;
+    }
+  }
+  .d-flex > .flex-fill::-webkit-scrollbar {
+    width: 8px;
+  }
+  .d-flex > .flex-fill::-webkit-scrollbar-track {
+    background: #f8fafc;
+  }
+  .d-flex > .flex-fill::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .d-flex > .flex-fill::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
   @media (max-width: 768px) {
     .staff-nav {
       width: 100% !important;
       position: static !important;
       border-right: none !important;
       border-bottom: 1px solid #edf2f7;
-      min-height: auto !important;
+      height: auto !important;
+      overflow-y: visible !important;
+    }
+    .d-flex > .flex-fill {
+      margin-left: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      overflow-y: visible !important;
+      overflow-x: hidden !important;
     }
   }
 </style>
+
+<script>
+  // Hide footer on staff pages
+  document.addEventListener('DOMContentLoaded', function() {
+    const footer = document.querySelector('footer');
+    if (footer && document.querySelector('.staff-nav')) {
+      footer.style.display = 'none';
+    }
+  });
+</script>

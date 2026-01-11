@@ -98,7 +98,11 @@ class CarSeeder extends Seeder
         ];
 
         foreach ($cars as $car) {
-            Car::create($car);
+            // Only create if car with this plate number doesn't exist
+            Car::firstOrCreate(
+                ['plate_number' => $car['plate_number']],
+                $car
+            );
         }
     }
 }

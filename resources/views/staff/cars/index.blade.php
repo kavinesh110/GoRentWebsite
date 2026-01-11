@@ -23,10 +23,35 @@
     background-color: #fffbeb;
     color: #92400e;
     transition: all 0.2s;
+    border-radius: 6px;
   }
   .btn-warning-subtle:hover {
     background-color: #fef3c7;
     transform: scale(1.01);
+  }
+  
+  /* Button styling - rounded corner squares */
+  .car-admin-card .btn {
+    border-radius: 6px !important;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  
+  .car-admin-card .btn-sm {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Ensure icon buttons are square */
+  .car-admin-card .btn[style*="width: 38px"] {
+    flex-shrink: 0;
+  }
+  
+  /* Better spacing for card content */
+  .car-admin-card .card-body {
+    min-height: 0;
   }
 
   /* Custom Pagination Styles */
@@ -130,32 +155,32 @@
       </div>
 
       {{-- SEARCH & FILTERS --}}
-      <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+      <div class="card border-0 shadow-sm mb-4 rounded-4">
         <div class="card-body p-3 bg-white">
           <form method="GET" action="{{ route('staff.cars') }}" class="row g-2 align-items-center">
-            <div class="col-lg-5">
+            <div class="col-md-6 col-lg-4">
               <div class="input-group input-group-sm border rounded-3 overflow-hidden bg-light-subtle">
                 <span class="input-group-text bg-transparent border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" name="search" class="form-control border-0 bg-transparent py-2 px-2" placeholder="Search by brand, model, or plate number..." value="{{ $filters['search'] ?? '' }}">
+                <input type="text" name="search" class="form-control border-0 bg-transparent py-2 px-2" placeholder="Search by brand, model, or plate..." value="{{ $filters['search'] ?? '' }}">
               </div>
             </div>
-            <div class="col-lg-2">
+            <div class="col-6 col-lg-2">
               <select name="status" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
-                <option value="">All Fleet Statuses</option>
-                <option value="available" {{ ($filters['status'] ?? '') === 'available' ? 'selected' : '' }}>Available & Ready</option>
-                <option value="in_use" {{ ($filters['status'] ?? '') === 'in_use' ? 'selected' : '' }}>Currently In Use</option>
-                <option value="maintenance" {{ ($filters['status'] ?? '') === 'maintenance' ? 'selected' : '' }}>Under Maintenance</option>
+                <option value="">All Statuses</option>
+                <option value="available" {{ ($filters['status'] ?? '') === 'available' ? 'selected' : '' }}>Available</option>
+                <option value="in_use" {{ ($filters['status'] ?? '') === 'in_use' ? 'selected' : '' }}>In Use</option>
+                <option value="maintenance" {{ ($filters['status'] ?? '') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
               </select>
             </div>
-            <div class="col-lg-2">
+            <div class="col-6 col-lg-2">
               <select name="car_type" class="form-select form-select-sm border rounded-3 py-2 bg-light-subtle">
-                <option value="">All Car Types</option>
+                <option value="">All Types</option>
                 @php
                   $carTypeLabels = [
-                    'hatchback' => 'Hatchback (Budget)',
-                    'sedan' => 'Sedan (Comfort)',
-                    'suv' => 'SUV (Family)',
-                    'mpv' => 'MPV (Group)'
+                    'hatchback' => 'Hatchback',
+                    'sedan' => 'Sedan',
+                    'suv' => 'SUV',
+                    'mpv' => 'MPV'
                   ];
                 @endphp
                 @foreach($availableCarTypes as $type)
@@ -165,8 +190,8 @@
                 @endforeach
               </select>
             </div>
-            <div class="col-lg-3 d-flex gap-2">
-              <button type="submit" class="btn btn-sm btn-dark px-4 flex-fill rounded-3 py-2 fw-bold">Apply Filters</button>
+            <div class="col-md-12 col-lg-4 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-dark px-3 rounded-3 py-2 fw-bold">Apply</button>
               <a href="{{ route('staff.cars') }}" class="btn btn-sm btn-light border px-3 rounded-3 py-2 fw-semibold text-muted">Reset</a>
             </div>
           </form>
@@ -202,29 +227,28 @@
                 </div>
               </div>
               
-              <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                  <div>
-                    <h5 class="fw-bold mb-1 text-slate-800" style="letter-spacing: -0.3px;">{{ $car->brand }} {{ $car->model }}</h5>
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="badge bg-light text-slate-700 border border-slate-200 fw-bold px-2 py-1" style="font-size: 11px;">{{ strtoupper($car->plate_number) }}</span>
-                      <span class="text-muted small fw-medium">{{ $car->year }}</span>
+              <div class="card-body p-4 d-flex flex-column" style="gap: 16px;">
+                {{-- Vehicle Info Section --}}
+                <div>
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-fill" style="margin-left: -0.75rem;">
+                      <h5 class="fw-bold mb-2 text-slate-800" style="letter-spacing: -0.3px; font-size: 18px; line-height: 1.2; margin: 0; padding: 0;">{{ $car->brand }} {{ $car->model }}</h5>
+                      <div class="d-flex flex-column gap-1" style="margin: 0; padding: 0;">
+                        <span class="badge bg-light text-slate-700 border border-slate-200 fw-bold py-1 px-2" style="font-size: 11px; width: fit-content; margin-left: 0; display: inline-block; white-space: nowrap;">{{ strtoupper($car->plate_number) }}</span>
+                        <span class="text-muted small fw-medium" style="font-size: 13px; margin: 0; padding: 0;">{{ $car->year }}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div class="text-end">
-                    <div class="small text-muted fw-bold text-uppercase" style="font-size: 9px;">Rate/Hour</div>
-                    <div class="fw-bold text-primary">RM{{ number_format($car->base_rate_per_hour, 2) }}</div>
+                    <div class="text-end ms-3 flex-shrink-0">
+                      <div class="small text-muted fw-bold text-uppercase mb-1" style="font-size: 9px; letter-spacing: 0.5px;">Rate/Hour</div>
+                      <div class="fw-bold text-primary" style="font-size: 16px;">RM{{ number_format($car->base_rate_per_hour, 2) }}</div>
+                    </div>
                   </div>
                 </div>
 
-                {{-- Key Stats Row --}}
-                <div class="row g-2 mb-4 bg-light rounded-3 p-2">
-                  <div class="col-12">
-                    <div class="p-2">
-                      <div class="small text-muted mb-0" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Mileage</div>
-                      <div class="fw-bold text-slate-700">{{ number_format($car->current_mileage) }} km</div>
-                    </div>
-                  </div>
+                {{-- Mileage Section --}}
+                <div class="pb-3 border-bottom" style="border-color: #e2e8f0 !important;">
+                  <div class="small text-muted mb-1" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Mileage</div>
+                  <div class="fw-bold text-slate-800" style="font-size: 15px;">{{ number_format($car->current_mileage) }} km</div>
                 </div>
 
                 {{-- Maintenance Status --}}
@@ -249,41 +273,41 @@
                   // If overdue, calculate how much past the service point
                   $overdueKm = $isServiceDue ? ($distanceSinceService - $mileageLimit) : 0;
                 @endphp
-                <div class="mb-4">
+                <div>
                   <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="small fw-bold text-slate-700" style="font-size: 11px;">Service Progress</span>
-                    <span class="small {{ $isServiceDue ? 'text-danger fw-bold' : 'text-muted fw-medium' }}" style="font-size: 11px;">
+                    <span class="small fw-bold text-slate-700" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Service Progress</span>
+                    <span class="small {{ $isServiceDue ? 'text-danger fw-bold' : 'text-muted fw-medium' }}" style="font-size: 10px;">
                       @if($isServiceDue)
-                        Service due ({{ number_format($overdueKm) }} km past interval)
+                        {{ number_format($overdueKm) }} km overdue
                       @else
-                        {{ number_format($remainingKm) }} km to next service
+                        {{ number_format($remainingKm) }} km remaining
                       @endif
                     </span>
                   </div>
-                  <div class="progress" style="height: 8px; border-radius: 10px; background: #f1f5f9;">
+                  <div class="progress" style="height: 8px; border-radius: 4px; background: #f1f5f9;">
                     <div class="progress-bar {{ $isServiceDue ? 'bg-danger' : ($progress > 85 ? 'bg-warning' : 'bg-success') }} dynamic-width" 
-                         data-width="{{ min(100, $progress) }}%" style="border-radius: 10px;"></div>
+                         data-width="{{ min(100, $progress) }}%" style="border-radius: 4px;"></div>
                   </div>
                 </div>
 
                 {{-- Notifications & Actions --}}
-                <div class="d-grid gap-2">
+                <div class="mt-auto">
                   @php $openIssuesCount = $issuesCounts[$car->id] ?? 0; @endphp
                   @if($openIssuesCount > 0)
-                    <a href="{{ route('staff.maintenance-issues', ['car_id' => $car->id]) }}" class="btn btn-warning-subtle btn-sm text-warning-emphasis d-flex align-items-center justify-content-center gap-2 border-0 rounded-3 py-2 fw-bold text-decoration-none">
+                    <a href="{{ route('staff.maintenance-issues', ['car_id' => $car->id]) }}" class="btn btn-warning-subtle btn-sm text-warning-emphasis d-flex align-items-center justify-content-center gap-2 border-0 mb-3 py-2 fw-bold text-decoration-none" style="border-radius: 6px;">
                       <i class="bi bi-exclamation-triangle-fill"></i>
                       <span>{{ $openIssuesCount }} Reported Issue{{ $openIssuesCount > 1 ? 's' : '' }}</span>
                     </a>
                   @endif
 
-                  <div class="d-flex gap-2">
-                    <a href="{{ route('staff.cars.edit', $car->id) }}" class="btn btn-primary flex-fill fw-bold btn-sm py-2 rounded-3">
-                      <i class="bi bi-pencil-square me-1"></i>Edit Profile
+                  <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ route('staff.cars.edit', $car->id) }}" class="btn btn-primary btn-sm" style="border-radius: 6px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Profile">
+                      <i class="bi bi-pencil-square"></i>
                     </a>
-                    <a href="{{ route('staff.maintenance.index', $car->id) }}" class="btn btn-outline-secondary btn-sm px-3 rounded-3" title="Service Logs">
+                    <a href="{{ route('staff.maintenance.index', $car->id) }}" class="btn btn-outline-secondary btn-sm" style="border-radius: 6px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Service Logs">
                       <i class="bi bi-wrench-adjustable"></i>
                     </a>
-                    <button type="button" class="btn btn-outline-danger btn-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#deleteCarModal{{ $car->id }}">
+                    <button type="button" class="btn btn-outline-danger btn-sm" style="border-radius: 6px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" data-bs-toggle="modal" data-bs-target="#deleteCarModal{{ $car->id }}" title="Delete">
                       <i class="bi bi-trash3"></i>
                     </button>
                   </div>

@@ -29,9 +29,10 @@ class HomeController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Get active activities/promotions (not expired)
-        // Activities with end_date >= today are considered active
-        $activities = Activity::where('end_date', '>=', now())
+        // Get active promotions only (not company schedules, not expired)
+        // Only show promotions (type='promotion') with end_date >= today
+        $activities = Activity::where('type', 'promotion')
+            ->where('end_date', '>=', now())
             ->orderBy('start_date', 'desc')
             ->get();
         
@@ -147,8 +148,40 @@ class HomeController extends Controller
             $query->where('car_type', strtolower($request->type));
         }
 
-        // Order and paginate results (12 cars per page)
-        $cars = $query->orderBy('created_at', 'desc')->paginate(12);
+        // Filter by date availability - exclude cars that are booked during the requested period
+        if ($request->has('start_date') && $request->has('end_date') && 
+            $request->start_date !== '' && $request->end_date !== '') {
+            
+            // Parse dates and set default times (start of day for pickup, end of day for dropoff)
+            $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+            
+            // Ensure end date is after start date
+            if ($endDate->lt($startDate)) {
+                $endDate = $startDate->copy()->endOfDay();
+            }
+            
+            // Exclude cars that have overlapping bookings
+            // A booking overlaps if it has any time overlap with the requested period
+            // This matches the logic used in BookingController@store
+            $query->whereDoesntHave('bookings', function($q) use ($startDate, $endDate) {
+                $q->whereIn('status', ['created', 'verified', 'confirmed', 'active'])
+                  ->where(function($query) use ($startDate, $endDate) {
+                      // Booking starts during requested period
+                      $query->whereBetween('start_datetime', [$startDate, $endDate])
+                            // OR booking ends during requested period
+                            ->orWhereBetween('end_datetime', [$startDate, $endDate])
+                            // OR booking completely encompasses the requested period
+                            ->orWhere(function($q) use ($startDate, $endDate) {
+                                $q->where('start_datetime', '<=', $startDate)
+                                  ->where('end_datetime', '>=', $endDate);
+                            });
+                  });
+            });
+        }
+
+        // Order and paginate results (12 cars per page) and preserve query string
+        $cars = $query->orderBy('created_at', 'desc')->paginate(12)->withQueryString();
 
         // Get locations for the filter bar
         $locations = CarLocation::whereIn('type', ['pickup', 'dropoff', 'both'])

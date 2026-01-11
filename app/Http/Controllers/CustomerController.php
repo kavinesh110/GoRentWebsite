@@ -97,8 +97,8 @@ class CustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Paginate results (10 bookings per page)
-        $bookings = $query->orderBy('created_at', 'desc')->paginate(10);
+        // Paginate results (10 bookings per page) and preserve query string
+        $bookings = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('customer.bookings.index', [
             'bookings' => $bookings,
@@ -157,7 +157,7 @@ class CustomerController extends Controller
         $pickupFormatted = $pickup->format('d M Y, H:i');
         $dropoffFormatted = $dropoff->format('d M Y, H:i');
         $durationHours = $pending['hours'];
-        $totalToPay = ($pending['deposit_amount'] ?? 0) + ($pending['total_rental_amount'] ?? 0);
+        $totalToPay = round(($pending['deposit_amount'] ?? 0) + ($pending['total_rental_amount'] ?? 0), 2);
 
         return view('customer.bookings.payment', [
             'car' => $car,
@@ -185,7 +185,7 @@ class CustomerController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit,full_payment', // booking is created with deposit payment (full_payment is also accepted for backward compatibility)
+            'payment_type' => 'required|in:deposit,full_payment', // booking is created with deposit (full_payment accepted for compatibility)
             'amount' => 'required|numeric|min:0',
             'payment_method' => 'required|in:bank_transfer,cash,e-wallet,other',
             'payment_date' => 'required|date',
@@ -194,6 +194,7 @@ class CustomerController extends Controller
             'account_number' => 'required|string|max:50',
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf|max:5120',
         ]);
+        
 
         // Wrap everything in a database transaction for atomicity
         try {
@@ -646,9 +647,9 @@ class CustomerController extends Controller
             ->findOrFail($id);
 
         $validated = $request->validate([
-            'payment_type' => 'required|in:deposit,rental',
+            'payment_type' => 'required|in:deposit,rental,full_payment',
             'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:bank_transfer,cash,other',
+            'payment_method' => 'required|in:bank_transfer,cash,other,e-wallet',
             'payment_date' => 'required|date',
             'bank_name' => 'required|string|max:100',
             'account_holder_name' => 'required|string|max:100',
@@ -1159,8 +1160,8 @@ class CustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Paginate results (10 tickets per page)
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
+        // Paginate results (10 tickets per page) and preserve query string
+        $tickets = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('customer.support-tickets.index', [
             'tickets' => $tickets,

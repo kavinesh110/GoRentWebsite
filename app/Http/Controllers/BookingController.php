@@ -137,6 +137,25 @@ class BookingController extends Controller
         // Calculate rental duration in hours
         $pickup = \Carbon\Carbon::parse($validated['pickup_date'] . ' ' . $validated['pickup_time']);
         $dropoff = \Carbon\Carbon::parse($validated['dropoff_date'] . ' ' . $validated['dropoff_time']);
+        
+        // Check for overlapping bookings (same car cannot be booked at the same time)
+        $hasConflict = Booking::where('car_id', $car->id)
+            ->whereIn('status', ['created', 'verified', 'confirmed', 'active'])
+            ->where(function($query) use ($pickup, $dropoff) {
+                $query->whereBetween('start_datetime', [$pickup, $dropoff])
+                    ->orWhereBetween('end_datetime', [$pickup, $dropoff])
+                    ->orWhere(function($q) use ($pickup, $dropoff) {
+                        $q->where('start_datetime', '<=', $pickup)
+                          ->where('end_datetime', '>=', $dropoff);
+                    });
+            })
+            ->exists();
+        
+        if ($hasConflict) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'This car is already booked for the selected dates. Please choose different dates.');
+        }
         $hours = max(1, $pickup->diffInHours($dropoff)); // Minimum 1 hour rental
         
         // Calculate pricing breakdown

@@ -42,6 +42,24 @@ class Inspection extends Model
     ];
 
     /**
+     * Accessor: Ensure photos is always an array
+     * Handles cases where photos might be stored as JSON string
+     */
+    public function getPhotosAttribute($value)
+    {
+        if (is_null($value) || $value === '') {
+            return [];
+        }
+        
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        
+        return is_array($value) ? $value : [];
+    }
+
+    /**
      * Get the booking associated with this inspection
      */
     public function booking(): BelongsTo

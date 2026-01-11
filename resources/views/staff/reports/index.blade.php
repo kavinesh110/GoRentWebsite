@@ -349,20 +349,79 @@
       {{-- Date Filter --}}
       <div class="filter-card">
         <form method="GET" action="{{ route('staff.reports') }}" class="row g-3 align-items-end">
+          <div class="col-md-2">
+            <div class="filter-label">Quick Filters</div>
+            <select name="quick_filter" class="filter-input" onchange="applyQuickFilter(this.value)">
+              <option value="">Custom Range</option>
+              <option value="last_month" {{ request('quick_filter') === 'last_month' ? 'selected' : '' }}>Last Month</option>
+              <option value="last_3_months" {{ request('quick_filter') === 'last_3_months' ? 'selected' : '' }}>Last 3 Months</option>
+              <option value="last_6_months" {{ request('quick_filter') === 'last_6_months' ? 'selected' : '' }}>Last 6 Months</option>
+              <option value="last_12_months" {{ request('quick_filter') === 'last_12_months' ? 'selected' : '' }}>Last 12 Months</option>
+              <option value="this_year" {{ request('quick_filter') === 'this_year' ? 'selected' : '' }}>This Year</option>
+              <option value="last_year" {{ request('quick_filter') === 'last_year' ? 'selected' : '' }}>Last Year</option>
+            </select>
+          </div>
           <div class="col-md-3">
             <div class="filter-label">Start Date</div>
-            <input type="date" name="start_date" class="filter-input" value="{{ $startDate }}">
+            <input type="date" name="start_date" id="start_date" class="filter-input" value="{{ $startDate }}">
           </div>
           <div class="col-md-3">
             <div class="filter-label">End Date</div>
-            <input type="date" name="end_date" class="filter-input" value="{{ $endDate }}">
+            <input type="date" name="end_date" id="end_date" class="filter-input" value="{{ $endDate }}">
           </div>
-          <div class="col-md-6 d-flex gap-2 justify-content-md-end">
+          <div class="col-md-4 d-flex gap-2 justify-content-md-end">
             <button type="submit" class="btn-apply">Apply Filter</button>
             <a href="{{ route('staff.reports') }}" class="btn-reset">Reset</a>
           </div>
         </form>
       </div>
+      
+      <script>
+      function applyQuickFilter(value) {
+        const today = new Date();
+        const startInput = document.getElementById('start_date');
+        const endInput = document.getElementById('end_date');
+        
+        if (!value) return;
+        
+        let startDate, endDate;
+        
+        switch(value) {
+          case 'last_month':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+          case 'last_3_months':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+            endDate = new Date(today);
+            break;
+          case 'last_6_months':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 6, 1);
+            endDate = new Date(today);
+            break;
+          case 'last_12_months':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 12, 1);
+            endDate = new Date(today);
+            break;
+          case 'this_year':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            endDate = new Date(today);
+            break;
+          case 'last_year':
+            startDate = new Date(today.getFullYear() - 1, 0, 1);
+            endDate = new Date(today.getFullYear() - 1, 11, 31);
+            break;
+          default:
+            return;
+        }
+        
+        startInput.value = startDate.toISOString().split('T')[0];
+        endInput.value = endDate.toISOString().split('T')[0];
+        
+        // Auto-submit form
+        startInput.closest('form').submit();
+      }
+      </script>
 
       {{-- ============================================== --}}
       {{-- EXECUTIVE SUMMARY - KEY METRICS --}}
@@ -476,7 +535,7 @@
             <div class="card-header-custom d-flex justify-content-between align-items-center flex-wrap gap-2">
               <span>Revenue Trend</span>
               <div class="d-flex align-items-center gap-2">
-                <select id="monthSelector" class="month-selector" style="display: none;">
+                <select id="monthSelector" class="month-selector">
                   <option value="">All Months</option>
                   @foreach($availableMonths as $month)
                     <option value="{{ $month['monthKey'] }}">{{ $month['label'] }}</option>
@@ -956,6 +1015,8 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
 // Chart defaults
 Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
@@ -964,19 +1025,31 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
 // FILTERABLE REVENUE CHART (Daily/Weekly/Monthly)
 // ==========================================
 const revenueDataSets = {
-  daily: {!! json_encode($dailyRevenueData) !!},
-  weekly: {!! json_encode($weeklyRevenueData) !!},
-  monthly: {!! json_encode($monthlyRevenueData) !!}
+  daily: {!! json_encode($dailyRevenueData ?? []) !!},
+  weekly: {!! json_encode($weeklyRevenueData ?? []) !!},
+  monthly: {!! json_encode($monthlyRevenueData ?? []) !!}
 };
 
-const revenueFilterCtx = document.getElementById('revenueFilterChart').getContext('2d');
+// Check if canvas element exists
+const revenueFilterCanvas = document.getElementById('revenueFilterChart');
+if (!revenueFilterCanvas) {
+  console.error('Revenue Filter Chart canvas not found');
+  return;
+}
+
+const revenueFilterCtx = revenueFilterCanvas.getContext('2d');
+// Ensure we have data before initializing chart
+const initialDailyData = revenueDataSets.daily && revenueDataSets.daily.length > 0 
+  ? revenueDataSets.daily 
+  : [{ label: 'No Data', value: 0 }];
+
 let revenueFilterChart = new Chart(revenueFilterCtx, {
   type: 'bar',
   data: {
-    labels: revenueDataSets.daily.map(d => d.label),
+    labels: initialDailyData.map(d => d.label),
     datasets: [{
       label: 'Revenue',
-      data: revenueDataSets.daily.map(d => d.value),
+      data: initialDailyData.map(d => d.value),
       backgroundColor: '#475569',
       borderRadius: 4,
       borderSkipped: false
@@ -1015,14 +1088,95 @@ let revenueFilterChart = new Chart(revenueFilterCtx, {
   }
 });
 
-// Function to filter daily data by month
-function filterDailyDataByMonth(monthKey) {
-  if (!monthKey || monthKey === '') {
-    return revenueDataSets.daily;
+// Function to generate all days in a month
+function generateAllDaysInMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate(); // Get number of days in month
+  const result = [];
+  
+  // Get existing data for this month
+  const existingData = revenueDataSets.daily.filter(d => d.monthKey === monthKey);
+  const dataMap = {};
+  existingData.forEach(d => {
+    const day = parseInt(d.date.split('-')[2]);
+    dataMap[day] = d.value;
+  });
+  
+  // Generate all days (1 to daysInMonth)
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    result.push({
+      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: dataMap[day] || 0,
+      monthKey: monthKey,
+      date: dateStr
+    });
   }
   
-  // Filter by monthKey (e.g., "2025-01")
-  return revenueDataSets.daily.filter(d => d.monthKey === monthKey);
+  return result;
+}
+
+// Function to get all weeks in a month
+function getAllWeeksInMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0); // Last day of the month
+  
+  // Find all weeks that overlap with this month
+  const result = [];
+  let currentDate = new Date(firstDay);
+  
+  // Go to the start of the week containing the first day
+  const dayOfWeek = currentDate.getDay();
+  currentDate.setDate(currentDate.getDate() - dayOfWeek);
+  
+  // Iterate through weeks until we pass the last day of the month
+  while (currentDate <= lastDay || (currentDate.getMonth() === month - 1 && currentDate.getFullYear() === year)) {
+    const weekEnd = new Date(currentDate);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    // Check if this week overlaps with the selected month
+    if (weekEnd >= firstDay && currentDate <= lastDay) {
+      const weekStartStr = currentDate.toISOString().split('T')[0];
+      const weekEndDate = weekEnd > lastDay ? lastDay : weekEnd;
+      const weekEndStr = weekEndDate.toISOString().split('T')[0];
+      
+      // Try to find existing data for this week
+      const existingWeek = revenueDataSets.weekly.find(w => {
+        const wStart = new Date(w.weekStart);
+        const wEnd = new Date(w.weekEnd);
+        // Check if weeks overlap
+        return (wStart <= weekEndDate && wEnd >= currentDate);
+      });
+      
+      const weekLabel = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      result.push({
+        label: `Week ${getWeekNumber(currentDate)} (${weekLabel})`,
+        value: existingWeek ? existingWeek.value : 0,
+        monthKey: monthKey,
+        weekStart: weekStartStr,
+        weekEnd: weekEndStr
+      });
+    }
+    
+    // Move to next week
+    currentDate.setDate(currentDate.getDate() + 7);
+    
+    // Stop if we've passed the month
+    if (currentDate > lastDay && currentDate.getMonth() !== month - 1) break;
+  }
+  
+  return result;
+}
+
+// Helper to get week number
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 // Function to update chart with data
@@ -1032,20 +1186,57 @@ function updateRevenueChart(data) {
   revenueFilterChart.update('active');
 }
 
+// Get current period and month selection
+function getCurrentPeriod() {
+  const activeBtn = document.querySelector('.revenue-filter-btn.active');
+  return activeBtn ? activeBtn.dataset.period : 'daily';
+}
+
+function getCurrentMonth() {
+  const monthSelector = document.getElementById('monthSelector');
+  return monthSelector ? monthSelector.value || '' : '';
+}
+
+// Function to apply current filters
+function applyFilters() {
+  const period = getCurrentPeriod();
+  const selectedMonth = getCurrentMonth();
+  
+  let data;
+  
+  if (period === 'monthly') {
+    // Monthly view shows all months in the date range (from backend)
+    data = revenueDataSets.monthly;
+    // If no data, show empty array (don't generate fake months)
+    if (!data || data.length === 0) {
+      data = [];
+    }
+  } else if (period === 'daily') {
+    // Daily view: Show all days in selected month
+    if (selectedMonth) {
+      data = generateAllDaysInMonth(selectedMonth);
+    } else {
+      data = revenueDataSets.daily;
+    }
+  } else if (period === 'weekly') {
+    // Weekly view: Show all weeks in selected month
+    if (selectedMonth) {
+      data = getAllWeeksInMonth(selectedMonth);
+    } else {
+      data = revenueDataSets.weekly;
+    }
+  }
+  
+  updateRevenueChart(data);
+}
+
 // Month selector handler
 const monthSelector = document.getElementById('monthSelector');
-monthSelector.addEventListener('change', function() {
-  const selectedMonth = this.value;
-  
-  // If "All Months" is selected, show monthly aggregated data
-  // Otherwise, show daily data for the selected month
-  if (!selectedMonth || selectedMonth === '') {
-    updateRevenueChart(revenueDataSets.monthly);
-  } else {
-    const filteredData = filterDailyDataByMonth(selectedMonth);
-    updateRevenueChart(filteredData);
-  }
-});
+if (monthSelector) {
+  monthSelector.addEventListener('change', function() {
+    applyFilters();
+  });
+}
 
 // Revenue filter button handlers
 document.querySelectorAll('.revenue-filter-btn').forEach(btn => {
@@ -1058,29 +1249,38 @@ document.querySelectorAll('.revenue-filter-btn').forEach(btn => {
     const period = this.dataset.period;
     
     // Show/hide month selector
-    if (period === 'monthly') {
-      monthSelector.style.display = 'block';
-      // Reset to "All Months" and show monthly aggregated data
-      monthSelector.value = '';
-      updateRevenueChart(revenueDataSets.monthly);
-    } else {
-      monthSelector.style.display = 'none';
-      // Use the period's data directly
-      const data = revenueDataSets[period];
-      updateRevenueChart(data);
+    const monthSelectorEl = document.getElementById('monthSelector');
+    if (monthSelectorEl) {
+      if (period === 'monthly') {
+        // For monthly, hide selector since we always show all months
+        monthSelectorEl.style.display = 'none';
+        monthSelectorEl.value = ''; // Reset selection
+      } else {
+        // Show for daily/weekly
+        monthSelectorEl.style.display = 'block';
+      }
     }
+    
+    // Apply filters with new period
+    applyFilters();
   });
 });
 
 // Revenue Trend Chart (smaller one)
-const revenueTrendCtx = document.getElementById('revenueTrendChart').getContext('2d');
-new Chart(revenueTrendCtx, {
+const revenueTrendCanvas = document.getElementById('revenueTrendChart');
+if (revenueTrendCanvas) {
+  const revenueTrendCtx = revenueTrendCanvas.getContext('2d');
+  const trendData = revenueDataSets.daily && revenueDataSets.daily.length > 0 
+    ? revenueDataSets.daily 
+    : [{ label: 'No Data', value: 0 }];
+
+  new Chart(revenueTrendCtx, {
   type: 'line',
   data: {
-    labels: revenueDataSets.daily.map(d => d.label),
+    labels: trendData.map(d => d.label),
     datasets: [{
       label: 'Revenue',
-      data: revenueDataSets.daily.map(d => d.value),
+      data: trendData.map(d => d.value),
       borderColor: '#475569',
       backgroundColor: 'rgba(71, 85, 105, 0.1)',
       borderWidth: 2,
@@ -1127,16 +1327,19 @@ new Chart(revenueTrendCtx, {
 // Payment Methods Chart
 const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
 const paymentMethodsData = {!! json_encode($paymentMethods) !!};
-new Chart(paymentMethodsCtx, {
-  type: 'doughnut',
-  data: {
-    labels: paymentMethodsData.map(p => p.payment_method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())),
-    datasets: [{
-      data: paymentMethodsData.map(p => parseFloat(p.total)),
-      backgroundColor: ['#475569', '#64748b', '#94a3b8', '#cbd5e1'],
-      borderWidth: 0
-    }]
-  },
+const hasPaymentData = paymentMethodsData && paymentMethodsData.length > 0 && paymentMethodsData.some(p => parseFloat(p.total) > 0);
+
+if (hasPaymentData) {
+  new Chart(paymentMethodsCtx, {
+    type: 'doughnut',
+    data: {
+      labels: paymentMethodsData.map(p => p.payment_method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())),
+      datasets: [{
+        data: paymentMethodsData.map(p => parseFloat(p.total)),
+        backgroundColor: ['#475569', '#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'],
+        borderWidth: 0
+      }]
+    },
   options: {
     responsive: true,
     maintainAspectRatio: false,
@@ -1148,14 +1351,38 @@ new Chart(paymentMethodsCtx, {
         }
       }
     }
+    });
+  } else {
+    // Show empty state for payment methods chart
+    new Chart(paymentMethodsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['No Data'],
+        datasets: [{
+          data: [1],
+          backgroundColor: ['#e2e8f0'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
+      }
+    });
   }
-});
+}
 
 // Booking Volume Chart
-const bookingVolumeCtx = document.getElementById('bookingVolumeChart').getContext('2d');
-const dailyBookingsData = {!! json_encode($dailyBookingsData) !!};
-if (dailyBookingsData.length > 0) {
-  new Chart(bookingVolumeCtx, {
+const bookingVolumeCanvas = document.getElementById('bookingVolumeChart');
+if (bookingVolumeCanvas) {
+  const bookingVolumeCtx = bookingVolumeCanvas.getContext('2d');
+  const dailyBookingsData = {!! json_encode($dailyBookingsData ?? []) !!};
+  if (dailyBookingsData && dailyBookingsData.length > 0) {
+    new Chart(bookingVolumeCtx, {
     type: 'bar',
     data: {
       labels: dailyBookingsData.map(d => d.date),
@@ -1218,13 +1445,18 @@ new Chart(bookingStatusCtx, {
         }
       }
     }
+    });
   }
-});
+}
 
 // Bookings by Day Chart
-const bookingsByDayCtx = document.getElementById('bookingsByDayChart').getContext('2d');
-const bookingsByDayData = {!! json_encode($bookingsByDayOfWeek) !!};
-new Chart(bookingsByDayCtx, {
+const bookingsByDayCanvas = document.getElementById('bookingsByDayChart');
+if (bookingsByDayCanvas) {
+  const bookingsByDayCtx = bookingsByDayCanvas.getContext('2d');
+  const bookingsByDayData = {!! json_encode($bookingsByDayOfWeek ?? []) !!};
+  
+  if (bookingsByDayData && bookingsByDayData.length > 0) {
+    new Chart(bookingsByDayCtx, {
   type: 'bar',
   data: {
     labels: bookingsByDayData.map(d => d.day_name),
@@ -1251,6 +1483,10 @@ new Chart(bookingsByDayCtx, {
       }
     }
   }
-});
+  });
+  }
+}
+
+}); // End of DOMContentLoaded
 </script>
 @endpush

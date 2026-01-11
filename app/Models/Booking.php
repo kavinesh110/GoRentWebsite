@@ -204,9 +204,9 @@ class Booking extends Model
      */
     public function isPhase1Complete(): bool
     {
-        // Phase 1 is complete when any deposit payment has been uploaded (regardless of status)
+        // Phase 1 is complete when any deposit or full payment has been uploaded (regardless of status)
         $hasPayment = $this->payments()
-            ->where('payment_type', 'deposit')
+            ->whereIn('payment_type', ['deposit', 'full_payment'])
             ->exists();
         
         return $hasPayment;
@@ -219,7 +219,7 @@ class Booking extends Model
     public function isPaymentVerified(): bool
     {
         return $this->payments()
-            ->where('payment_type', 'deposit')
+            ->whereIn('payment_type', ['deposit', 'full_payment'])
             ->where('status', 'verified')
             ->exists();
     }

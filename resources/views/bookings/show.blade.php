@@ -230,6 +230,25 @@
     {{-- LEFT: BOOKING FORM --}}
     <div class="col-lg-8">
       <div class="booking-form-card">
+        @if(session('error'))
+          <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
+        @if($errors->any())
+          <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <strong>Please fix the following errors:</strong>
+            <ul class="mb-0 mt-2">
+              @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
         <form id="bookingForm" method="POST" action="{{ route('bookings.store') }}">
           @csrf
           <input type="hidden" name="car_id" value="{{ $car->id }}">
@@ -459,7 +478,7 @@
       const total = subtotal - voucherDiscount;
       
       if (subtotalDisplay) subtotalDisplay.textContent = 'RM ' + subtotal.toFixed(2);
-      if (totalDisplay) totalDisplay.textContent = 'RM ' + Math.round(total);
+      if (totalDisplay) totalDisplay.textContent = 'RM ' + total.toFixed(2);
       
       const discRow = document.getElementById('voucher-discount-row');
       if (voucherDiscount > 0) {

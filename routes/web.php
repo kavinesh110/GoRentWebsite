@@ -104,6 +104,10 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::put('/vouchers/{id}', [App\Http\Controllers\StaffController::class, 'vouchersUpdate'])->name('vouchers.update');
     Route::delete('/vouchers/{id}', [App\Http\Controllers\StaffController::class, 'vouchersDestroy'])->name('vouchers.destroy');
     
+    // Promotion management (under vouchers section)
+    Route::get('/vouchers/promotions/create', [App\Http\Controllers\StaffController::class, 'promotionsCreate'])->name('vouchers.promotions.create');
+    Route::post('/vouchers/promotions', [App\Http\Controllers\StaffController::class, 'promotionsStore'])->name('vouchers.promotions.store');
+    
     // Maintenance records management
     Route::get('/cars/{id}/maintenance', [App\Http\Controllers\StaffController::class, 'maintenanceRecords'])->name('maintenance.index');
     Route::get('/cars/{id}/maintenance/create', [App\Http\Controllers\StaffController::class, 'maintenanceCreate'])->name('maintenance.create');
