@@ -65,39 +65,11 @@
     {{-- FULL WIDTH: BOOKING & PAYMENT DETAILS --}}
     <div class="col-12">
       @php
-        $beforeInspection = $booking->inspections ? $booking->inspections->where('type', 'before')->first() : null;
-        $afterInspection = $booking->inspections ? $booking->inspections->where('type', 'after')->first() : null;
-        
-        // Safely handle photos - convert string to array if needed
-        if ($beforeInspection && $beforeInspection->photos) {
-          $beforeInspectionPhotos = is_string($beforeInspection->photos) 
-            ? json_decode($beforeInspection->photos, true) ?? [] 
-            : (is_array($beforeInspection->photos) ? $beforeInspection->photos : []);
-        } else {
-          $beforeInspectionPhotos = [];
-        }
-        
-        if ($afterInspection && $afterInspection->photos) {
-          $afterInspectionPhotos = is_string($afterInspection->photos) 
-            ? json_decode($afterInspection->photos, true) ?? [] 
-            : (is_array($afterInspection->photos) ? $afterInspection->photos : []);
-        } else {
-          $afterInspectionPhotos = [];
-        }
-        
-        $hasBeforeInspection = !empty($beforeInspectionPhotos);
-        $hasAfterInspection = $afterInspection && $afterInspection->status === 'completed' && !empty($afterInspectionPhotos);
-        
-        // Check if "Before Pickup Inspection" (confirmed) stage is complete
-        // Requires: Before pickup inspection form submitted (staff)
-        $hasAgreementSigned = $booking->agreement_signed_at !== null;
+        // Check if "Car Collected" (active) stage is complete
+        // Requires: 1) Signed Agreement Photo uploaded (customer), 2) Receiving Car Keys Photo uploaded (customer)
         $hasAgreementPhoto = $booking->rentalPhotos && $booking->rentalPhotos->where('photo_type', 'agreement')->count() > 0;
         $hasPickupPhoto = $booking->rentalPhotos && $booking->rentalPhotos->where('photo_type', 'pickup')->count() > 0;
-        $isPrePickupInspectionComplete = $hasBeforeInspection;
-        
-        // Check if "Car Collected" (active) stage is complete
-        // Requires: 1) Signed Agreement Photo uploaded (customer), 2) Receiving Car Keys Photo uploaded (customer), 3) Before Pickup Inspection form submitted (staff)
-        $isCarCollectedComplete = $hasAgreementPhoto && $hasPickupPhoto && $hasBeforeInspection;
+        $isCarCollectedComplete = $hasAgreementPhoto && $hasPickupPhoto;
       @endphp
 
       {{-- BOOKING PROGRESS BAR --}}
@@ -107,43 +79,25 @@
         </div>
         <div class="card-body p-4">
           @php
-            $statusOrder = ['created', 'verified', 'confirmed', 'active', 'completed', 'after_inspection', 'deposit_returned'];
+            $statusOrder = ['created', 'verified', 'active', 'completed', 'deposit_returned'];
             $statusIcons = [
               'created' => 'bi-file-earmark-plus',
               'verified' => 'bi-check-circle',
-              'confirmed' => 'bi-box-arrow-in-right',
               'active' => 'bi-car-front',
               'completed' => 'bi-check-circle-fill',
-              'after_inspection' => 'bi-clipboard-check',
               'deposit_returned' => 'bi-wallet2',
               'cancelled' => 'bi-x-circle'
             ];
             $statusNames = [
               'created' => 'Created',
               'verified' => 'Verified',
-              'confirmed' => 'Before Pickup Inspection',
               'active' => 'Car Collected',
               'completed' => 'Car Returned',
-              'after_inspection' => 'After Return Inspection',
               'deposit_returned' => 'Deposit Returned',
               'cancelled' => 'Cancelled'
             ];
             
-            // Determine effective status for progress bar
-            // If after return inspection is completed and status is still 'completed',
-            // treat it as if we're at after_inspection stage
-            // But if deposit is already paid (deposit_decision is set), use actual status
-            $effectiveStatus = $booking->status;
-            if ($booking->status === 'completed' && $hasAfterInspection && !$booking->deposit_decision) {
-              $effectiveStatus = 'after_inspection';
-            }
-            // If deposit is paid, deposit_returned should be completed, not current
-            if ($booking->deposit_decision && $booking->status === 'deposit_returned') {
-              // Use a status that's beyond deposit_returned (or keep as deposit_returned but mark as completed)
-              // We'll handle this in the isCurrent check below
-            }
-            
-            $currentStatusIndex = array_search($effectiveStatus, $statusOrder);
+            $currentStatusIndex = array_search($booking->status, $statusOrder);
             if ($currentStatusIndex === false) $currentStatusIndex = -1;
           @endphp
 
@@ -158,33 +112,19 @@
                     $isCompleted = true;
                   } elseif ($status === 'verified') {
                     // Verified is completed when status is verified or beyond
-                    $isCompleted = in_array($effectiveStatus, ['verified', 'confirmed', 'active', 'completed', 'after_inspection', 'deposit_returned']);
-                  } elseif ($status === 'confirmed') {
-                    // "Before Pickup Inspection" is completed only when before pickup inspection form is filled
-                    $isCompleted = $isPrePickupInspectionComplete;
+                    $isCompleted = in_array($booking->status, ['verified', 'active', 'completed', 'deposit_returned']);
                   } elseif ($status === 'active') {
-                    // "Car Collected" is completed only when:
+                    // "Car Collected" is completed when:
                     // 1) Status is active or beyond, AND
                     // 2) Signed Agreement Photo uploaded (customer), AND
-                    // 3) Receiving Car Keys Photo uploaded (customer), AND
-                    // 4) Before Pickup Inspection form submitted (staff)
-                    $isCompleted = in_array($effectiveStatus, ['active', 'completed', 'after_inspection', 'deposit_returned']) && $isCarCollectedComplete;
+                    // 3) Receiving Car Keys Photo uploaded (customer)
+                    $isCompleted = in_array($booking->status, ['active', 'completed', 'deposit_returned']) && $isCarCollectedComplete;
                   } elseif ($status === 'completed') {
                     // "Car Returned" is completed when booking status is completed or beyond
-                    // This should always be true once car is returned, regardless of after inspection status
-                    // Check the actual booking status, not the effective status
                     $isCompleted = in_array($booking->status, ['completed', 'deposit_returned']);
-                  } elseif ($status === 'after_inspection') {
-                    // "After Return Inspection" is completed only when after return inspection form is submitted
-                    $isCompleted = $hasAfterInspection;
                   } elseif ($status === 'deposit_returned') {
-                    // For deposit_returned step, also check if deposit_decision is set
-                    if ($booking->deposit_decision !== null) {
-                      $isCompleted = true;
-                    } else {
-                      // Only completed if we've passed it
-                      $isCompleted = $index < $currentStatusIndex;
-                    }
+                    // For deposit_returned step, check if deposit_decision is set
+                    $isCompleted = $booking->deposit_decision !== null;
                   }
                   
                   $isCancelled = $booking->status === 'cancelled';
@@ -428,134 +368,6 @@
                     <p class="text-muted mb-0">This booking has been verified.</p>
                   </div>
                 @endif
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {{-- BEFORE PICKUP INSPECTION SECTION --}}
-      <div class="accordion-item border-0 shadow-sm mb-3">
-        <h2 class="accordion-header">
-          <button class="accordion-button {{ $booking->status === 'confirmed' ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#readyToPickupSection" aria-expanded="{{ $booking->status === 'confirmed' ? 'true' : 'false' }}">
-            <span class="fw-bold me-2"><i class="bi bi-box-arrow-in-right me-2 text-primary"></i>Before Pickup Inspection</span>
-          </button>
-        </h2>
-        <div id="readyToPickupSection" class="accordion-collapse collapse {{ $booking->status === 'confirmed' ? 'show' : '' }}" data-bs-parent="#statusAccordion">
-          <div class="accordion-body p-0">
-            {{-- Before-Pickup Inspection --}}
-            <div class="card border-0 {{ in_array($booking->status, ['created', 'verified']) && !$hasBeforeInspection ? 'border-start border-4 border-warning' : '' }}">
-              <div class="card-header bg-white border-0 pt-4 px-4">
-                <div class="d-flex align-items-center justify-content-between">
-                  <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>Before-Pickup Inspection</h6>
-                  @if($hasBeforeInspection)
-                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
-                  @else
-                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Required</span>
-                  @endif
-                </div>
-                @if(in_array($booking->status, ['created', 'verified']) && !$hasBeforeInspection)
-                  <p class="text-muted small mb-0 mt-2"><i class="bi bi-info-circle me-1"></i>Upload inspection photos before confirming this booking.</p>
-                @endif
-              </div>
-              <div class="card-body p-4 pt-2">
-                @if(!empty($beforeInspectionPhotos))
-                  <div class="row g-2 mb-3">
-                    @foreach($beforeInspectionPhotos as $photo)
-                      <div class="col-4">
-                        <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
-                      </div>
-                    @endforeach
-                  </div>
-                @endif
-                <form method="POST" action="{{ route('staff.bookings.inspections.store', $booking->booking_id) }}" enctype="multipart/form-data">
-                  @csrf
-                  <input type="hidden" name="inspection_type" value="before">
-                  <div class="row g-2">
-                    <div class="col-6 mb-2">
-                      <label class="form-label x-small">Fuel Level (0-8)</label>
-                      <input type="number" name="fuel_level" min="0" max="8" class="form-control form-control-sm" value="{{ $beforeInspection->fuel_level ?? 8 }}" required>
-                    </div>
-                    <div class="col-6 mb-2">
-                      <label class="form-label x-small">Odometer (km)</label>
-                      <input type="number" name="odometer_reading" class="form-control form-control-sm" value="{{ $beforeInspection->odometer_reading ?? '' }}" required>
-                    </div>
-                    <div class="col-12 mb-2">
-                      <label class="form-label x-small">Inspection Photos <span class="text-danger">*</span></label>
-                      <input type="file" name="photos[]" class="form-control form-control-sm" accept="image/*" multiple {{ $hasBeforeInspection ? '' : 'required' }}>
-                      <small class="text-muted">Upload car condition photos (max 10)</small>
-                    </div>
-                    <div class="col-12 mb-2">
-                      <label class="form-label x-small">Notes</label>
-                      <textarea name="notes" class="form-control form-control-sm" rows="2">{{ $beforeInspection->notes ?? '' }}</textarea>
-                    </div>
-                  </div>
-                  <button type="submit" class="btn btn-sm btn-dark w-100">
-                    <i class="bi bi-camera me-1"></i>{{ $hasBeforeInspection ? 'Update Inspection' : 'Save Inspection' }}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {{-- AFTER RETURN INSPECTION SECTION --}}
-      <div class="accordion-item border-0 shadow-sm mb-3">
-        <h2 class="accordion-header">
-          <button class="accordion-button {{ in_array($booking->status, ['completed', 'deposit_returned']) ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#afterReturnInspectionSection" aria-expanded="{{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'true' : 'false' }}">
-            <span class="fw-bold me-2"><i class="bi bi-clipboard-check me-2 text-info"></i>After Return Inspection</span>
-          </button>
-        </h2>
-        <div id="afterReturnInspectionSection" class="accordion-collapse collapse {{ in_array($booking->status, ['completed', 'deposit_returned']) ? 'show' : '' }}" data-bs-parent="#statusAccordion">
-          <div class="accordion-body p-0">
-            <div class="card border-0">
-              <div class="card-header bg-white border-0 pt-4 px-4">
-                <div class="d-flex align-items-center justify-content-between">
-                  <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>After-Return Inspection</h6>
-                  @if($hasAfterInspection)
-                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
-                  @else
-                    <span class="badge bg-secondary">Pending</span>
-                  @endif
-                </div>
-              </div>
-              <div class="card-body p-4 pt-2">
-                @if(!empty($afterInspectionPhotos))
-                  <div class="row g-2 mb-3">
-                    @foreach($afterInspectionPhotos as $photo)
-                      <div class="col-4">
-                        <img src="{{ asset('storage/' . $photo) }}" alt="Inspection" class="img-fluid rounded-3" style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;" onclick="window.open('{{ asset('storage/' . $photo) }}', '_blank')">
-                      </div>
-                    @endforeach
-                  </div>
-                @endif
-                <form method="POST" action="{{ route('staff.bookings.inspections.store', $booking->booking_id) }}" enctype="multipart/form-data">
-                  @csrf
-                  <input type="hidden" name="inspection_type" value="after">
-                  <div class="row g-2">
-                    <div class="col-6 mb-2">
-                      <label class="form-label x-small">Fuel Level (0-8)</label>
-                      <input type="number" name="fuel_level" min="0" max="8" class="form-control form-control-sm" value="{{ $afterInspection->fuel_level ?? '' }}" required>
-                    </div>
-                    <div class="col-6 mb-2">
-                      <label class="form-label x-small">Odometer (km)</label>
-                      <input type="number" name="odometer_reading" class="form-control form-control-sm" value="{{ $afterInspection->odometer_reading ?? '' }}" required>
-                    </div>
-                    <div class="col-12 mb-2">
-                      <label class="form-label x-small">Inspection Photos</label>
-                      <input type="file" name="photos[]" class="form-control form-control-sm" accept="image/*" multiple>
-                      <small class="text-muted">Upload car condition photos (max 10)</small>
-                    </div>
-                    <div class="col-12 mb-2">
-                      <label class="form-label x-small">Notes</label>
-                      <textarea name="notes" class="form-control form-control-sm" rows="2">{{ $afterInspection->notes ?? '' }}</textarea>
-                    </div>
-                  </div>
-                  <button type="submit" class="btn btn-sm btn-dark w-100">
-                    <i class="bi bi-camera me-1"></i>{{ $hasAfterInspection ? 'Update Inspection' : 'Save Inspection' }}
-                  </button>
-                </form>
               </div>
             </div>
           </div>
