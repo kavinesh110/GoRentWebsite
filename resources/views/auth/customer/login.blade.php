@@ -29,7 +29,10 @@
 
         <div class="mb-3">
           <label for="email" class="form-label">UTM Email</label>
-          <input type="email" name="email" id="email" class="form-control" value="{{ old('email') }}" required autocomplete="email" placeholder="your.email@student.utm.my">
+          <input type="email" name="email" id="email" class="form-control" value="{{ old('email') }}" 
+                 pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.utm\.my$"
+                 required autocomplete="email" placeholder="yourname@graduate.utm.my">
+          <small class="text-muted">Only UTM email addresses are allowed</small>
         </div>
 
         <div class="mb-3">

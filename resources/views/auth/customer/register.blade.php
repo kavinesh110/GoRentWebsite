@@ -28,8 +28,11 @@
 
         <div class="row g-3 mb-4">
           <div class="col-12">
-            <label class="form-label">UTM email</label>
-            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
+            <label class="form-label">UTM Email</label>
+            <input type="email" name="email" class="form-control" value="{{ old('email') }}" 
+                   pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.utm\.my$" 
+                   placeholder="yourname@graduate.utm.my" required>
+            <small class="text-muted">Must be a valid UTM email address (@*.utm.my)</small>
           </div>
           <div class="col-12">
             <label class="form-label">Password</label>

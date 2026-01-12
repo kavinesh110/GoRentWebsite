@@ -9,6 +9,10 @@ use App\Models\CarLocation;
 use App\Models\Booking;
 use App\Models\SupportTicket;
 use App\Models\Customer;
+use App\Models\Staff;
+use App\Mail\SupportTicketNotification;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Handles the homepage/public facing views
@@ -115,7 +119,7 @@ class HomeController extends Controller
             ->firstOrFail();
         
         // Create support ticket
-        SupportTicket::create([
+        $ticket = SupportTicket::create([
             'customer_id' => $customerId,
             'booking_id' => $booking->booking_id,
             'car_id' => $booking->car_id,
@@ -127,6 +131,22 @@ class HomeController extends Controller
             'description' => $validated['description'],
             'status' => 'open',
         ]);
+        
+        // Send email notification to all staff members
+        try {
+            // Load the car relationship for the email
+            $ticket->load('car');
+            
+            // Get all staff email addresses
+            $staffEmails = Staff::pluck('email')->filter()->toArray();
+            
+            if (!empty($staffEmails)) {
+                Mail::to($staffEmails)->send(new SupportTicketNotification($ticket));
+            }
+        } catch (\Exception $e) {
+            // Log the error but don't fail the request - ticket was created successfully
+            Log::error('Failed to send support ticket notification email: ' . $e->getMessage());
+        }
         
         return redirect()->to(route('home') . '#support')->with('success', 'Your support request has been submitted successfully. We will get back to you soon!');
     }

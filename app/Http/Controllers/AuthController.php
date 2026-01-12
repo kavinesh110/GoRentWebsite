@@ -116,9 +116,18 @@ class AuthController extends Controller
         } else {
             // Handle customer registration - simplified to only email and password
             // All other details must be completed in profile before booking
+            // Only UTM emails are allowed (@*.utm.my)
             $data = $request->validate([
-                'email' => 'required|email|max:255|unique:customers,email',
+                'email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    'unique:customers,email',
+                    'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.utm\.my$/i',
+                ],
                 'password' => 'required|string|min:8|confirmed',
+            ], [
+                'email.regex' => 'Only UTM email addresses (@*.utm.my) are allowed for registration.',
             ]);
 
             // Create customer account with minimal data - profile must be completed later
@@ -157,11 +166,30 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $data = $request->validate([
-            'role' => 'required|in:customer,staff',
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+        $role = $request->input('role', 'customer');
+        
+        // Different validation rules for customer vs staff
+        if ($role === 'customer') {
+            // Customer login - only UTM emails allowed
+            $data = $request->validate([
+                'role' => 'required|in:customer,staff',
+                'email' => [
+                    'required',
+                    'email',
+                    'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.utm\.my$/i',
+                ],
+                'password' => 'required|string',
+            ], [
+                'email.regex' => 'Only UTM email addresses (@*.utm.my) are allowed.',
+            ]);
+        } else {
+            // Staff login - any email allowed
+            $data = $request->validate([
+                'role' => 'required|in:customer,staff',
+                'email' => 'required|email',
+                'password' => 'required|string',
+            ]);
+        }
 
         // Handle staff login
         if ($data['role'] === 'staff') {

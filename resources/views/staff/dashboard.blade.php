@@ -165,6 +165,37 @@
     font-size: 18px;
   }
 
+  /* Pending Links */
+  .pending-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .pending-link:hover {
+    text-decoration: underline;
+  }
+  
+  .pending-warning {
+    color: #d97706;
+  }
+  
+  .pending-warning:hover {
+    color: #b45309;
+  }
+  
+  .pending-info {
+    color: #2563eb;
+  }
+  
+  .pending-info:hover {
+    color: #1d4ed8;
+  }
+
   @media (max-width: 768px) {
     .container-fluid { padding-left: 1rem !important; padding-right: 1rem !important; }
     .stat-value { font-size: 24px; }
@@ -217,7 +248,13 @@
             <div class="stat-label">Active Bookings</div>
             <div class="stat-value">{{ $stats['activeBookings'] }}</div>
             <div class="stat-change">
-              <span class="text-muted">{{ $stats['pendingBookings'] }} pending</span>
+              @if($stats['pendingBookings'] > 0)
+                <a href="{{ route('staff.bookings') }}?status=created" class="pending-link pending-warning">
+                  <i class="bi bi-exclamation-circle"></i> {{ $stats['pendingBookings'] }} pending
+                </a>
+              @else
+                <span class="text-muted">{{ $stats['pendingBookings'] }} pending</span>
+              @endif
             </div>
           </div>
         </div>
@@ -232,7 +269,13 @@
             <div class="stat-label">Total Customers</div>
             <div class="stat-value">{{ $stats['totalCustomers'] }}</div>
             <div class="stat-change">
-              <span class="text-muted">{{ $stats['pendingVerifications'] }} pending verification</span>
+              @if($stats['pendingVerifications'] > 0)
+                <a href="{{ route('staff.customers') }}?verification_status=pending" class="pending-link pending-info">
+                  <i class="bi bi-exclamation-circle"></i> {{ $stats['pendingVerifications'] }} pending verification
+                </a>
+              @else
+                <span class="text-muted">{{ $stats['pendingVerifications'] }} pending verification</span>
+              @endif
             </div>
           </div>
         </div>
