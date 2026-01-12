@@ -2878,6 +2878,70 @@ class StaffController extends Controller
     }
 
     /**
+     * Display all maintenance records across all vehicles
+     * 
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function allMaintenanceRecords(Request $request)
+    {
+        $this->ensureStaff($request);
+
+        $query = MaintenanceRecord::with('car')
+            ->orderBy('service_date', 'desc');
+
+        // Filter by car
+        if ($request->filled('car_id')) {
+            $query->where('car_id', $request->car_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('start_date')) {
+            $query->whereDate('service_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('service_date', '<=', $request->end_date);
+        }
+
+        // Search in description
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhereHas('car', function($cq) use ($search) {
+                      $cq->where('brand', 'like', "%{$search}%")
+                        ->orWhere('model', 'like', "%{$search}%")
+                        ->orWhere('plate_number', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $records = $query->paginate(20)->withQueryString();
+
+        // Get all cars for filter dropdown
+        $cars = Car::orderBy('brand')->orderBy('model')->get();
+
+        // Calculate stats
+        $stats = [
+            'total_records' => MaintenanceRecord::count(),
+            'total_cost' => MaintenanceRecord::sum('cost'),
+            'this_month' => MaintenanceRecord::whereMonth('service_date', now()->month)
+                ->whereYear('service_date', now()->year)
+                ->count(),
+            'this_month_cost' => MaintenanceRecord::whereMonth('service_date', now()->month)
+                ->whereYear('service_date', now()->year)
+                ->sum('cost'),
+        ];
+
+        return view('staff.maintenance.all', [
+            'records' => $records,
+            'cars' => $cars,
+            'stats' => $stats,
+            'filters' => $request->only(['car_id', 'start_date', 'end_date', 'search']),
+        ]);
+    }
+
+    /**
      * Display maintenance issues page - shows car issues from support tickets
      * 
      * @param Request $request

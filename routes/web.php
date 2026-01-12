@@ -146,6 +146,9 @@ Route::prefix('staff')->name('staff.')->group(function () {
     Route::get('/support-tickets/{id}', [App\Http\Controllers\StaffController::class, 'supportTicketsShow'])->name('support-tickets.show');
     Route::patch('/support-tickets/{id}', [App\Http\Controllers\StaffController::class, 'supportTicketsUpdate'])->name('support-tickets.update');
     
+    // All Maintenance Records
+    Route::get('/maintenance', [App\Http\Controllers\StaffController::class, 'allMaintenanceRecords'])->name('maintenance');
+    
     // Maintenance Issues (Car Issues from Support Tickets)
     Route::get('/maintenance-issues', [App\Http\Controllers\StaffController::class, 'maintenanceIssues'])->name('maintenance-issues');
     Route::post('/maintenance-issues/{id}/resolve', [App\Http\Controllers\StaffController::class, 'maintenanceIssuesResolve'])->name('maintenance-issues.resolve');
