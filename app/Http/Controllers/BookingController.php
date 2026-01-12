@@ -89,7 +89,11 @@ class BookingController extends Controller
                 $feedbacks = collect([]);
             }
             
-            return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks', 'availableVouchers'));
+            // Get dates from query params (passed from cars listing filter)
+            $pickupDate = $request->query('start_date', date('Y-m-d'));
+            $dropoffDate = $request->query('end_date', date('Y-m-d', strtotime('+1 day')));
+            
+            return view('bookings.show', compact('car', 'customer', 'locations', 'feedbacks', 'availableVouchers', 'pickupDate', 'dropoffDate'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             abort(404, 'Car not found');
         }

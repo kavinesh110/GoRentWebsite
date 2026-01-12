@@ -443,7 +443,7 @@
                 <span class="h5 fw-bold mb-0">RM {{ number_format($car->base_rate_per_hour * 24, 0) }}</span>
                 <span class="text-muted small">/day</span>
               </div>
-              <a href="{{ route('cars.show', $car->id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold">Rent Now</a>
+              <a href="{{ route('cars.show', $car->id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold rent-now-btn" data-car-id="{{ $car->id }}">Rent Now</a>
             </div>
           </div>
         </div>
@@ -655,5 +655,30 @@
       }
     });
   });
+
+  // Update "Rent Now" links with selected dates from filter
+  const startDateInput = document.querySelector('input[name="start_date"]');
+  const endDateInput = document.querySelector('input[name="end_date"]');
+  const rentNowBtns = document.querySelectorAll('.rent-now-btn');
+  
+  function updateRentNowLinks() {
+    const startDate = startDateInput ? startDateInput.value : '';
+    const endDate = endDateInput ? endDateInput.value : '';
+    
+    rentNowBtns.forEach(btn => {
+      const carId = btn.dataset.carId;
+      const baseUrl = '{{ url("/cars") }}/' + carId;
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      btn.href = baseUrl + (params.toString() ? '?' + params.toString() : '');
+    });
+  }
+
+  if (startDateInput) startDateInput.addEventListener('change', updateRentNowLinks);
+  if (endDateInput) endDateInput.addEventListener('change', updateRentNowLinks);
+  
+  // Initialize links with default dates
+  updateRentNowLinks();
 </script>
 @endpush

@@ -291,7 +291,7 @@
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label">Pickup Date</label>
-              <input type="date" name="pickup_date" id="pickup_date" class="form-control" required>
+              <input type="date" name="pickup_date" id="pickup_date" class="form-control" value="{{ $pickupDate ?? date('Y-m-d') }}" required>
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label">Pickup Time</label>
@@ -310,7 +310,7 @@
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label">Dropoff Date</label>
-              <input type="date" name="dropoff_date" id="dropoff_date" class="form-control" required>
+              <input type="date" name="dropoff_date" id="dropoff_date" class="form-control" value="{{ $dropoffDate ?? date('Y-m-d', strtotime('+1 day')) }}" required>
             </div>
             <div class="col-md-3 col-6">
               <label class="form-label">Dropoff Time</label>
@@ -524,11 +524,17 @@
   const today = new Date().toISOString().split('T')[0];
   if (pickupDateInput) {
     pickupDateInput.setAttribute('min', today);
-    pickupDateInput.value = today;
+    // Only set default if no value from server
+    if (!pickupDateInput.value) {
+      pickupDateInput.value = today;
+    }
   }
   if (dropoffDateInput) {
     dropoffDateInput.setAttribute('min', today);
-    dropoffDateInput.value = today;
+    // Only set default if no value from server
+    if (!dropoffDateInput.value) {
+      dropoffDateInput.value = today;
+    }
   }
   updatePricing();
 </script>

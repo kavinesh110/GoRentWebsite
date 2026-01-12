@@ -209,7 +209,7 @@
                 <span class="h5 fw-bold mb-0">RM {{ number_format($car->base_rate_per_hour * 24, 0) }}</span>
                 <span class="text-muted small">/day</span>
               </div>
-              <a href="{{ route('cars.show', $car->id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold">Rent Now</a>
+              <a href="{{ route('cars.show', ['id' => $car->id, 'start_date' => $filters['start_date'] ?? date('Y-m-d'), 'end_date' => $filters['end_date'] ?? date('Y-m-d', strtotime('+1 day'))]) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold">Rent Now</a>
             </div>
           </div>
         </div>
